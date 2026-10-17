@@ -199,39 +199,71 @@ class StatsCsvTest(Case):
 
 
 class PhotoTest(Case):
-    def photo_id(self):
-        return next(r["id"] for r in FAKE if r["photo_path"])
+    GUID = "iMessage;-;at-0-TESTGUID"
+    PNG = bytes.fromhex("89504e470d0a1a0a") + b"-real-photo-bytes"
+
+    def synthetic_photo_id(self):
+        return next(r["id"] for r in FAKE if r["has_photo"])
 
     def no_photo_id(self):
         return next(r["id"] for r in FAKE if not r["has_photo"])
 
-    def test_needs_the_password(self):
-        self.assertEqual(self.client.get(f"/council/photos/{self.photo_id()}").status_code, 401)
+    def real_report(self, guid=GUID, mime="image/jpeg"):
+        rid = tools.save_report("pothole", "6 Photo Road", "Hole", reporter="+447700900123",
+                                conn=self.conn)["report_id"]
+        if guid:
+            self.assertTrue(reports_db.set_photo(self.conn, rid, guid, mime))
+        return rid
 
-    def test_serves_the_photo_privately(self):
-        response = self.client.get(f"/council/photos/{self.photo_id()}", headers=AUTH)
+    def get(self, rid, **kwargs):
+        return self.client.get(f"/council/photos/{rid}", headers=AUTH, **kwargs)
+
+    def test_needs_the_password(self):
+        self.assertEqual(self.client.get(f"/council/photos/{self.synthetic_photo_id()}").status_code, 401)
+
+    def test_synthetic_row_gets_its_placeholder(self):
+        response = self.get(self.synthetic_photo_id())
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.mimetype, "image/png")
-        self.assertTrue(response.get_data().startswith(b"\x89PNG"))
+        self.assertTrue(response.get_data().startswith(bytes.fromhex("89504e47")))
         self.assertEqual(response.headers["Cache-Control"], "no-store")
         self.assertEqual(response.headers["Content-Security-Policy"], "default-src 'none'")
         response.close()
 
-    def test_no_photo_is_a_404(self):
-        for rid in (self.no_photo_id(), "R-9999"):
-            self.assertEqual(self.client.get(f"/council/photos/{rid}", headers=AUTH).status_code, 404, rid)
+    def test_real_photo_comes_from_bluebubbles(self):
+        rid = self.real_report()
+        with unittest.mock.patch.object(website.bb, "download_attachment",
+                                        return_value=(self.PNG, "image/jpeg")) as download:
+            response = self.get(rid)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_data(), self.PNG)
+        self.assertEqual(response.mimetype, "image/jpeg")
+        self.assertEqual(download.call_args.args[0], self.GUID)
+        self.assertEqual(response.headers["Referrer-Policy"], "no-referrer")
+        self.assertNotIn(self.GUID, str(response.headers))
 
-    def test_never_serves_anything_outside_the_photo_folder(self):
-        photos = Path(self.tmp.name) / "photos"
-        photos.mkdir()
-        (photos / "notes.txt").write_text("not an image", encoding="utf-8")
-        app = website.create_app(self.path, PASSWORD, photo_dir=photos)
-        client = app.test_client()
-        rid = self.photo_id()
-        for bad in ("../officer.db", "../../website.py", str(Path(website.__file__).resolve()), "notes.txt",
-                    "missing.png"):
-            self.conn.execute("UPDATE reports SET photo_path = ? WHERE id = ?", (bad, rid))
-            self.assertEqual(client.get(f"/council/photos/{rid}", headers=AUTH).status_code, 404, bad)
+    def test_refuses_anything_that_is_not_an_image(self):
+        rid = self.real_report(mime="text/html")
+        with unittest.mock.patch.object(website.bb, "download_attachment",
+                                        return_value=(b"<script>", "text/html")):
+            self.assertEqual(self.get(rid).status_code, 404)
+        with unittest.mock.patch.object(website.bb, "download_attachment", return_value=None):
+            self.assertEqual(self.get(self.real_report(guid="iMessage;-;other")).status_code, 404)
+
+    def test_no_photo_is_a_404(self):
+        never_called = unittest.mock.patch.object(website.bb, "download_attachment",
+                                                  side_effect=AssertionError("no fetch expected"))
+        with never_called:
+            for rid in (self.no_photo_id(), "R-9999", self.real_report(guid=None)):
+                self.assertEqual(self.get(rid).status_code, 404, rid)
+
+    def test_real_report_without_a_guid_is_not_shown_as_stored(self):
+        rid = self.real_report(guid=None)
+        self.conn.execute("UPDATE reports SET has_photo = 1 WHERE id = ?", (rid,))
+        reports = {r["id"]: r for r in self.client.get("/council/reports.json", headers=AUTH).get_json()["reports"]}
+        self.assertEqual(reports[rid]["has_photo"], 1)
+        self.assertFalse(reports[rid]["photo_stored"])
+        self.assertIn("Photo sent, not stored", self.client.get("/council", headers=AUTH).get_data(as_text=True))
 
     def test_photos_are_not_in_the_public_static_folder(self):
         for path in ("/assets/photos/synthetic/pothole.png", "/assets/../photos/synthetic/pothole.png",
@@ -239,20 +271,25 @@ class PhotoTest(Case):
             self.assertEqual(self.client.get(path).status_code, 404, path)
         self.assertFalse((website.WEB_DIR / "static" / "photos").exists())
 
-    def test_page_gets_a_flag_not_the_path(self):
+    def test_page_gets_a_flag_never_the_guid(self):
+        rid = self.real_report()
         reports = self.client.get("/council/reports.json", headers=AUTH).get_json()["reports"]
-        self.assertTrue(all("photo_path" not in r for r in reports))
+        for r in reports:
+            self.assertNotIn("photo_guid", r)
+            self.assertNotIn("photo_mime", r)
         flags = {r["id"]: r["photo_stored"] for r in reports}
+        self.assertTrue(flags[rid])
         for fake in FAKE:
-            self.assertEqual(bool(flags[fake["id"]]), bool(fake["photo_path"]), fake["id"])
-        self.assertNotIn("synthetic/", self.client.get("/council", headers=AUTH).get_data(as_text=True))
+            self.assertEqual(bool(flags[fake["id"]]), bool(fake["has_photo"]), fake["id"])
+        page = self.client.get("/council", headers=AUTH).get_data(as_text=True)
+        self.assertNotIn(self.GUID, page)
+        self.assertNotIn(self.GUID, json.dumps(reports))
 
-    def test_every_synthetic_photo_exists_and_is_stamped_synthetic(self):
+    def test_every_category_has_a_stamped_placeholder(self):
         for fake in FAKE:
-            if fake["photo_path"]:
-                path = website.PHOTO_DIR / fake["photo_path"]
-                self.assertTrue(path.is_file(), fake["photo_path"])
-                self.assertTrue(fake["photo_path"].startswith("synthetic/"))
+            if fake["has_photo"]:
+                path = website.PHOTO_DIR / website.synthetic_photo_for(fake["category_id"])
+                self.assertTrue(path.is_file(), path)
         self.assertIn("SYNTHETIC DEMO IMAGE", (website.PHOTO_DIR.parent.parent / "dashboard" /
                                                "make_fake_photos.py").read_text(encoding="utf-8"))
 

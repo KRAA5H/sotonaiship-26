@@ -61,14 +61,19 @@ def _join(*lines):
     return "\n".join(line.strip() for line in lines if line and line.strip())
 
 
+PHOTO_ASK = "If you can send a photo, it will help the crew."
+
+
 def logged(decision, saved):
     """A report was saved. Say what, where, and what happens next."""
     head = f"Logged: {_label(decision)}"
     where = _where(decision)
     if where:
         head += f", {where}"
-    head += ". Photo attached." if decision.get("has_photo") else "."
-    return _join(head, "The council has it for review.", f"Follow it: {saved['link']}")
+    has_photo = bool(decision.get("has_photo"))
+    head += ". Photo attached." if has_photo else "."
+    ask = "" if has_photo else PHOTO_ASK
+    return _join(head, "The council has it for review.", ask, f"Follow it: {saved['link']}")
 
 
 def duplicate(decision, saved):
@@ -77,9 +82,11 @@ def duplicate(decision, saved):
     if where:
         head += f", {where}"
     head += "."
+    ask = "" if decision.get("has_photo") else PHOTO_ASK
     return _join(
         head,
         "Your report is linked to it, so the same updates apply.",
+        ask,
         f"Follow it: {saved['link']}",
     )
 
@@ -103,10 +110,15 @@ def answered(text):
 
 
 def no_answer(decision):
+    """Never lead with what we cannot do. Offer to help, with the page as a fallback."""
     category = _category(decision.get("category_id"))
     page = (category.get("official_form_url") or category.get("answer_source")
             or COUNCIL_CONTACT)
-    return _join("I do not have a checked answer for that.", f"The council's page: {page}")
+    return _join(
+        "I can help with that.",
+        "Tell me a bit more about what you need and where, and I'll point you the right way.",
+        f"The council's page might have it too: {page}",
+    )
 
 
 def not_council(decision):
@@ -135,7 +147,7 @@ def emergency():
 
 def unclear():
     return _join(
-        "I could not read that.",
+        "I didn't catch that.",
         "Send the problem and the street, for example: pothole outside 12 Alma Road.",
     )
 
@@ -145,6 +157,28 @@ def greeting():
         "Hello. Send a street problem and I will log it with the council.",
         "Pothole, dumped rubbish, missed bin, broken glass.",
     )
+
+
+def contact_for(category_id):
+    """Who else can help, and the page to send them to, from the rulebook."""
+    category = _category(category_id)
+    key = category.get("redirect_to") or ""
+    link = _book()[1].get(key) or {}
+    org = {
+        "national_highways": "National Highways",
+        "find_your_council": "your local council",
+        "flood_warnings": "the Environment Agency",
+        "emergency": "999",
+    }.get(key) or (link.get("label") or "the right service")
+    return {
+        "org": org,
+        "contact": (link.get("contact") or "").strip(),
+        "page": (link.get("url") or link.get("source") or "").strip(),
+    }
+
+
+def photo_added(link):
+    return _join("Photo added to your report.", f"Follow it: {link}")
 
 
 def thanks():

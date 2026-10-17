@@ -70,9 +70,12 @@ class CopyRuleTest(unittest.TestCase):
             self.assertNotIn("interested in", text.lower(), name)
 
     def test_three_lines_at_most(self):
+        # A saved report may carry the photo request as a fourth line.
+        four_allowed = {"logged", "logged_photo", "duplicate"}
         for name, text in all_copy().items():
             lines = [line for line in text.splitlines() if line.strip()]
-            self.assertLessEqual(len(lines), 3, f"{name}: {text!r}")
+            limit = 4 if name in four_allowed else 3
+            self.assertLessEqual(len(lines), limit, f"{name}: {text!r}")
 
     def test_one_link_at_most(self):
         for name, text in all_copy().items():
@@ -111,6 +114,14 @@ class PathTest(unittest.TestCase):
     def test_a_photo_is_acknowledged(self):
         self.assertIn("Photo attached.", messages.logged(decision(has_photo=True), SAVED))
 
+    def test_a_report_without_a_photo_asks_for_one(self):
+        text = messages.logged(decision(has_photo=False), SAVED)
+        self.assertIn("photo", text.lower())
+
+    def test_a_report_with_a_photo_does_not_ask_again(self):
+        text = messages.logged(decision(has_photo=True), SAVED)
+        self.assertNotIn(messages.PHOTO_ASK, text)
+
     def test_a_duplicate_is_linked_not_relogged(self):
         text = messages.duplicate(decision(), {**SAVED, "duplicate_of": "R-0069"})
         self.assertTrue(text.startswith("Already logged:"))
@@ -127,7 +138,7 @@ class PathTest(unittest.TestCase):
 
     def test_an_unanswered_question_points_at_an_official_page(self):
         text = messages.no_answer(decision(category_id="council_service_other"))
-        self.assertIn("I do not have a checked answer", text)
+        self.assertIn("I can help with that", text)
         self.assertIn("southampton.gov.uk", text)
 
     def test_a_motorway_problem_names_national_highways_and_its_number(self):

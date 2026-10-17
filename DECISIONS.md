@@ -51,6 +51,11 @@ The short record of what we decided and what we rejected, so nobody re-opens a s
 | D24 | BlueBubbles sends with `method=apple-script` | `private_api` is false on server 1.9.9, so `private-api` would fail every send |
 | D25 | Plans stay short and the todo list carries **only live development work** | A plan nobody reads is worse than no plan |
 | D26 | **Reports follow `CLAUDE.md` and `dashboard/schema.sql`, replacing `PLAN.md` section 4.** One 11-column `reports` table, `R-0001` ids, statuses `new` / `in_review` / `resolved`, no coordinates, no channel, residents see only `/r/<link_token>`. Duplicates: same category, same location text, open (not resolved), within 30 days, as in `agent/categories.json`. The KB-xxxx report object, its statuses and the 80 m / 14 day rule are retired | The newer design is what the dashboard, the fake data and the agent tools are built on; two report shapes would split the team. Signed: Aadil |
+| D38 | **Bursts are coalesced, not answered one by one.** A per-sender 2.5 second quiet window, and messages that arrive while we are generating are folded into the same turn before anything is saved | Residents type in bursts. Answering the first fragment is the fastest way to look deaf, and a second reply to the second fragment doubles the noise. 2.5s is the common range (OpenClaw defaults 2s, WhatsApp 5s) |
+| D39 | **Never lead with what we do not know.** "Not sure", "no checked answer" and "honestly" are banned in code, and the council page is a fallback at the end, never the opening. The first move is always a question or an offer to log | The owner's judgement: an immediate redirect to the council form makes the product useless. The reply must keep the resident with us first |
+| D35 | **Resident replies are written by the model from a brief, then linted, with the old templates as the fallback.** The model never sees the link and never writes a URL. Required strings (spoken category, street, status, org, contact) and required meaning phrases are checked on every reply | A fixed template reads automated, and the owner judged that the biggest product weakness. The lint keeps the safety of a template while the words stay human. Cost of one extra call per reply is accepted |
+| D36 | **The register is a friendly young council employee**: casual, contractions, helpful, no corporate phrasing and no slang that dates. The examples in `code/voice.py` are the contract | The owner's instruction, in his words: it should feel like texting a person who works there |
+| D37 | **Photos stay in BlueBubbles and the database stores a reference.** `photo_guid` and `photo_mime` are additive columns, migrated in `init_db`. `GET /r/<token>/photo` is token-only, no-store, no-referrer, and the guid never appears in a URL. This is a contract change for `code/reports_db.py`, which Section 3 owns, agreed so photos can appear on cards later without storing bytes in SQL | The owner chose file references over storing images in SQL. A guid is re-fetchable and the raw bytes never enter the repo or the database |
 | D31 | **Grounded answers use the full fact sheet, not a vector database and not keyword retrieval.** All 53 dated facts fit in one prompt (about 2,940 tokens). The model returns the fact numbers it used, and we append the citation. It answered 12 of 12 evaluation questions correctly and refused 2 of 2 unanswerable ones | A keyword list failed on natural language ("gas leak" matched nothing) and was hand-maintained. An embedding model would mean a second provider and key for no measurable gain on 50 documents. Trigger to revisit: if answer citation accuracy falls below 10 of 12 |
 | D32 | **Act first, ask second.** A council report with no street is saved with location "Not given", and the resident's next short message fills that row in rather than creating a second report | A missing location used to throw the report away. An incomplete card is the truthful state and the officer can see it |
 | D33 | **One module owns every resident-facing string**, with the copy rules enforced as tests: three lines, one link, no markdown, no unconfirmed team names, no search links, no em dashes, silence for thanks | Copy written in three places drifts. The bot used to answer "thanks" with a refusal |
@@ -60,6 +65,49 @@ The short record of what we decided and what we rejected, so nobody re-opens a s
 | D29 | **Duplicate matching allows extra words at the same place.** "Weston Lane" matches "Weston Lane outside the school". A directional suffix (north, south, east, west, upper, lower) still means a different road | Exact text matching missed a real repeat during the live check; the suffix guard keeps one street from swallowing its neighbours |
 | D30 | **The bot remembers a location question for 10 minutes** and joins a short reply to the earlier message | Without it, "there is a pothole near my house" followed by "Alma Road" lost the report. A proper session store is deferred |
 | D35 | **Real FixMyStreet reports may be used for the evaluation only.** Permission given by: ________ (fill in) on ____-__-__ (fill in). Covers: Southampton reports from FixMyStreet's Open311 API, used unaltered (names and details as published) by the evaluation in `code/eval/fms/` to score category accuracy and the duplicate rule. Not covered: the demo database, the council dashboard, the agent, or any committed file. Raw data stays in `code/eval/fms/raw/`, which is gitignored; committed files hold FixMyStreet ids and our labels only. Credit mySociety/FixMyStreet in `NUMBERS.md` and the README. This is an exception to the `CLAUDE.md` rule against using individual FixMyStreet reports, which should be updated to point here | The brief names FixMyStreet as the starting point, and 60 synthetic messages written by us would only test our own phrasing. Signed: Aadil |
+
+## Proposed: drop-a-pin location link (not wired in yet)
+
+| # | Proposal | Why | Proposed by |
+|---|---|---|---|
+| D35 | **When a report has no street, also offer a map link.** `code/pin_service.py` is built and tested but the bot does not call it yet. The changes below are for the owners of `blue_bubbles.py` (Section 1) and `messages.py` (Section 2) to make | A map pin is faster and more accurate than typing a street, and it works for residents who do not know the road name. Privacy design and legal notes in `COMPLIANCE_LOCATION.md` | Anirudh |
+
+**Where it is called (Section 1, `code/blue_bubbles.py`).** In `reply_for`, in the `reason == "no_location"` branch, after `tools.save_report(...)` succeeds and `remember_location(...)` runs:
+
+```python
+pin_url = None
+if os.getenv("PIN_BASE_URL"):  # off unless the pin service is running behind HTTPS
+    import pin_service
+    pin_url = pin_service.create_location_link(saved["report_id"])  # passes only R-0074, never the sender
+return messages.need_location(decision, pin_url=pin_url)
+```
+
+`create_location_link` reads `BASE_URL`. The bot should set it from `PIN_BASE_URL`, or the two can share one variable.
+
+**The text (Section 2, `code/messages.py`).** `need_location(decision, pin_url=None)` keeps today's reply when `pin_url` is None. With a link, placeholder wording, still three lines and one URL:
+
+> Logged: fly-tipping.
+> Where exactly is it? Drop a pin on this map: <pin_url>
+> Or just reply with the street name.
+
+**How the bot reads the result.** Both processes run on the demo Mac, so the simplest route is a direct call, `pin_service.get_location(report_id)`, with `SOTONFIX_DB` pointing at the same file. From another machine, use `GET /api/location/<report_id>` with header `X-Api-Key: $BOT_API_KEY`. That returns the same dict plus a ready-made `location_text`. Two moments to read it:
+1. **When the next message arrives from someone with a `_pending` entry**, check `get_location` first. If a pin was confirmed, use it and treat the message as normal.
+2. **Optionally**, a background check every 30 seconds over `_pending` entries. When a location appears, call `reports_db.set_location` and send `messages.logged(...)`, so the resident gets a confirmation without texting again.
+
+**How the fields map onto the report.**
+- `reports.location` is `pin_service.as_report_location(loc)`, for example `Windsor Terrace, near The Bargate, SO14 7BQ`, written with the existing `reports_db.set_location`.
+- The street comes first on purpose. `tools._same_place` allows extra words after a street, so duplicate matching against an earlier "Windsor Terrace" report still works.
+- `reports.area` (the new column from f77dd7e) takes `loc["area"]`. That needs a small setter in `reports_db.py`, which Section 3 owns.
+- `coverage == "unverified"` means we could not confirm it is in Southampton. Keep the report and let the officer see a flag (Section 3).
+
+**Coordinates stay off by default.** `STORE_COORDINATES` is unset, so the pin service keeps no latitude or longitude, which matches D26 and the "never store coordinates" rule. Turning it on stores them rounded to about 11 m, only in `code/pin.db` and never in `kerbside.db`.
+
+**Overlap with TODO-SPLIT 1.1 and 1.7, please read.**
+- **1.1 (Apple Maps pins in a text)** also reverse geocodes with Nominatim, in the bot process. Two separate rate limiters could together break Nominatim's one-request-per-second rule. Suggest 1.1 reuses `pin_service.assess(lat, lng)`. That gives one geocoder, one lock and cache, the same Southampton check (bounding box, then postcodes.io council area) and the same sanitising, with no coordinates stored. `code/location.py` currently returns coordinates and has no timeout on its wait, so it is better not to use it for this.
+- **1.7 (maps plugin attachments)**: no code conflict. A shared Apple Maps location and a confirmed pin are two routes to the same location field. Whichever arrives first wins, and the other should not overwrite it without the resident asking.
+- **1.4 (incomplete reports)**: once a pin fills the location, duplicate matching should run again on the real street, never on "Not given".
+
+**To run it:** `python code/pin_service.py` (port 5007) behind an HTTPS tunnel with `TRUST_PROXY=1`, `BASE_URL=https://<host>`, `CONTROLLER_NAME`, `CONTACT_EMAIL` and `SOTONFIX_USER_AGENT` set. Phones refuse location sharing on plain HTTP.
 
 ## How to change something
 

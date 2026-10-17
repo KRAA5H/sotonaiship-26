@@ -93,32 +93,32 @@ The feedback, verbatim: "instead of very fixed responses, we do not want automat
 
 The right shape is closer to: "Unfortunately that one isn't ours to fix, but here's a link that should help."
 
-- [ ] The model writes the sentence. We keep the facts: category, street, status, one link, source and date
-- [ ] A warmth pass over the refusal, no-answer, duplicate and incomplete paths first, since those sound the most robotic
-- [ ] Vary phrasing between identical inputs, but never invent a fact, a link or a telephone number
-- [ ] Allow up to three sentences where warmth helps, never a wall of text
-- [ ] Turn the existing copy rules into a lint over generated text: three lines, one URL, no markdown, no unconfirmed team names, no em dashes
-- [ ] Fall back to today's template when generated text fails the lint, so the bot can never send something broken
-- [ ] Extend `code/eval/messages.py` with a style check: no two replies to the same question identical, and none containing the banned phrases
-- [ ] Record the before and after side by side in the pull request, so the improvement is visible in one screen
+- [x] The model writes the sentence. We keep the facts: category, street, status, one link, source and date
+- [x] A warmth pass over the refusal, no-answer, duplicate and incomplete paths first, since those sound the most robotic
+- [x] Vary phrasing between identical inputs, but never invent a fact, a link or a telephone number
+- [x] Allow up to three sentences where warmth helps, never a wall of text
+- [x] Turn the existing copy rules into a lint over generated text: three lines, one URL, no markdown, no unconfirmed team names, no em dashes
+- [x] Fall back to today's template when generated text fails the lint, so the bot can never send something broken
+- [x] Extend `code/eval/messages.py` with a style check: no two replies to the same question identical, and none containing the banned phrases
+- [x] Record the before and after side by side in the pull request, so the improvement is visible in one screen
 
 ## 2.2 Ask for a photo
 
 Evidence. `has_photo` is 0 on every real report from `R-0070` to `R-0078`. Photo analysis is our strongest evidence and we never ask for it.
 
-- [ ] Ask for a photo on every council report that has none, as one extra line in the same reply
-- [ ] Accept a photo sent later and attach it to the open report
-- [ ] Never block a report on a photo. The report is already logged, the photo only improves it
-- [ ] Keep it to three lines and one URL: confirmation first, then the ask, then the link
-- [ ] Track the share of reports with a photo so `NUMBERS.md` can show the improvement
+- [x] Ask for a photo on every council report that has none, as one extra line in the same reply
+- [x] Accept a photo sent later and attach it to the open report
+- [x] Never block a report on a photo. The report is already logged, the photo only improves it
+- [x] Keep it to three lines and one URL: confirmation first, then the ask, then the link
+- [x] Track the share of reports with a photo so `NUMBERS.md` can show the improvement
 
 ## 2.3 The resident page
 
 Files: `code/web/templates/resident.html` only, coordinate with Section 3 before touching the route.
 
-- [ ] Show the resident's own photo on their report page, if they sent one
-- [ ] The completion text copy for when a report moves to resolved, matching the warmer voice
-- [ ] One plain sentence at the top saying what happens next and when
+- [x] Show the resident's own photo on their report page, if they sent one
+- [x] The completion text copy for when a report moves to resolved, matching the warmer voice
+- [x] One plain sentence at the top saying what happens next and when
 
 ---
 

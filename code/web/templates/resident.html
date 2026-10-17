@@ -40,6 +40,13 @@
     </ol>
   </section>
 
+  {% if report.photo_url %}
+  <section class="r-sec" aria-labelledby="photo-h">
+    <h2 id="photo-h">Your photo</h2>
+    <img src="{{ report.photo_url }}" alt="The photo you sent with your report" loading="lazy" style="max-width:100%;height:auto;border-radius:12px">
+  </section>
+  {% endif %}
+
   <section class="r-sec" aria-labelledby="det-h">
     <h2 id="det-h">Your report</h2>
     <dl class="meta">
@@ -47,7 +54,7 @@
       <dt>Where</dt><dd>{{ report.location or "Not given" }}</dd>
       <dt>Reported</dt><dd>{{ report.created_at[:10] | ukdate }}</dd>
       <dt>Details</dt><dd>{{ description or "Not given" }}</dd>
-      <dt>Photo</dt><dd>{{ "You sent a photo" if report.has_photo else "No photo" }}</dd>
+      <dt>Photo</dt><dd>{% if report.photo_url %}<a href="{{ report.photo_url }}">Your photo</a>{% elif report.has_photo %}You sent a photo{% else %}No photo{% endif %}</dd>
     </dl>
   </section>
 </article>

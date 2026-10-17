@@ -24,7 +24,9 @@ CATEGORIES = AGENT_DIR / "categories.json"
 MAX_CITED = 3
 
 SYSTEM = (
-    "You answer questions for Southampton City Council's text message line.\n"
+    "You answer quick questions on Southampton City Council's text line.\n"
+    "You are a friendly young council employee texting from your phone: British "
+    "English, contractions, plain words, warm but not chatty, no corporate tone.\n"
     "Below are numbered facts, each checked with the council on the date shown.\n"
     "Use only those facts. Do not add anything you were not given.\n"
     "Never write a web address or a phone number that is not in the facts.\n"
@@ -147,6 +149,7 @@ def answer(question, category_id=None):
 
     picked = _pick(data.get("facts"), len(facts))
     body = " ".join(str(data.get("answer") or "").split())
+    body = body.replace(chr(0x2014), " - ")
     body = re.sub(r"https?://\S+", "", body).strip()
     if not picked or not body:
         return "", []

@@ -71,7 +71,7 @@ def _candidates(image):
     return out
 
 
-def _payload(system, user, image, candidate):
+def _payload(system, user, image, candidate, max_tokens=None, temperature=None):
     if image and candidate["image"]:
         data, mime = image
         content = [
@@ -88,17 +88,19 @@ def _payload(system, user, image, candidate):
             {"role": "system", "content": system},
             {"role": "user", "content": content},
         ],
-        "max_tokens": 300,
-        "temperature": 0.7,
+        "max_tokens": max_tokens or (800 if candidate["reasoning"] else 300),
+        "temperature": 0.7 if temperature is None else temperature,
     }
     if candidate["reasoning"]:
-        # Reasoning models spend the whole budget thinking otherwise.
-        payload["max_tokens"] = 800
+        # Reasoning models think before they answer, and the thinking counts
+        # against the budget. Never let a short caller ask for so little that
+        # the reply comes back empty.
+        payload["max_tokens"] = max(payload["max_tokens"], 400)
         payload["reasoning"] = {"effort": "low"}
     return payload
 
 
-def chat(system, user, image=None):
+def chat(system, user, image=None, max_tokens=None, temperature=None):
     """Return (reply_text, mode) where mode is 'model' or 'stub'."""
     candidates = _candidates(image)
     if not candidates:
@@ -113,7 +115,7 @@ def chat(system, user, image=None):
                         "Authorization": "Bearer " + candidate["key"],
                         "Content-Type": "application/json",
                     },
-                    json=_payload(system, user, image, candidate),
+                    json=_payload(system, user, image, candidate, max_tokens, temperature),
                     timeout=TIMEOUT,
                 )
             except requests.RequestException as error:

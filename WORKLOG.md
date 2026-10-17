@@ -9,6 +9,23 @@ Three places, no more:
 
 ---
 
+## 21:15, Saturday: bursts and no deflection
+
+- **Bursts.** A per-sender 2.5 second quiet window (`enqueue_message`, `flush_burst`), and anything that arrives while we are thinking is folded into the same turn before saving (`take_pending`). Ten out of ten double-texts used to get two replies; now they get one. Live: two messages 0.8s apart became one report, `R-0083`, with both facts and one reply.
+- **No deflection.** Removed "not sure", "no checked answer", "honestly", "don't know" from the templates, the brief, the prompt and the lint. The council page is now the last line, never the opening. A question we cannot settle gets "tell me a bit more and i'll point you the right way" instead of a form.
+- Voice budget raised to 700 tokens after DeepSeek returned empty content twice under a 400 token floor; three of three samples then passed lint.
+- Tests: 269 pass, 31 message-evaluation cases. A question now takes about 12 seconds: 2.5 quiet window, triage, a retrieval attempt, then the voice call. Speed is Section 1.
+
+## 22:40, Saturday: section 2, the resident's voice
+
+- `code/voice.py`: the model writes the sentence, we keep the facts. 22 spoken category names, a brief per path, a lint over every reply, and the existing templates as the fallback. `code/test_voice.py` has 51 offline tests.
+- The register is a friendly young council employee. "ah, that one's not ours, sorry. National Highways handles motorways, so give them a ring on 0300 123 5000." Rejections: corporate phrases, invented timescales and numbers, unconfirmed team names, URLs, markdown, em dashes.
+- A photo is now requested on every saved report, in the same reply, and the templates carry the same line.
+- A photo sent later attaches to the sender's single open report through `code/photos.py`. The Maps plugin payload is never treated as a photo.
+- The resident page shows their own photo through `GET /r/<token>/photo`, token-only, no store, no guid in any URL. Photo bytes stay in BlueBubbles; the database holds two reference columns.
+- Live run: 7 messages. Casual duplicate and refusal replies, silence on thanks, a status answer, a grounded answer, a late photo attached to `R-0079`, resident page 200, photo 200 at 826 KB.
+- Tests: 268 pass (voice 51, photos 25, bot 41, tools 47, website 31, messages 23, triage 25, rag 25), plus 31 message-evaluation cases.
+
 ## 21:40, Saturday: RAG and the resident voice (phase 1)
 
 - `code/rag.py`: grounded answers. All 53 dated facts go in one prompt and the model cites fact numbers, so there is no vector database and no keyword list. 12 of 12 live questions cite the right fact, and 2 of 2 unanswerable questions are refused cleanly.

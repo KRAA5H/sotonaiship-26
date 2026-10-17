@@ -31,6 +31,7 @@ from flask import Blueprint, Flask, Response, current_app, jsonify, render_templ
 
 load_dotenv(Path(__file__).with_name(".env"))
 
+import bb
 import photo_features
 import priority
 import reports_db
@@ -38,11 +39,16 @@ import tools
 
 import loader  # noqa: E402  (agent/loader.py, on the path via tools)
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dashboard"))
+from make_fake_photos import photo_for as synthetic_photo_for  # noqa: E402
+
 WEB_DIR = Path(__file__).with_name("web")
-# Report photos. Never under WEB_DIR/static: only /council/photos/<id> serves them.
+# Synthetic placeholder photos. Never under WEB_DIR/static: only /council/photos/<id>
+# serves them, behind the council password. Real photos stay in BlueBubbles.
 PHOTO_DIR = Path(__file__).with_name("photos")
-PHOTO_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
-               ".gif": "image/gif"}
+# Same whitelist as photos.py: BlueBubbles converts on download, so only these two.
+IMAGE_MIMES = ("image/jpeg", "image/png")
+PHOTO_WIDTH = 1024
 STEPS = (
     ("new", "Received", "We have your report."),
     ("in_review", "In review", "A council officer is looking at it."),
@@ -186,15 +192,35 @@ def council_photo(report_id):
     if denied:
         return denied
     with _connect() as conn:
-        relative = reports_db.photo_path(conn, report_id)
-    root = Path(current_app.config.get("PHOTO_DIR") or PHOTO_DIR).resolve()
-    path = (root / relative).resolve() if relative else None
-    # Only image files inside the photo folder, whatever the database says.
-    if (not path or root not in path.parents or not path.is_file()
-            or path.suffix.lower() not in PHOTO_TYPES):
-        return Response("No photo for this report.", 404, mimetype="text/plain")
-    response = send_file(path, mimetype=PHOTO_TYPES[path.suffix.lower()])
+        source = reports_db.council_photo_source(conn, report_id)
+    not_found = Response("No photo for this report.", 404, mimetype="text/plain")
+    if not source:
+        return not_found
+
+    if source["photo_guid"]:
+        # The resident's real photo, fetched from BlueBubbles as photos.py does for
+        # /r/<token>/photo. The guid never leaves the server.
+        fetched = bb.download_attachment(source["photo_guid"], width=PHOTO_WIDTH)
+        if not fetched:
+            return not_found
+        body, fetched_mime = fetched
+        mime = next((m for m in ((source["photo_mime"] or "").split(";")[0].strip().lower(),
+                                 (fetched_mime or "").split(";")[0].strip().lower())
+                     if m in IMAGE_MIMES), None)
+        if mime is None:
+            return not_found
+        response = Response(body, mimetype=mime)
+    elif source["synthetic"] and source["has_photo"]:
+        # Demo rows: a placeholder chosen by category, never a path from the database.
+        root = Path(current_app.config.get("PHOTO_DIR") or PHOTO_DIR).resolve()
+        path = (root / synthetic_photo_for(source["category_id"])).resolve()
+        if root not in path.parents or not path.is_file() or path.suffix.lower() != ".png":
+            return not_found
+        response = send_file(path, mimetype="image/png")
+    else:
+        return not_found
     response.headers["Content-Security-Policy"] = "default-src 'none'"
+    response.headers["Content-Disposition"] = "inline"
     return response
 
 

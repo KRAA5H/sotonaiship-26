@@ -71,6 +71,16 @@ class JsonTest(unittest.TestCase):
     def test_garbage_is_none(self):
         self.assertIsNone(rag._json_object("I cannot help with that"))
 
+    def test_an_em_dash_is_normalised_before_it_reaches_a_resident(self):
+        with unittest.mock.patch.object(
+            rag.llm, "chat",
+            return_value=(rag.json.dumps({"answer": "Repairs take months — depends on size.",
+                                          "facts": [1]}), "model"),
+        ):
+            text, _ = rag.answer("how long does a pothole take to fix")
+        self.assertNotIn("—", text)
+        self.assertIn(" - ", text)
+
 
 class SourceLineTest(unittest.TestCase):
     def test_one_fact(self):

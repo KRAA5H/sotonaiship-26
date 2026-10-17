@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="noindex, nofollow">
+<title>Where is the problem?</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="/static/pin.css">
+<script src="/static/vendor/leaflet/leaflet.js" defer></script>
+<script src="/static/pin.js" defer></script>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <h1>Where is the problem?</h1>
+    <p class="lede">Tap the map where the problem is, drag the pin to adjust, then confirm.</p>
+    <details class="why">
+      <summary>How we use your location</summary>
+      <p>We only save the street, a nearby landmark, the area and the postcode, for this one report. Using your phone's location is optional and we never track you. <a href="/privacy">Read the privacy notice</a>.</p>
+    </details>
+    <form class="search" id="pcForm" novalidate>
+      <label class="sr-only" for="pc">Search by postcode</label>
+      <input id="pc" name="postcode" type="text" inputmode="text" autocomplete="postal-code"
+             autocapitalize="characters" spellcheck="false" maxlength="10" placeholder="Postcode, for example SO14 7BQ">
+      <button type="submit" id="pcBtn">Find</button>
+    </form>
+  </header>
+
+  <div class="map" id="map" aria-label="Map of Southampton. Tap to drop a pin where the problem is."></div>
+
+  <footer class="bottom" id="panel">
+    <p class="status" id="status" role="status" aria-live="polite">Loading the map.</p>
+    <p class="note" id="note" hidden></p>
+    <button type="button" class="secondary" id="gpsBtn">Use my phone's location (optional)</button>
+    <p class="hint">Your phone will ask permission first. We only use it to place the pin.</p>
+    <button type="button" class="primary" id="submitBtn" disabled>Confirm location</button>
+    <p class="hint">Can't use the map? Reply to our text with the road name instead.</p>
+    <p class="attrib">Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors. Postcode data contains OS and ONS data, Crown copyright and database right, under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">Open Government Licence</a>.</p>
+  </footer>
+</div>
+
+<div class="lock" id="lock" hidden>
+  <h1>This link is not working</h1>
+  <p id="lockMsg">Reply to our text with the road name instead.</p>
+</div>
+</body>
+</html>
