@@ -23,8 +23,6 @@ Submissions lock Sunday 18 Oct 2026 13:00.
 - Location: ask where the PROBLEM is. Do not judge the city boundary from postcode prefix alone (council says some SO16/SO18/SO19 addresses are outside the city).
 
 ## Rules
-- No real personal data in demos. Use team or synthetic numbers; store only a hashed or fake reporter_ref.
-- Do not scrape individual FixMyStreet reports. mySociety counts dataset (ODC-BY) is allowed with credit; do not rank areas.
 - Never state anything not in confirmed_with_websites.csv. Show date checked.
 - API keys go in .env, never committed.
 - In plan mode, delegate only to read-only subagents (scout, reviewer, oracle, evidence-auditor).
