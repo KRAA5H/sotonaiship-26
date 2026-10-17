@@ -196,6 +196,12 @@ class PathTest(unittest.TestCase):
         self.assertNotIn("logged", text.lower())
         self.assertNotIn("crew", text.lower())
 
+
+    def test_a_pin_with_no_words_asks_the_one_question(self):
+        text = messages.pin_received({"street_name": "Highfield Road", "area": "Highfield"})
+        self.assertIn("Highfield Road", text)
+        self.assertIn("What's the problem", text)
+
     def test_a_motorway_problem_never_sends_a_streetlight_page(self):
         text = messages.not_council(decision(category_id="not_council_trunk_road"))
         self.assertNotIn("hants.gov.uk", text)

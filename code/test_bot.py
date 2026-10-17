@@ -432,5 +432,73 @@ class BurstTest(unittest.TestCase):
         handler.assert_not_called()
 
 
+class LinkDeliveryTest(unittest.TestCase):
+    def test_the_words_and_the_link_are_two_messages(self):
+        body, link = bot.split_reply(
+            "Logged: pothole, Alma Road.\nThe council has it for review.\n"
+            "Follow it: https://example.test/r/tok")
+        self.assertEqual(body, "Logged: pothole, Alma Road.\nThe council has it for review.")
+        self.assertEqual(link, "https://example.test/r/tok")
+
+    def test_a_link_only_reply_is_just_the_link(self):
+        self.assertEqual(bot.split_reply("https://example.test/r/tok"),
+                         ("", "https://example.test/r/tok"))
+
+    def test_no_link_means_one_message(self):
+        self.assertEqual(bot.split_reply("hello there"), ("hello there", ""))
+
+    def test_deliver_sends_the_link_after_the_words(self):
+        with unittest.mock.patch.object(bot.bb, "send_text") as send, \
+             unittest.mock.patch.object(bot.time, "sleep") as sleep:
+            bot.deliver("chat", "Logged: pothole.\nFollow it: https://example.test/r/tok")
+        self.assertEqual([call.args[1] for call in send.call_args_list],
+                         ["Logged: pothole.", "https://example.test/r/tok"])
+        sleep.assert_called_once()
+
+
+class PlaceTest(unittest.TestCase):
+    def setUp(self):
+        bot._places.clear()
+
+    def tearDown(self):
+        bot._places.clear()
+
+    def _service(self):
+        class Fake:
+            def reverse_geocode(self, latitude, longitude):
+                return {"street_name": "Highfield Road", "postcode": "SO17 1BJ",
+                        "area": "Highfield", "latitude": latitude,
+                        "longitude": longitude}
+        return Fake()
+
+    def test_a_maps_link_becomes_a_street(self):
+        with unittest.mock.patch.object(bot.location, "LocationService",
+                                        side_effect=self._service):
+            place = bot.place_from_text(
+                "https://maps.apple.com/place?coordinate=50.9097,-1.4044&name=x")
+        self.assertEqual(place["street_name"], "Highfield Road")
+
+    def test_a_pin_fills_a_missing_location(self):
+        filled = bot.apply_place(
+            {"category_id": "pothole", "outcome": "council_report",
+             "reason": "no_location", "location": "", "is_report": False},
+            {"street_name": "Highfield Road"})
+        self.assertEqual(filled["location"], "Highfield Road")
+        self.assertEqual(filled["reason"], "ok")
+        self.assertTrue(filled["is_report"])
+
+    def test_a_pin_never_overwrites_a_street_the_resident_gave(self):
+        kept = bot.apply_place(
+            {"category_id": "pothole", "outcome": "council_report",
+             "reason": "ok", "location": "Alma Road"},
+            {"street_name": "Highfield Road"})
+        self.assertEqual(kept["location"], "Alma Road")
+
+    def test_a_pin_is_used_once(self):
+        bot.remember_place("+451", {"street_name": "Highfield Road"})
+        self.assertEqual(bot.take_place("+451")["street_name"], "Highfield Road")
+        self.assertIsNone(bot.take_place("+451"))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

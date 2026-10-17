@@ -9,6 +9,13 @@ Three places, no more:
 
 ---
 
+## 22:50, Saturday: links as their own text, and pins wired
+
+- **Links are a second message.** `deliver()` splits the words from the link and sends the link on its own after `LINK_DELAY` (0.8s). A follow-it line, a council page, a finder link: all arrive as a normal human follow-up. Live proof: "got it, pothole logged on Alma Road..." then the report link as a separate send.
+- **Shared pins now reach the message flow.** `place_from_text()` parses `coordinate=lat,lon` from Apple and Google map links, `LocationService.reverse_geocode` turns it into a street and area, and `apply_place()` fills the missing location instead of asking for it. A pin with no words keeps the place and asks "what's the problem there?"; the next message uses it. A pin outside Southampton gets the council finder, sent as its own link.
+- Live: pin at 50.9097,-1.4044 became Floral Walk (The Polygon); a pin then "there is a pothole here" saved `R-0098`; a pin inside a sentence saved `R-0099`; a London pin replied with Charing Cross and the finder link.
+- Tests: 289 pass, 31 evaluation cases.
+
 ## 22:20, Saturday: independent audit and fixes
 
 Three read-only audits ran over section 2: code review, evidence check, goal check. The functional claims held, the numbers and four behaviours did not.

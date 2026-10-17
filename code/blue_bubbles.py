@@ -35,6 +35,7 @@ load_dotenv(Path(__file__).with_name(".env"))
 
 import bb
 import llm
+import location
 import messages
 import rag
 import reports_db
@@ -473,6 +474,109 @@ def take_pending(sender):
     return entry
 
 
+LINK_DELAY = float(os.getenv("LINK_DELAY") or "0.8")
+URL_PATTERN = re.compile(r"https?://\S+")
+LINK_LABELS = {"follow it", "details", "council page", "the council page"}
+
+
+def split_reply(text):
+    """Words first, link on its own line, the way a person texts."""
+    text = (text or "").strip()
+    match = URL_PATTERN.search(text)
+    if not match:
+        return text, ""
+    link = match.group(0).rstrip(".,)")
+    lines = []
+    for line in (text[:match.start()] + "\n" + text[match.end():]).splitlines():
+        cleaned = line.replace(link, "").rstrip(" :")
+        if not cleaned.strip():
+            continue
+        if cleaned.strip().lower() in LINK_LABELS:
+            continue
+        lines.append(cleaned.strip())
+    return "\n".join(lines).strip(), link
+
+
+def deliver(chat_guid, text):
+    """One text for the words, one for the link. Never one wall."""
+    body, link = split_reply(text)
+    if body:
+        print(f"[send] words to {chat_guid}: {body[:90]}")
+        bb.send_text(chat_guid, body)
+    if link:
+        time.sleep(LINK_DELAY)
+        print(f"[send] link to {chat_guid}: {link[:70]}")
+        bb.send_text(chat_guid, link)
+
+
+PLACE_SECONDS = 600
+_places = {}
+_places_lock = threading.Lock()
+MAPS_PATTERN = re.compile(
+    r"(?:coordinate=|ll=|center=|q=)(-?\d{1,3}\.\d{3,}),\s*(-?\d{1,3}\.\d{3,})",
+    re.IGNORECASE,
+)
+
+
+def remember_place(sender, place):
+    if not sender or not place:
+        return
+    with _places_lock:
+        _places[sender] = {"place": place, "at": time.time()}
+        while len(_places) > 200:
+            _places.popitem(last=False)
+
+
+def take_place(sender):
+    """The pin the resident shared just before this message, if it is still fresh."""
+    if not sender:
+        return None
+    with _places_lock:
+        entry = _places.pop(sender, None)
+    if not entry:
+        return None
+    if time.time() - entry["at"] > PLACE_SECONDS:
+        return None
+    return entry["place"]
+
+
+def place_from_text(text):
+    """Apple and Google maps links carry lat,lon in the query string."""
+    match = MAPS_PATTERN.search(text or "")
+    if not match:
+        return None
+    try:
+        latitude, longitude = float(match.group(1)), float(match.group(2))
+    except ValueError:
+        return None
+    try:
+        place = location.LocationService().reverse_geocode(latitude, longitude)
+    except Exception as error:  # noqa: BLE001 - a pin must never break a reply
+        print(f"[place] reverse geocode failed: {error}")
+        return None
+    if not place or not place.get("street_name"):
+        return None
+    print(f"[place] {latitude:.4f},{longitude:.4f} -> {place.get('street_name')} "
+          f"({place.get('area')})")
+    return place
+
+
+def apply_place(decision, place):
+    """A pin is a location. Use it instead of asking for one."""
+    if not place or not place.get("street_name"):
+        return decision
+    decision = dict(decision)
+    if decision.get("location"):
+        return decision
+    if decision.get("outcome") != "council_report":
+        return decision
+    decision["location"] = place["street_name"]
+    if decision.get("reason") in ("no_location", "model_says_not_a_report"):
+        decision["reason"] = "ok"
+        decision["is_report"] = True
+    return decision
+
+
 def handle_inbound(inbound):
     chat_guid = inbound["chat_guid"]
     text = inbound.get("text") or ""
@@ -498,7 +602,7 @@ def handle_inbound(inbound):
                 session = ConversationSession(session_id=sender, phone_number=sender)
                 _sessions[sender] = session
             result = get_agent().handle_message(session, text)
-            bb.send_text(chat_guid, result["reply_text"])
+            deliver(chat_guid, result["reply_text"])
             return
 
         if MODE == "echo":
@@ -507,7 +611,7 @@ def handle_inbound(inbound):
                 SYSTEM, text or "The resident sent this photo with no words.", image
             )
             print(f"[reply] mode={mode} vision={bool(image)} to={chat_guid}: {reply[:120]}")
-            bb.send_text(chat_guid, reply)
+            deliver(chat_guid, reply)
             return
 
         sender = inbound.get("sender") or chat_guid
@@ -516,7 +620,7 @@ def handle_inbound(inbound):
             return
         if wants_greeting(text):
             print(f"[greeting] {sender}")
-            bb.send_text(chat_guid, voice.say("greeting", {}, messages.greeting()))
+            deliver(chat_guid, voice.say("greeting", {}, messages.greeting()))
             return
         relink_to = None
         if wants_status(text):
@@ -525,7 +629,7 @@ def handle_inbound(inbound):
                 report, status_text = found
                 if report["status"] != "resolved" or not STILL_WORDS.search(text):
                     print(f"[status] {report['id']} -> {report['status']}")
-                    bb.send_text(chat_guid, status_text)
+                    deliver(chat_guid, status_text)
                     return
                 relink_to = report["id"]
         if image and not text and attachments and _is_image_attachment(attachments[0]):
@@ -543,7 +647,7 @@ def handle_inbound(inbound):
                         fresh.append(row)
                 if len(fresh) > 1:
                     print(f"[photo] {len(fresh)} open reports for {sender}, asking which")
-                    bb.send_text(chat_guid, messages.which_report(fresh))
+                    deliver(chat_guid, messages.which_report(fresh))
                     return
             attached = attach_photo_to_open_report(sender, attachments[0], image)
             if attached:
@@ -551,8 +655,25 @@ def handle_inbound(inbound):
                 reply = voice.say("photo_added", facts,
                                   messages.photo_added(attached["link"]))
                 print(f"[reply] to={chat_guid}: {reply[:120]}")
-                bb.send_text(chat_guid, reply)
+                deliver(chat_guid, reply)
                 return
+
+        place = place_from_text(text)
+        if place:
+            rest = URL_PATTERN.sub("", text).strip(" ,-\n")
+            postcode = (place.get("postcode") or "").upper()
+            if postcode and not postcode.startswith("SO"):
+                deliver(chat_guid, messages.pin_outside(place))
+                return
+            if not rest:
+                remember_place(sender, place)
+                deliver(chat_guid, messages.pin_received(place))
+                return
+            text = f"{rest}\nThe resident shared a pin at {place['street_name']}."
+        else:
+            place = take_place(sender)
+            if place and text:
+                text = f"{text}\nThe resident shared a pin at {place['street_name']}."
 
         text, pending = merge_pending(sender, text)
         if pending:
@@ -570,6 +691,7 @@ def handle_inbound(inbound):
             print(f"[burst] a photo arrived late from {sender}, handling it next")
             enqueue_message({**late_photo["inbound"], "text": "",
                              "attachments": late_photo["attachments"]})
+        decision = apply_place(decision, place)
         print(f"[triage] report={decision['is_report']} {decision['category_id']} "
               f"sev={decision['severity']} conf={decision['confidence']} "
               f"why={decision['reason']} to={chat_guid}")
@@ -582,11 +704,11 @@ def handle_inbound(inbound):
             print(f"[silent] nothing to send to {chat_guid}")
             return
         print(f"[reply] to={chat_guid}: {reply[:120]}")
-        bb.send_text(chat_guid, reply)
+        deliver(chat_guid, reply)
     except Exception as error:  # noqa: BLE001 - a webhook must never die silently
         print(f"[error] handling {chat_guid}: {error}")
         try:
-            bb.send_text(chat_guid, messages.sorry())
+            deliver(chat_guid, messages.sorry())
         except Exception as send_error:  # noqa: BLE001
             print(f"[error] fallback send failed: {send_error}")
 

@@ -199,6 +199,24 @@ def sorry():
     return "Something went wrong at our end. Send that again and I will log it."
 
 
+def pin_received(place):
+    """A shared pin arrived with no words. Keep it and ask the one question."""
+    street = (place or {}).get("street_name") or "that pin"
+    area = (place or {}).get("area")
+    where = f"{street}, {area}" if area else street
+    return _join(f"Got your pin at {where}.", "What's the problem there?")
+
+
+def pin_outside(place):
+    """A pin outside Southampton. Say so, then give the finder as a link."""
+    street = (place or {}).get("street_name") or "that pin"
+    postcode = (place or {}).get("postcode")
+    where = f"{street}, {postcode}" if postcode else street
+    page = contact_for("outside_southampton").get("page") or "https://www.gov.uk/find-local-council"
+    return _join(f"That pin is at {where}, which is outside Southampton.",
+                 f"Your own council handles it: {page}")
+
+
 def thanks():
     """Silence. A reply here would be noise."""
     return ""
