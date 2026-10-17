@@ -24,6 +24,11 @@ Three places, no more:
 
 ## Log
 
+### 17:20, verification, no code changes
+- Re-verified after re-approval: all six files present, Flask healthy on `192.168.0.202:5005`, ping 200, one-shot model reply in 11.1s, synthetic webhook returned `mode=model sent=true`.
+- Windows firewall rule could not be created without admin (`Access is denied`), so the Mac to Windows hop is still unverified. Old webhook id 2 pointing at `localhost:5005` still needs deleting.
+- Only open plan item is the real inbound test from a second device.
+
 ### 17:10, code, implemented and verified
 - New: `code/bb.py`, `code/send_test.py`, `code/llm.py`, `code/echo_ai.py`, `code/.env.example`, `code/requirements.txt`. `code/.env` exists locally and is gitignored.
 - Rewrote `code/blue_bubbles.py`: `MODE=echo` or `agent`, lazy `IntakeAgent` so echo mode needs no Anthropic key, `/health`, `host=0.0.0.0:5005`.
