@@ -50,6 +50,18 @@ class ConversationSession:
 # 2. THE AGENT: one method, handle_message(), called once per resident
 #    message. It sends the WHOLE conversation so far to Claude each time -
 #    that's the one genuinely new pattern here versus a single-shot call.
+#
+#    IMPORTANT CHANGE: this agent no longer asks for location itself.
+#    Every resident now goes through a mandatory location link (see
+#    location.py + blue_bubbles.py's /locate routes) BEFORE this agent is
+#    ever called - by the time handle_message() runs, street_name,
+#    postcode and area are already known and stored separately. The old
+#    prompt asked the agent to collect "the location" conversationally,
+#    which is now both redundant and wrong, since the resident was never
+#    going to type it themselves. The synthetic "[Location shared via
+#    link: ...]" message blue_bubbles.py inserts after the link flow is
+#    purely informational context for the agent, not something it needs
+#    to request.
 # ---------------------------------------------------------------------------
 class IntakeAgent:
     SYSTEM_PROMPT = """You are an intake assistant for Southampton City Council's
@@ -57,17 +69,21 @@ street report line. Your only job: collect enough information about a
 resident's issue (pothole, fly-tipping, broken streetlight, graffiti,
 flooding, or other) to hand it off for classification. You need:
 - a description of the problem
-- the location (a street name or landmark is enough)
 - a photo, if the resident can provide one (not mandatory)
 
+Do NOT ask the resident for their location. Location is always collected
+separately, before you are involved, and will appear in the conversation
+as a system note such as "[Location shared via link: Shirley High Street,
+SO15 5LF]" - treat that as already-known fact, never ask for it again.
+
 Ask ONE clarifying question at a time if something important is missing.
-Once you have enough to work with, mark the report complete - don't keep
-asking once you have a workable description and location.
+Once you have a workable description (and a photo, if one is coming),
+mark the report complete - don't keep asking once you have enough.
 
 Respond with ONLY valid JSON, no other text, in this exact shape:
 {"status": "ask_more" | "complete",
  "reply_text": "what to say back to the resident",
- "summary": {"description": "...", "location": "...", "has_photo": true|false}}
+ "summary": {"description": "...", "has_photo": true|false}}
 
 If status is "ask_more", summary can be null.
 """
@@ -90,7 +106,6 @@ If status is "ask_more", summary can be null.
             session.status = "incomplete"
             session.summary = {
                 "description": incoming_text,
-                "location": None,
                 "has_photo": photo_path is not None,
             }
             reply = ("Thanks - we've logged what you've shared so far. "
@@ -132,17 +147,20 @@ If status is "ask_more", summary can be null.
 
 
 # ---------------------------------------------------------------------------
-# DEMO: simulates a short, realistic back-and-forth. Run this file directly.
+# DEMO: simulates a short, realistic back-and-forth, including the
+# synthetic location note the real pipeline inserts after the link flow.
+# Run this file directly.
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     agent = IntakeAgent(api_key=os.getenv("ANTHROPIC_API_KEY"))
     session = ConversationSession(session_id="demo-1", phone_number="+44-SYNTHETIC-001")
 
-    # Simulating the resident's side, one message at a time - in the real
-    # Streamlit version, each of these would be a text box submission.
+    # In the real pipeline, blue_bubbles.py sends the location-shared
+    # message AFTER the link flow completes - simulated here as the first
+    # turn, same as it would arrive for real.
     resident_messages = [
+        "[Location shared via link: Shirley High Street, SO15 5LF]",
         "There's a massive pothole outside my house",
-        "It's on Shirley Road, near the Tesco Express",
     ]
 
     for message in resident_messages:
