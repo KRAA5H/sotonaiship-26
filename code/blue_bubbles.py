@@ -1,8 +1,10 @@
 """BlueBubbles webhook receiver.
 
-MODE=echo  : one inbound text becomes one model call with no history, and one
-             reply goes back out.
-MODE=agent : the original multi-turn IntakeAgent path, untouched.
+MODE=triage : one inbound message is classified, saved as a report when it is a
+              council matter, and the resident gets a link to their own page.
+MODE=echo   : one inbound text becomes one model call with no history, and one
+              plain reply goes back out. No database write.
+MODE=agent  : the original multi-turn IntakeAgent path, untouched.
 
 Two operational rules, both learned from real traffic:
   1. Return 200 immediately and reply from a background thread. A model call
@@ -16,6 +18,7 @@ Run:
 """
 
 import os
+import re
 import sys
 import threading
 import time
@@ -31,9 +34,11 @@ load_dotenv(Path(__file__).with_name(".env"))
 
 import bb
 import llm
+import tools
+import triage
 from website import site
 
-MODE = (os.getenv("MODE") or "echo").lower()
+MODE = (os.getenv("MODE") or "triage").lower()
 
 # Never reply to the server's own account. Replying to yourself creates an
 # infinite loop, because the reply itself arrives as a new inbound message.
@@ -72,6 +77,13 @@ _seen = OrderedDict()
 _seen_lock = threading.Lock()
 SEEN_LIMIT = 500
 
+# When we ask "where is it?" the next short message from that person is their
+# answer, not a new report. Remember the first half so the two join up.
+_pending = OrderedDict()
+_pending_lock = threading.Lock()
+PENDING_SECONDS = 600
+PENDING_LIMIT = 200
+
 
 def already_handled(message_guid):
     """True if this exact BlueBubbles message has been processed before."""
@@ -93,6 +105,76 @@ def get_agent():
 
         _agent = IntakeAgent(api_key=os.getenv("ANTHROPIC_API_KEY"))
     return _agent
+
+
+def merge_pending(sender, text):
+    """Join a short follow-up onto the message we just asked a location for."""
+    if not sender:
+        return text, False
+    with _pending_lock:
+        entry = _pending.pop(sender, None)
+    if not entry or not text or len(text) > 140:
+        return text, False
+    original, asked_at = entry
+    if time.time() - asked_at > PENDING_SECONDS:
+        return text, False
+    return f"{original}\n\nThe resident then said where it is: {text}", True
+
+
+def remember_location(sender, text):
+    if not sender or not text:
+        return
+    with _pending_lock:
+        _pending[sender] = (text, time.time())
+        while len(_pending) > PENDING_LIMIT:
+            _pending.popitem(last=False)
+
+
+def reply_for(decision, sender, has_photo=False):
+    """Save what triage accepted, and return the one text the resident gets back."""
+    reason = decision["reason"]
+
+    if reason == "ok":
+        saved = tools.save_report(
+            category_id=decision["category_id"],
+            location=decision["location"],
+            description=decision["description"],
+            severity=decision["severity"],
+            has_photo=has_photo,
+            reporter=sender,
+        )
+        if not saved.get("ok"):
+            print(f"[save] refused: {saved.get('error')}")
+            return ("Sorry, I could not log that just now. Please send it again in "
+                    "a minute.")
+        label = decision["category_label"] or decision["category_id"]
+        if saved.get("duplicate_of"):
+            return (f"That one is already open with the council ({label}).\n\n"
+                    f"Follow it here: {saved['link']}")
+        print(f"[saved] {saved['report_id']} {decision['category_id']} "
+              f"sev={decision['severity']} duplicate_of={saved['duplicate_of']}")
+        return (f"Thanks, that is logged with the council ({label}).\n\n"
+                f"Follow it here: {saved['link']}\n\n"
+                "We will text you when the status changes.")
+
+    if reason == "no_location":
+        return ("Thanks. Where exactly is it? A street name with the nearest number "
+                "or landmark is enough for a crew to find it.")
+
+    if reason.startswith("no_report_for_") or reason == "model_says_not_a_report":
+        if has_photo and decision["description"]:
+            seen = re.sub(r"^(the )?(photo|image) (shows|showing|is of)\s+", "",
+                          decision["description"].strip(), flags=re.IGNORECASE).rstrip(".")
+            return (f"From your photo: {seen}. That is not something the council "
+                    "can act on, so nothing has been logged.")
+        guidance = triage.guidance_for(decision["category_id"])
+        if guidance:
+            return guidance + "\n\nNothing has been logged for this one."
+        return ("That one is not something the council can act on, so nothing has "
+                "been logged. Tell me if there is something else on your street.")
+
+    return ("Sorry, I did not catch that. Tell me what the problem is and where it "
+            "is, in a few words.")
 
 
 def handle_inbound(inbound):
@@ -123,9 +205,27 @@ def handle_inbound(inbound):
             bb.send_text(chat_guid, result["reply_text"])
             return
 
-        prompt = text or "The resident sent this photo with no words."
-        reply, mode = llm.chat(SYSTEM, prompt, image)
-        print(f"[reply] mode={mode} vision={bool(image)} to={chat_guid}: {reply[:120]}")
+        if MODE == "echo":
+            # Plain chat with no database write: useful for testing the channel.
+            reply, mode = llm.chat(
+                SYSTEM, text or "The resident sent this photo with no words.", image
+            )
+            print(f"[reply] mode={mode} vision={bool(image)} to={chat_guid}: {reply[:120]}")
+            bb.send_text(chat_guid, reply)
+            return
+
+        sender = inbound.get("sender") or chat_guid
+        text, merged = merge_pending(sender, text)
+        if merged:
+            print(f"[pending] joined a follow-up from {sender}")
+        decision = triage.triage(text, image)
+        print(f"[triage] report={decision['is_report']} {decision['category_id']} "
+              f"sev={decision['severity']} conf={decision['confidence']} "
+              f"why={decision['reason']} to={chat_guid}")
+        if decision["reason"] == "no_location":
+            remember_location(sender, text)
+        reply = reply_for(decision, sender, bool(image))
+        print(f"[reply] to={chat_guid}: {reply[:120]}")
         bb.send_text(chat_guid, reply)
     except Exception as error:  # noqa: BLE001 - a webhook must never die silently
         print(f"[error] handling {chat_guid}: {error}")
@@ -143,7 +243,10 @@ def health():
             "mode": MODE,
             "text_provider": "deepseek" if os.getenv("DEEPSEEK_API_KEY") else "openrouter",
             "text_model": llm.DS_MODEL,
-            "vision_model": llm.VISION_MODEL,
+            "vision_model": llm.DS_MODEL if os.getenv("DEEPSEEK_API_KEY")
+                            else llm.VISION_MODEL,
+            "vision_fallback": llm.VISION_MODEL,
+            "site_url": tools.SITE_URL,
             "bluebubbles": bb.BASE,
             "method": bb.METHOD,
             "handled": len(_seen),

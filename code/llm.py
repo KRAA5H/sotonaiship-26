@@ -1,8 +1,11 @@
 """One-shot model call with a provider ladder.
 
-Text goes to DeepSeek first. Photos go to a vision model on OpenRouter when
-quota allows, and fall back to a text reply that asks for a description, so the
-resident always gets an answer.
+DeepSeek V4.1 Flash does text and images, so it goes first for both. Photos fall
+back to a vision model on OpenRouter, then to a text reply that asks for a
+description, so the resident always gets an answer.
+
+DeepSeek returns HTTP 200 with EMPTY content for an image unless the request
+carries a `reasoning` object. That is why the image candidates set reasoning.
 
 No history, no session, no state. Falls back to a deterministic stub when no
 provider can answer, and every caller can say which mode answered.
@@ -46,16 +49,21 @@ def _candidates(image):
     out = []
 
     if image:
+        if ds_key:
+            out.append({"base": DS_BASE, "model": DS_MODEL, "key": ds_key,
+                        "image": True, "reasoning": True})
         if or_key:
             out.append({"base": BASE_URL, "model": VISION_MODEL, "key": or_key,
                         "image": True, "reasoning": True})
         return out
 
     if ds_key:
+        # DeepSeek defaults to high effort and can spend the whole output budget
+        # thinking, returning empty content. Low effort keeps it short and cheap.
         out.append({"base": DS_BASE, "model": DS_MODEL, "key": ds_key,
-                    "image": False, "reasoning": False})
+                    "image": False, "reasoning": True})
         out.append({"base": DS_BASE, "model": "deepseek-v4-pro", "key": ds_key,
-                    "image": False, "reasoning": False})
+                    "image": False, "reasoning": True})
 
     if not image and or_key:
         out.append({"base": BASE_URL, "model": MODEL, "key": or_key,
@@ -124,7 +132,12 @@ def chat(system, user, image=None):
             text = (message.get("content") or "").strip()
             if text:
                 return text, "model"
-            print(f"[llm] {candidate['model']} empty content")
+            # DeepSeek sometimes returns an empty content with a populated
+            # reasoning field. One more try usually answers.
+            if attempt == 1:
+                time.sleep(0.5)
+                continue
+            print(f"[llm] {candidate['model']} empty content twice")
             break
 
     if image:

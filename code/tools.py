@@ -66,6 +66,25 @@ def _normalise_location(text):
     return " ".join(text.split())
 
 
+_DIRECTIONS = ("north", "south", "east", "west", "upper", "lower")
+
+
+def _same_place(one, other):
+    """Same street, allowing one to carry extra words.
+
+    The resident who writes "Weston Lane" and the one who writes "weston lane
+    outside the school" are reporting the same place. A directional suffix is a
+    different road, so "Weston Lane North" never matches "Weston Lane".
+    """
+    if one == other:
+        return True
+    short, long = (one, other) if len(one) <= len(other) else (other, one)
+    if len(short) < 5 or f" {short} " not in f" {long} ":
+        return False
+    extra = long.replace(short, " ", 1).split()
+    return not any(word in _DIRECTIONS for word in extra)
+
+
 def _reporter_ref(reporter):
     """Salted hash of the sender handle. The raw number or email is never stored."""
     if not reporter:
@@ -148,7 +167,7 @@ def check_duplicate(category_id, location, conn=None, now=None):
         ).fetchall()
         matches = [
             r for r in rows
-            if _normalise_location(r["location"]) == wanted
+            if _same_place(_normalise_location(r["location"]), wanted)
             and datetime.fromisoformat(r["created_at"]) >= since
         ]
         if not matches:

@@ -9,6 +9,18 @@ Three places, no more:
 
 ---
 
+## 19:20, Saturday: v1 joined
+
+Gate G1 met and beaten: one iMessage becomes one row, one card and one link.
+
+- `code/triage.py`: new. One DeepSeek call returns JSON (category, location, description, severity, confidence). We validate it, the model does not. Unknown category, missing location and info-only outcomes are refused before any write.
+- `code/blue_bubbles.py`: `MODE=triage` saves a report and replies with `/r/<token>`. `MODE=echo` kept as a plain chat fallback. A short follow-up after "where is it?" is joined to the earlier message instead of being lost.
+- `code/llm.py`: DeepSeek V4.1 Flash now reads photos natively. Two faults fixed: an image request without `reasoning` returns 200 with empty content, and an empty content is retried once before moving down the ladder.
+- `code/tools.py`: duplicate matching accepts extra words at the same place ("Weston Lane" vs "Weston Lane outside the school") and refuses directional suffixes.
+- Tests: 106 pass. `test_triage.py` 25, `test_tools.py` 38, `test_website.py` 31, `test_bot.py` 12.
+- Verified live: real pothole text, real iMessage reply delivered, row `R-0069`, resident page 200, council page shows it.
+- Fixed in passing: two servers were bound to port 5005 at once, which would have double-replied. One server now.
+
 ## State at 16:50, Saturday
 
 | | |

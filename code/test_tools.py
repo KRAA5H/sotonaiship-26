@@ -166,6 +166,28 @@ class CheckDuplicateTest(DbCase):
     def test_location_required(self):
         self.assertFalse(tools.check_duplicate("pothole", "  ", conn=self.conn)["ok"])
 
+    def test_extra_words_at_the_same_place_are_a_duplicate(self):
+        first = tools.save_report("pothole", "Weston Lane", "Hole", conn=self.conn)
+        result = tools.check_duplicate("pothole", "weston lane outside the school",
+                                       conn=self.conn)
+        self.assertTrue(result["is_duplicate"])
+        self.assertEqual(result["duplicate_of"], first["report_id"])
+
+    def test_a_directional_suffix_is_a_different_road(self):
+        tools.save_report("pothole", "Weston Lane", "Hole", conn=self.conn)
+        result = tools.check_duplicate("pothole", "Weston Lane North", conn=self.conn)
+        self.assertFalse(result["is_duplicate"])
+
+    def test_house_number_at_the_same_street_is_a_duplicate(self):
+        tools.save_report("pothole", "Weston Lane", "Hole", conn=self.conn)
+        result = tools.check_duplicate("pothole", "18 Weston Lane", conn=self.conn)
+        self.assertTrue(result["is_duplicate"])
+
+    def test_short_locations_never_match_by_containment(self):
+        tools.save_report("pothole", "Mill", "Hole", conn=self.conn)
+        result = tools.check_duplicate("pothole", "Mill Lane", conn=self.conn)
+        self.assertFalse(result["is_duplicate"])
+
 
 class SaveReportTest(DbCase):
     def test_saves_a_new_report(self):
