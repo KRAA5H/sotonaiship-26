@@ -138,7 +138,9 @@ def health():
         {
             "ok": True,
             "mode": MODE,
-            "llm_model": llm.MODEL,
+            "text_provider": "deepseek" if os.getenv("DEEPSEEK_API_KEY") else "openrouter",
+            "text_model": llm.DS_MODEL,
+            "vision_model": llm.VISION_MODEL,
             "bluebubbles": bb.BASE,
             "method": bb.METHOD,
             "handled": len(_seen),
