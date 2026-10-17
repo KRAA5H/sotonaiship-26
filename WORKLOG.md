@@ -9,6 +9,15 @@ Three places, no more:
 
 ---
 
+## 22:20, Saturday: independent audit and fixes
+
+Three read-only audits ran over section 2: code review, evidence check, goal check. The functional claims held, the numbers and four behaviours did not.
+
+- **Fixed, critical:** two messages for the same sender could run two turns at once (concurrent `handle_inbound`, double reports, a question asked after it was answered). One turn per sender now, with the second message queued and handled after; a test sleeps inside a turn and asserts one save.
+- **Fixed, high:** `merge_pending` deleted the pending report before validating the follow-up, so a long answer lost it. The voice prompt still carried a banned exemplar, so the no-answer path kept falling back. The photo ask was computed but never enforced by the lint. The status lint could accept "now closed" against "being looked at". Bare domains passed the URL rule, and "a crew will be out soon" passed the timescale rule. A late photo with two open reports became a junk "Not given" report instead of a question. The motorway refusal appended a Hampshire streetlight page. A crash sent "that is logged" when nothing was. The incomplete path never asked for a photo.
+- **Now:** 280 tests and 31 evaluation cases pass. Live: `R-0092` pothole with a photo ask, `R-0093` from two messages 0.7s apart (one reply), a parking question answered with "tell me a bit more", a late photo attached to `R-0093`, resident page and photo both 200.
+- **Still open, stated plainly:** a message that lands during the 3 to 4 second voice call gets its own later turn (no double save, but two replies); `python code/website.py` alone does not register the photo route; evaluation cases 3 and 17 are weaker than they look; the attachment guid appears in BlueBubbles log lines; the photo route can block for 45 seconds if the Mac sleeps; the council page is still the third line on a no-answer.
+
 ## 21:15, Saturday: bursts and no deflection
 
 - **Bursts.** A per-sender 2.5 second quiet window (`enqueue_message`, `flush_burst`), and anything that arrives while we are thinking is folded into the same turn before saving (`take_pending`). Ten out of ten double-texts used to get two replies; now they get one. Live: two messages 0.8s apart became one report, `R-0083`, with both facts and one reply.

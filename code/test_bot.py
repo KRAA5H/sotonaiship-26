@@ -4,6 +4,7 @@ Run: python code/test_bot.py
 """
 
 import sys
+import threading
 import time
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -278,7 +279,8 @@ class ConversationTest(unittest.TestCase):
 
 class VoiceIntegrationTest(unittest.TestCase):
     def test_a_compliant_voiced_reply_is_used_and_carries_the_link(self):
-        voiced = "nice one, that's logged - pothole on Weston Lane."
+        voiced = ("nice one, that's logged - pothole on Weston Lane. "
+                  "if you can grab a photo, send it over.")
         with unittest.mock.patch.object(bot.voice, "generate", return_value=voiced),              unittest.mock.patch.object(bot.tools, "save_report", return_value=SAVED):
             reply = bot.reply_for(decision(reason="ok", location="Weston Lane"), "+441")
         self.assertIn("nice one, that's logged", reply)
@@ -399,6 +401,30 @@ class BurstTest(unittest.TestCase):
         late = bot.take_pending("+451")
         self.assertEqual(late["texts"], ["first"])
         self.assertIsNone(bot.take_pending("+451"))
+
+
+    def test_a_long_follow_up_does_not_lose_the_report(self):
+        bot.remember_location("+451", "pothole somewhere", SAVED, decision())
+        text, entry = bot.merge_pending("+451", "x" * 200)
+        self.assertIsNone(entry)
+        self.assertIn("+451", bot._pending)
+
+    def test_a_message_during_a_turn_never_runs_a_second_turn(self):
+        calls = []
+
+        def slow(inbound):
+            calls.append(inbound["text"])
+            time.sleep(0.3)
+
+        with unittest.mock.patch.object(bot, "handle_inbound", side_effect=slow):
+            bot.enqueue_message(self._message("+451", "first"))
+            worker = threading.Thread(target=bot.flush_burst, args=("+451",))
+            worker.start()
+            time.sleep(0.05)
+            bot.enqueue_message(self._message("+451", "second"))
+            worker.join()
+        self.assertEqual(calls, ["first"])
+        self.assertEqual(bot._burst["+451"]["texts"], ["second"])
 
     def test_an_empty_burst_does_nothing(self):
         with unittest.mock.patch.object(bot, "handle_inbound") as handler:

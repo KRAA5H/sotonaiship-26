@@ -33,7 +33,7 @@ COUNCIL_NAME = "southampton city council"
 MAX_CHARS = 300
 MAX_LINES = 3
 TEMPERATURE = 0.9
-MAX_TOKENS = 160
+MAX_TOKENS = 700
 EMERGENCY_LEAD = "Call 999 now."
 FALLBACK_SPOKEN = "report"
 
@@ -119,9 +119,20 @@ TIMESCALES = (
     ("by_day", re.compile(
         r"\bby\s+(tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday|"
         r"the end of)\b", re.I)),
+    ("will_happen", re.compile(
+        r"\b(will|'ll|shall)\s+(be\s+)?(out|with you|come|attend|visit|"
+        r"get (it )?(sorted|fixed|done))\b", re.I)),
+    ("soon", re.compile(
+        r"\b(soon|shortly|asap|imminently|today|tomorrow|tonight|this week|next week|"
+        r"next few days|in the next)\b", re.I)),
 )
 
-URLISH = re.compile(r"https?://|www\.|google\.|search\?q=", re.I)
+
+URLISH = re.compile(
+    r"https?://|www\.|google\.|search\?q=|"
+    r"\b[a-z0-9-]+\.(?:gov\.uk|co\.uk|org\.uk|ac\.uk|uk|com|org|net|io)\b",
+    re.I,
+)
 MARKDOWN = re.compile(r"[*_#`]")
 REPORT_ID = re.compile(r"\bR-\d{4}\b", re.I)
 EM_DASH = "\u2014"
@@ -159,7 +170,7 @@ SYSTEM = (
     '- "someone\'s already reported that one, so i\'ve linked yours to it."\n'
     '- "ah that one\'s not ours, sorry. National Highways handles motorways, give them a '
     'ring on 0300 123 5000."\n'
-    '- "honestly i\'m not sure on that one, but the council page will have it."\n'
+    '- "leave that one with me - tell me which street and i will point you the right way."\n'
     '- "got it, pothole logged. whereabouts is it? a street and the nearest number is plenty."\n'
     "\n"
     'Reply with one JSON object and nothing else: {"text": "your message"}'
@@ -246,6 +257,8 @@ def brief(kind, facts=None):
     elif kind == "incomplete":
         must_contain = [spoken]
         must_any = ["logged", "got it", "noted", "saved", "on the list"]
+        ask = not has_photo
+        banned = list(PHOTO_ASKS) if has_photo else []
     elif kind == "not_council":
         must_contain = [org, contact]
         must_any = ["not ours", "not the council", "not us", "someone else", "isn't ours"]
@@ -253,7 +266,9 @@ def brief(kind, facts=None):
     elif kind == "no_answer":
         must_contain = []
         must_any = ["tell me", "point you", "help with that", "where", "what you need"]
-        banned = ["definitely"]
+        # Never assert a policy we have not verified.
+        banned = ["definitely", "you can", "you should", "you'll need to",
+                  "you need to", "you must"]
     elif kind == "unclear":
         must_contain = []
         must_any = ["didn't catch", "not sure", "tell me", "say that", "again"]
@@ -262,7 +277,12 @@ def brief(kind, facts=None):
         must_any = ["send", "tell me", "text me", "log"]
     elif kind == "status":
         must_contain = [spoken, location, status_text]
-        must_any = ["update", "status", "looking at", "resolved", "now", "still"]
+        must_any = ["update", "status", "now", "still"]
+        if "resolved" in status_text.lower():
+            banned = ["being looked at", "in progress", "still working", "on it",
+                      "not looked at", "received"]
+        else:
+            banned = ["resolved", "closed", "fixed", "done", "finished", "completed"]
     elif kind == "photo_added":
         must_contain = []
         must_any = ["photo", "pic", "picture"]
@@ -370,6 +390,11 @@ def lint(text, brief_data):
         if pattern.search(flat):
             problems.append("timescale:" + name)
 
+    if brief_data.get("ask"):
+        said = " ".join(str(text).lower().split())
+        if not any(phrase in said for phrase in PHOTO_ASKS):
+            problems.append("no_ask")
+
     allowed = set(str(number) for number in brief_data.get("allowed_numbers") or [])
     for required in brief_data.get("must_contain") or []:
         allowed.update(_numbers(str(required)))
@@ -417,7 +442,11 @@ def say(kind, facts, template):
         print(f"[voice] fallback {kind} no_text")
         return template
 
-    problems = lint(text, brief_data)
+    try:
+        problems = lint(text, brief_data)
+    except Exception as error:  # noqa: BLE001 - a reply must always go out
+        print(f"[voice] fallback {kind} lint_error:{error}")
+        return template
     if problems:
         print(f"[voice] fallback {kind} {' '.join(problems)}")
         return template

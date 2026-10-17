@@ -118,7 +118,8 @@ def run_voice(check):
               expect=["i can help", "tell me"])
 
     unclear = ("got it, pothole logged. whereabouts is it? "
-               "a street and the nearest number is plenty.")
+               "a street and the nearest number is plenty. "
+               "if you can grab a photo, send it over.")
     with mock.patch.object(bot.tools, "save_report", return_value=SAVED), \
          mock.patch.object(bot.voice, "generate", return_value=unclear):
         reply = bot.reply_for(decision(reason="no_location"), "+441", "pothole near me")
@@ -178,7 +179,7 @@ def run():
         bot._pending.clear()
         check("2 pothole with no street is logged, then asks",
               bot.reply_for(decision(reason="no_location"), "+441", "pothole near my house"),
-              expect=["Logged: pothole.", "?"])
+              expect=["Logged: pothole.", "?"], max_lines=4)
 
         check("3 a duplicate points at the open report",
               bot.reply_for(decision(location="Weston Lane"),
@@ -255,7 +256,7 @@ def run():
               bot.reply_for(decision(reason="no_location", category_id="noise_nuisance",
                                      category_label="Noise from a neighbouring property"),
                             "+441", "my neighbour keeps shouting"),
-              expect=["Logged: noise from a neighbouring property.", "?"])
+              expect=["Logged: noise from a neighbouring property.", "?"], max_lines=4)
 
         check("16 a long message stays short and one link",
               bot.reply_for(decision(location="Weston Lane"), "+441"),

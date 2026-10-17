@@ -71,7 +71,7 @@ class CopyRuleTest(unittest.TestCase):
 
     def test_three_lines_at_most(self):
         # A saved report may carry the photo request as a fourth line.
-        four_allowed = {"logged", "logged_photo", "duplicate"}
+        four_allowed = {"logged", "logged_photo", "duplicate", "need_location"}
         for name, text in all_copy().items():
             lines = [line for line in text.splitlines() if line.strip()]
             limit = 4 if name in four_allowed else 3
@@ -182,6 +182,24 @@ class PathTest(unittest.TestCase):
             decision(category_id="litter_street_cleaning",
                      category_label="Litter / street needs cleaning"), SAVED)
         self.assertTrue(text.startswith("Logged: litter / street needs cleaning,"))
+
+    def test_two_open_reports_are_offered_as_a_choice(self):
+        text = messages.which_report([
+            {"location": "Alma Road"}, {"location": "Weston Lane"}])
+        self.assertIn("Alma Road", text)
+        self.assertIn("Weston Lane", text)
+        self.assertNotIn("http", text)
+        self.assertLessEqual(len([l for l in text.splitlines() if l.strip()]), 3)
+
+    def test_the_failure_reply_never_claims_a_report_was_logged(self):
+        text = messages.sorry()
+        self.assertNotIn("logged", text.lower())
+        self.assertNotIn("crew", text.lower())
+
+    def test_a_motorway_problem_never_sends_a_streetlight_page(self):
+        text = messages.not_council(decision(category_id="not_council_trunk_road"))
+        self.assertNotIn("hants.gov.uk", text)
+        self.assertIn("0300 123 5000", text)
 
 
 if __name__ == "__main__":

@@ -44,9 +44,10 @@ GOOD = (
      "nice one, that's logged - pothole on Weston Lane. the photo helps, so you're all set."),
     ("duplicate", "duplicate", DUPLICATE,
      "someone's already reported that one, so i've linked yours to it - pothole on Weston "
-     "Lane."),
+     "Lane. if you can grab a photo, send it over."),
     ("incomplete", "incomplete", INCOMPLETE,
-     "got it, pothole logged. whereabouts is it? a street and the nearest number is plenty."),
+     "got it, pothole logged. whereabouts is it? a street and the nearest number is plenty. "
+     "if you can grab a photo, send it over."),
     ("not_council", "not_council", NOT_COUNCIL,
      "ah that one's not ours, sorry. National Highways handles motorways, so give them a "
      "ring on 0300 123 5000."),
@@ -150,8 +151,9 @@ class BriefTest(unittest.TestCase):
         for phrase in ("tell me", "point you", "help with that"):
             self.assertIn(phrase, data["must_any"])
 
-    def test_incomplete_has_no_photo_ask(self):
-        self.assertFalse(voice.brief("incomplete", INCOMPLETE)["ask"])
+    def test_incomplete_asks_for_a_photo_unless_one_arrived(self):
+        self.assertTrue(voice.brief("incomplete", INCOMPLETE)["ask"])
+        self.assertFalse(voice.brief("incomplete", {**INCOMPLETE, "has_photo": True})["ask"])
 
     def test_emergency_requires_999_and_the_fixed_lead(self):
         data = voice.brief("emergency", {"contact": "999"})
@@ -206,6 +208,34 @@ class LintRuleTest(unittest.TestCase):
                                       voice.brief("no_answer", {}))
                 self.assertTrue(any(item.startswith("corporate:") for item in problems),
                                 f"{phrase!r} -> {problems}")
+
+
+    def test_a_missing_photo_ask_is_rejected(self):
+        self.check("saved", SAVED,
+                   "nice one, that's logged - pothole on Weston Lane.", "no_ask")
+
+    def test_a_status_reply_cannot_claim_the_opposite(self):
+        self.check("status", STATUS,
+                   "quick update on the pothole at Weston Lane - it's being looked at by "
+                   "the council and it's now closed.", "banned:closed")
+
+    def test_a_bare_domain_is_a_url(self):
+        self.check("saved", SAVED,
+                   "logged pothole on Weston Lane. see southampton.gov.uk/x", "url")
+
+    def test_a_crew_will_be_out_soon_is_a_promise(self):
+        self.check("saved", SAVED,
+                   "nice one, that's logged - pothole on Weston Lane. a crew will be out "
+                   "soon.", "timescale:will_happen")
+
+    def test_the_prompt_does_not_teach_a_banned_phrase(self):
+        self.assertNotIn("honestly", voice.SYSTEM.lower())
+        self.assertNotIn("no checked answer", voice.SYSTEM.lower())
+
+
+    def test_an_unverified_policy_is_rejected(self):
+        self.check("no_answer", NO_ANSWER,
+                   "yes, you can put out two extra bags, where are you?", "banned:you can")
 
     def test_markdown(self):
         for mark in ("*logged*", "#logged", "`logged`", "logged_pothole"):
@@ -271,7 +301,8 @@ class LintRuleTest(unittest.TestCase):
         self.check("incomplete", INCOMPLETE, "pothole logged. where is it", "questions:0")
 
     def test_case_and_a_leading_ah_are_tolerated(self):
-        self.assertEqual(voice.lint("NICE ONE, THAT'S LOGGED - POTHOLE ON WESTON LANE.",
+        self.assertEqual(voice.lint("NICE ONE, THAT'S LOGGED - POTHOLE ON WESTON LANE. "
+                                    "IF YOU CAN GRAB A PHOTO, SEND IT OVER.",
                                     voice.brief("saved", SAVED)), [])
         self.assertEqual(voice.lint("Ah, i can help with that - tell me a bit more.", voice.brief("no_answer", {})),
                          [])
@@ -309,12 +340,12 @@ class GenerateTest(unittest.TestCase):
         with patch("voice.llm.chat", chat):
             self.assertEqual(voice.generate(voice.brief("saved", SAVED)), "logged it")
 
-    def test_hotter_and_shorter_than_the_other_calls(self):
+    def test_hotter_and_with_a_full_budget(self):
         chat = fake_chat(spoken("logged it"))
         with patch("voice.llm.chat", chat):
             voice.generate(voice.brief("saved", SAVED))
         self.assertEqual(chat.calls[0]["temperature"], 0.9)
-        self.assertEqual(chat.calls[0]["max_tokens"], 160)
+        self.assertEqual(chat.calls[0]["max_tokens"], 700)
 
     def test_no_model_means_no_text(self):
         chat = fake_chat(("stub words", "stub"))
@@ -415,7 +446,7 @@ class SayTest(unittest.TestCase):
 
     def test_two_runs_vary_the_words_and_keep_the_facts(self):
         first = "nice one, that's logged - pothole on Weston Lane. if you can grab a photo, send it over."
-        second = "got it, pothole on Weston Lane is logged. a photo would help if you can."
+        second = "got it, pothole on Weston Lane is logged. if you can grab a photo, send it over."
         chat = fake_chat(spoken(first), spoken(second))
         with patch("voice.llm.chat", chat):
             one = voice.say("saved", {**SAVED, "link": LINK}, BAD_TEMPLATE)

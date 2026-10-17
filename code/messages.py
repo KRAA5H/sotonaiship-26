@@ -97,10 +97,12 @@ def need_location(decision):
     question = (questions[0] if questions else "Where exactly is it").strip()
     if not question.endswith("?"):
         question += "?"
+    ask = "" if decision.get("has_photo") else PHOTO_ASK
     return _join(
         f"Logged: {_label(decision)}.",
         question,
         "Reply with the street and I will add it.",
+        ask,
     )
 
 
@@ -127,7 +129,7 @@ def not_council(decision):
     link = _book()[1].get(key) or {}
     lead = NOT_COUNCIL_COPY.get(key, "That one is not the council's to fix.")
     contact = (link.get("contact") or "").strip()
-    url = (link.get("url") or link.get("source") or "").strip()
+    url = (link.get("url") or "").strip()
     lines = [lead]
     if contact and not contact.startswith("http"):
         lines.append(f"Call {contact}.")
@@ -173,12 +175,28 @@ def contact_for(category_id):
     return {
         "org": org,
         "contact": (link.get("contact") or "").strip(),
-        "page": (link.get("url") or link.get("source") or "").strip(),
+        # "source" is where we checked the fact, not a page to send a resident to.
+        "page": (link.get("url") or "").strip(),
     }
 
 
 def photo_added(link):
     return _join("Photo added to your report.", f"Follow it: {link}")
+
+
+def which_report(rows):
+    """Two open reports, one photo. Ask, never guess."""
+    names = [(row.get("location") or "").strip() or "one with no street yet"
+             for row in (rows or [])[:3]]
+    return _join(
+        "Which one is this photo for? " + " or ".join(names) + ".",
+        "Reply with the street and I will add the photo.",
+    )
+
+
+def sorry():
+    """Something failed. Never claim a report was logged when it was not."""
+    return "Something went wrong at our end. Send that again and I will log it."
 
 
 def thanks():

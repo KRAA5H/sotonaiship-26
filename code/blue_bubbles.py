@@ -115,14 +115,16 @@ def get_agent():
 
 def merge_pending(sender, text):
     """Join a short follow-up onto the message we asked a location for."""
-    if not sender:
+    if not sender or not text:
         return text, None
     with _pending_lock:
-        entry = _pending.pop(sender, None)
-    if not entry or not text or len(text) > 140:
+        entry = _pending.get(sender)
+    if not entry or len(text) > 140:
         return text, None
     if time.time() - entry["asked_at"] > PENDING_SECONDS:
         return text, None
+    with _pending_lock:
+        _pending.pop(sender, None)
     joined = f"{entry['text']}\n\nThe resident then said where it is: {text}"
     return joined, entry
 
@@ -138,6 +140,7 @@ def remember_location(sender, text, saved, decision):
             "report_id": saved["report_id"],
             "link": saved["link"],
             "category_id": decision["category_id"],
+            "has_photo": bool(decision.get("has_photo")),
         }
         while len(_pending) > PENDING_LIMIT:
             _pending.popitem(last=False)
@@ -215,6 +218,8 @@ def reply_for(decision, sender, text="", has_photo=False, pending=None, relink_t
         if _with_db(lambda c: reports_db.set_location(
                 c, pending["report_id"], decision["location"])):
             print(f"[located] {pending['report_id']} -> {decision['location']}")
+            decision["has_photo"] = bool(pending.get("has_photo",
+                                                     decision.get("has_photo")))
             template = messages.logged(decision, {"link": pending["link"]})
             return voice.say("saved", _voice_facts(decision, link=pending["link"]), template)
 
@@ -386,6 +391,21 @@ BURST_SECONDS = float(os.getenv("BURST_SECONDS") or "2.5")
 _burst = {}
 _burst_lock = threading.Lock()
 
+# One turn per sender at a time. A second message that lands while a turn is
+# running is collected, never processed in parallel: two turns at once could
+# save the same report twice and ask a question the resident already answered.
+_inflight = set()
+_inflight_lock = threading.Lock()
+
+
+def _schedule(sender, entry):
+    if entry.get("timer") is not None:
+        return
+    timer = threading.Timer(BURST_SECONDS, flush_burst, args=(sender,))
+    timer.daemon = True
+    entry["timer"] = timer
+    timer.start()
+
 
 def enqueue_message(inbound):
     """Buffer a message for its sender, resetting the quiet window."""
@@ -403,28 +423,43 @@ def enqueue_message(inbound):
         entry["attachments"].extend(inbound.get("attachments") or [])
         entry["chat_guid"] = inbound.get("chat_guid")
         entry["inbound"] = dict(inbound)
-        if entry["timer"] is not None:
-            entry["timer"].cancel()
-        timer = threading.Timer(BURST_SECONDS, flush_burst, args=(sender,))
-        timer.daemon = True
-        entry["timer"] = timer
-        timer.start()
+        if sender not in _inflight:
+            if entry["timer"] is not None:
+                entry["timer"].cancel()
+                entry["timer"] = None
+            _schedule(sender, entry)
 
 
 def flush_burst(sender):
-    """Turn the quiet burst into one inbound message."""
-    with _burst_lock:
-        entry = _burst.pop(sender, None)
-    if not entry:
-        return
-    inbound = dict(entry["inbound"])
-    inbound["text"] = "\n".join(entry["texts"]).strip()
-    inbound["attachments"] = entry["attachments"]
-    if not inbound["text"] and not inbound["attachments"]:
-        return
-    if len(entry["texts"]) > 1:
-        print(f"[burst] {len(entry['texts'])} messages from {sender} handled as one")
-    handle_inbound(inbound)
+    """Turn the quiet burst into one inbound message, one turn at a time."""
+    with _inflight_lock:
+        if sender in _inflight:
+            return
+        _inflight.add(sender)
+    try:
+        with _burst_lock:
+            entry = _burst.pop(sender, None)
+        if not entry:
+            return
+        inbound = dict(entry["inbound"])
+        inbound["text"] = "\n".join(entry["texts"]).strip()
+        inbound["attachments"] = entry["attachments"]
+        if not inbound["text"] and not inbound["attachments"]:
+            return
+        if len(entry["texts"]) > 1:
+            print(f"[burst] {len(entry['texts'])} messages from {sender} handled as one")
+        handle_inbound(inbound)
+    finally:
+        with _inflight_lock:
+            _inflight.discard(sender)
+        # Anything that arrived during the turn gets its own quiet window now.
+        with _burst_lock:
+            entry = _burst.get(sender)
+            if entry and (entry["texts"] or entry["attachments"]):
+                if entry["timer"] is not None:
+                    entry["timer"].cancel()
+                    entry["timer"] = None
+                _schedule(sender, entry)
 
 
 def take_pending(sender):
@@ -494,6 +529,22 @@ def handle_inbound(inbound):
                     return
                 relink_to = report["id"]
         if image and not text and attachments and _is_image_attachment(attachments[0]):
+            if sender not in _pending:
+                candidates = _with_db(
+                    lambda c: reports_db.open_reports_for(c, tools.reporter_ref(sender))) or []
+                cutoff = datetime.now(timezone.utc) - timedelta(hours=72)
+                fresh = []
+                for row in candidates:
+                    try:
+                        created = datetime.fromisoformat(str(row.get("created_at")))
+                    except (TypeError, ValueError):
+                        continue
+                    if created >= cutoff:
+                        fresh.append(row)
+                if len(fresh) > 1:
+                    print(f"[photo] {len(fresh)} open reports for {sender}, asking which")
+                    bb.send_text(chat_guid, messages.which_report(fresh))
+                    return
             attached = attach_photo_to_open_report(sender, attachments[0], image)
             if attached:
                 facts = {"link": attached["link"], "link_label": "Your report"}
@@ -514,6 +565,11 @@ def handle_inbound(inbound):
                 text = f"{text}\n{extra}".strip()
                 print(f"[burst] folded a late message from {sender} into this turn")
                 decision = triage.triage(text, image)
+        late_photo = take_pending(sender)
+        if late_photo and late_photo["attachments"] and not late_photo["texts"]:
+            print(f"[burst] a photo arrived late from {sender}, handling it next")
+            enqueue_message({**late_photo["inbound"], "text": "",
+                             "attachments": late_photo["attachments"]})
         print(f"[triage] report={decision['is_report']} {decision['category_id']} "
               f"sev={decision['severity']} conf={decision['confidence']} "
               f"why={decision['reason']} to={chat_guid}")
@@ -530,7 +586,7 @@ def handle_inbound(inbound):
     except Exception as error:  # noqa: BLE001 - a webhook must never die silently
         print(f"[error] handling {chat_guid}: {error}")
         try:
-            bb.send_text(chat_guid, llm.STUB_REPLY)
+            bb.send_text(chat_guid, messages.sorry())
         except Exception as send_error:  # noqa: BLE001
             print(f"[error] fallback send failed: {send_error}")
 

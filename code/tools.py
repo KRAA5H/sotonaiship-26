@@ -289,7 +289,7 @@ def get_report_status(link_token, conn=None):
     def work(c):
         row = c.execute(
             "SELECT created_at, category_id, status, location, area, description, has_photo, "
-            "photo_guid, duplicate_of FROM reports WHERE link_token = ?",
+            "photo_guid, photo_mime, duplicate_of FROM reports WHERE link_token = ?",
             (link_token,),
         ).fetchone()
         if row is None:
@@ -306,7 +306,9 @@ def get_report_status(link_token, conn=None):
             "description": row["description"],
             "created_at": row["created_at"],
             "has_photo": bool(row["has_photo"]),
-            "photo_url": f"/r/{link_token}/photo" if row["photo_guid"] else None,
+            "photo_url": (f"/r/{link_token}/photo"
+                          if row["photo_guid"] and row["photo_mime"] in ("image/jpeg", "image/png")
+                          else None),
             "reported_by_others_too": bool(row["duplicate_of"]),
         }
 
