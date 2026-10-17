@@ -29,7 +29,7 @@ Working name: **Kerbside**.
 | iMessage in and out (BlueBubbles) | **Works, verified on real traffic.** Replies from a background thread, deduplicated, own account ignored, stale replay skipped | `code/bb.py`, `code/blue_bubbles.py` |
 | Photo understanding | **Works.** Attachment download plus a vision model, about 12 s | `code/llm.py`, `code/bb.py` |
 | Model call | **One-shot only.** One system message, one user message, no history, no tools. Stub fallback when there is no key or the reply is empty | `code/llm.py` |
-| Rulebook and fact sheet | **Done.** 22 confirmed categories, 53 dated facts, loader joins them | `agent/` |
+| Rulebook and fact sheet | **Done.** 22 confirmed categories, 54 dated facts, loader joins them | `agent/` |
 | Reports database | **Done, on branch `aadil/agent-tools`, not on `main` yet.** SQLite built from `schema.sql`, 68 synthetic reports | `code/reports_db.py` |
 | The four agent tools | **Done and tested (34 tests), same branch.** `find_category_facts`, `check_duplicate`, `save_report`, `get_report_status`, plus tool schemas and `call_tool()` | `code/tools.py`, `code/test_tools.py` |
 | **Agent loop (the model calls the tools)** | **Not started. This is the main gap.** The webhook still sends one-shot text and never reads the rulebook or writes a report | `code/blue_bubbles.py` |
@@ -43,8 +43,8 @@ Working name: **Kerbside**.
 
 1. **Scope.** Section 2 still lists a mock works system, scheduler, priority and a predictive pane. `CLAUDE.md` describes a smaller product (answer from verified facts, take a structured report, send a private link). D26 only retired the report shape. Decide whether items 5 to 8 and 11 of section 2 stay in, or `CLAUDE.md` wins. Until then the backend builds only what `CLAUDE.md` describes.
 2. **Where the backend runs on demo day.** The webhook runs on a Windows machine (`192.168.0.202:5005`); `CLAUDE.md` says the database lives on the demo Mac. The resident's private link (`SITE_URL`) has to open on a phone, so it needs an address the phone can reach, not `localhost`.
-3. **Council out-of-hours number** appears as both 023 8023 3344 and 023 8083 3344. Do not quote either until checked.
-4. **A36/A33 National Highways status** is not confirmed. Do not name roads.
+3. **Council out-of-hours number: resolved.** 023 8023 3344, confirmed on the council's emergency out-of-hours page (checked 2026-10-17) and in the fact sheet.
+4. Decided to leave out: A33/A36 responsibility not confirmed.
 5. **Tool calling on the free models is untested.** Nothing in the log shows that the pinned model follows a tool schema. Check this first (task 1 below).
 
 ### 0.4 Next backend tasks, in order

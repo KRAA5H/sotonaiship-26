@@ -9,7 +9,7 @@ Submissions lock Sunday 18 Oct 2026 13:00.
 
 ## Files
 - agent/categories.json: rulebook (22 fully confirmed categories, outcomes, follow-up questions, official form links, location rule). Only fully confirmed items are allowed.
-- agent/confirmed_with_websites.csv: fact sheet (53 rows, source URL + date 2026-10-17). category_id may hold several ids separated by ";".
+- agent/confirmed_with_websites.csv: fact sheet (54 rows, source URL + date 2026-10-17). category_id may hold several ids separated by ";".
 - agent/loader.py: joins the two on category_id.
 - dashboard/schema.sql + SCHEMA.md: reports table, 11 columns (id, created_at, category_id, status, severity, location, description, has_photo, duplicate_of, reporter_ref, link_token). No coordinates, no channel column.
 - dashboard/fake_reports.*: 68 SYNTHETIC reports. dashboard/prototype/index.html: clickable prototype.
@@ -32,8 +32,9 @@ Submissions lock Sunday 18 Oct 2026 13:00.
   child (worker, delegate, claude-code-writer) would edit code behind the gate.
 - Approved plans execute under .pi/plannotator.json, which sets the delegation policy. Restart
   or /reload for config changes to apply.
+- Named trunk or main roads: if a resident reports an issue on a named trunk or main road (A33, A36 or similar) and the facts don't say who is responsible, say once that you can't confirm who looks after that road, point them to the council's roads page (https://www.southampton.gov.uk/travel-transport/report-issue/potholes/) or National Highways, and do not save a report.
+- Council out-of-hours emergency number is 023 8023 3344 (confirmed fact, source and date in the fact sheet). Adult social care out of hours is 0300 555 1373.
 
 ## Open items
-- Council out-of-hours number appears as both 023 8023 3344 and 023 8083 3344. Check before quoting.
-- A36/A33 National Highways status not confirmed; do not name roads.
+- Decided to leave out: A33/A36 responsibility not confirmed.
 - Most council multi-step forms only read to their first steps.
