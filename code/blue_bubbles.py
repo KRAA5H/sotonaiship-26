@@ -55,6 +55,9 @@ STALE_SECONDS = int(os.getenv("STALE_SECONDS") or "120")
 SYSTEM = (
     "You are the street report line for Southampton City Council. "
     "Reply in at most two short sentences, in plain English, with no jargon. "
+    "If a photo is attached, say briefly what you can see and what happens next. "
+    "If the photo is not a street or council issue, say so kindly and ask what they need. "
+    "If you cannot tell what the photo shows, say so and ask where it is. "
     "Never give safety advice; if life is at risk, tell the person to call 999."
 )
 
@@ -93,10 +96,15 @@ def handle_inbound(inbound):
     chat_guid = inbound["chat_guid"]
     text = inbound.get("text") or ""
     try:
-        if not text:
+        image = None
+        attachments = inbound.get("attachments") or []
+        if attachments:
+            image = bb.download_attachment(attachments[0].get("guid"))
+
+        if not text and not image:
             bb.send_text(
                 chat_guid,
-                "I can only read text just now. Please describe the problem in a few words.",
+                "I can only read text and photos just now. Please describe the problem in a few words.",
             )
             return
 
@@ -112,8 +120,9 @@ def handle_inbound(inbound):
             bb.send_text(chat_guid, result["reply_text"])
             return
 
-        reply, mode = llm.chat(SYSTEM, text)
-        print(f"[reply] mode={mode} to={chat_guid}: {reply[:120]}")
+        prompt = text or "The resident sent this photo with no words."
+        reply, mode = llm.chat(SYSTEM, prompt, image)
+        print(f"[reply] mode={mode} vision={bool(image)} to={chat_guid}: {reply[:120]}")
         bb.send_text(chat_guid, reply)
     except Exception as error:  # noqa: BLE001 - a webhook must never die silently
         print(f"[error] handling {chat_guid}: {error}")

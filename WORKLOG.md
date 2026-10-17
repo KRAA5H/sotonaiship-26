@@ -24,6 +24,12 @@ Three places, no more:
 
 ## Log
 
+### 17:55, code, photos work
+- `bb.download_attachment`: `GET /api/v1/attachment/<guid>/download`. Omit `original` and the server converts HEIC to JPEG; `width=1024` returns PNG. No Private API needed. Confirmed from the server source by the research agent.
+- `llm.chat(system, user, image)`: sends the image as a data URI to a separate `LLM_VISION_MODEL`, with `reasoning.effort=low` and 800 tokens, because reasoning models otherwise return empty `content`.
+- Vision model: `nvidia/nemotron-3.5-super-vl:free`, 10.5 to 12.2s, read a real inbound photo correctly and said it was not a council issue. Gemma models returned 429, inkling returned 403 (agentic harness only), dots-3 returned empty.
+- Webhook now downloads the first attachment and answers with what it saw. Verified end to end with a throwaway chat id: `vision=True`.
+
 ### 17:35, code, guards after real traffic
 - Real traffic proved inbound: 51 webhook deliveries from `192.168.0.26`, replies delivered to `anirudh.udupi@gmail.com` and the self chat.
 - Fixed a reasoning leak: some models return empty `content` and a populated `reasoning` field, and the old fallback sent the reasoning to a resident. `llm.py` now retries, then uses the stub, and never sends reasoning.

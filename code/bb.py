@@ -166,6 +166,33 @@ def normalise(payload):
     }
 
 
+def download_attachment(guid, width=1024):
+    """Download an attachment as bytes. Returns (bytes, mime) or None.
+
+    Verified: adding `width` makes the server convert HEIC to PNG, and omitting
+    `original` returns JPEG. No Private API needed. Raw bytes, not the usual
+    {status, message, data} envelope.
+    """
+    if not guid:
+        return None
+    params = {"password": PASSWORD}
+    if width:
+        params["width"] = str(width)
+    try:
+        response = requests.get(
+            f"{BASE}/api/v1/attachment/{guid}/download", params=params, timeout=45
+        )
+    except requests.RequestException as error:
+        print(f"[bb] attachment {guid} -> transport error: {error}")
+        return None
+    if response.status_code != 200:
+        print(f"[bb] attachment {guid} -> {response.status_code} {response.text[:120]}")
+        return None
+    mime = response.headers.get("Content-Type") or "application/octet-stream"
+    print(f"[bb] attachment {guid} -> {len(response.content)} bytes, {mime}")
+    return response.content, mime
+
+
 _self_address = None
 
 
