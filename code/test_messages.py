@@ -138,7 +138,7 @@ class PathTest(unittest.TestCase):
 
     def test_an_unanswered_question_points_at_an_official_page(self):
         text = messages.no_answer(decision(category_id="council_service_other"))
-        self.assertIn("I do not have a checked answer", text)
+        self.assertIn("I can help with that", text)
         self.assertIn("southampton.gov.uk", text)
 
     def test_a_motorway_problem_names_national_highways_and_its_number(self):
