@@ -52,6 +52,10 @@ def category_ids():
     return list(_rulebook()[0])
 
 
+def category_labels():
+    return {cid: c["label"] for cid, c in _rulebook()[0].items()}
+
+
 def _now():
     return datetime.now(timezone.utc)
 

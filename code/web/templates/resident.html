@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Your report{% endblock %}
+{% block sub %}Your report and where it has got to.{% endblock %}
+{% block main %}
+<div class="phone">
+{% if report %}
+  <div class="card">
+    <h2>{{ report.category }}</h2>
+    <span class="chip s-{{ report.status }}"><i></i>{{ status_label }}</span>
+    <dl class="meta">
+      <dt>Where</dt><dd>{{ report.location or "Not given" }}</dd>
+      <dt>Reported</dt><dd>{{ report.created_at[:10] | ukdate }}</dd>
+      <dt>Details</dt><dd>{{ description or "Not given" }}</dd>
+    </dl>
+    {% if report.reported_by_others_too %}
+    <p class="note">Someone has already reported this. We joined your report to it so the council only handles it once.</p>
+    {% endif %}
+    <ol class="steps">
+      {% for step in steps %}
+      <li class="{{ 'done' if step.done }}"><span class="dot">{{ '✓' if step.done }}</span><span><b>{{ step.title }}</b>{{ step.text if step.done }}</span></li>
+      {% endfor %}
+    </ol>
+  </div>
+{% else %}
+  <div class="card">
+    <h2>We can't find that report</h2>
+    <p class="err">The link may be incomplete.</p>
+    <p>Check the link in your message and try again. If you still need help, contact Southampton City Council through its website.</p>
+  </div>
+{% endif %}
+  <p class="note">This page shows only the report that belongs to this link.</p>
+</div>
+{% endblock %}

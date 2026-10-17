@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>{% block title %}Southampton Reports{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('website.static', filename='kerbside.css') }}">
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div><h1>Southampton Reports</h1><div class="sub">{% block sub %}{% endblock %}</div></div>
+</header>
+<div class="demo">Demo with synthetic reports. None of these are real residents or incidents.</div>
+<main id="view" style="display:flex;flex-direction:column;gap:20px">{% block main %}{% endblock %}</main>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

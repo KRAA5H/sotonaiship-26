@@ -10,3 +10,6 @@ __pycache__/
 .venv/
 # mac
 .DS_Store
+# SQLite WAL side files
+*.db-wal
+*.db-shm
