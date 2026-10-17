@@ -9,6 +9,16 @@ Three places, no more:
 
 ---
 
+## 22:40, Saturday: section 2, the resident's voice
+
+- `code/voice.py`: the model writes the sentence, we keep the facts. 22 spoken category names, a brief per path, a lint over every reply, and the existing templates as the fallback. `code/test_voice.py` has 51 offline tests.
+- The register is a friendly young council employee. "ah, that one's not ours, sorry. National Highways handles motorways, so give them a ring on 0300 123 5000." Rejections: corporate phrases, invented timescales and numbers, unconfirmed team names, URLs, markdown, em dashes.
+- A photo is now requested on every saved report, in the same reply, and the templates carry the same line.
+- A photo sent later attaches to the sender's single open report through `code/photos.py`. The Maps plugin payload is never treated as a photo.
+- The resident page shows their own photo through `GET /r/<token>/photo`, token-only, no store, no guid in any URL. Photo bytes stay in BlueBubbles; the database holds two reference columns.
+- Live run: 7 messages. Casual duplicate and refusal replies, silence on thanks, a status answer, a grounded answer, a late photo attached to `R-0079`, resident page 200, photo 200 at 826 KB.
+- Tests: 268 pass (voice 51, photos 25, bot 41, tools 47, website 31, messages 23, triage 25, rag 25), plus 31 message-evaluation cases.
+
 ## 21:40, Saturday: RAG and the resident voice (phase 1)
 
 - `code/rag.py`: grounded answers. All 53 dated facts go in one prompt and the model cites fact numbers, so there is no vector database and no keyword list. 12 of 12 live questions cite the right fact, and 2 of 2 unanswerable questions are refused cleanly.

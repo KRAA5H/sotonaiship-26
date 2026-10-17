@@ -331,5 +331,20 @@ class LocationAndStatusTest(DbCase):
         self.assertEqual(self.row(second["report_id"])["duplicate_of"], first["report_id"])
 
 
+class PhotoUrlTest(DbCase):
+    def test_a_report_with_a_photo_exposes_a_url_not_the_guid(self):
+        saved = tools.save_report("pothole", "Alma Road", "Hole", conn=self.conn)
+        reports_db.set_photo(self.conn, saved["report_id"], "GUID-SECRET", "image/jpeg")
+        token = self.row(saved["report_id"])["link_token"]
+        found = tools.get_report_status(token, conn=self.conn)
+        self.assertEqual(found["photo_url"], f"/r/{token}/photo")
+        self.assertNotIn("GUID-SECRET", str(found))
+
+    def test_a_report_without_a_photo_has_no_photo_url(self):
+        saved = tools.save_report("pothole", "Alma Road", "Hole", conn=self.conn)
+        token = self.row(saved["report_id"])["link_token"]
+        self.assertIsNone(tools.get_report_status(token, conn=self.conn)["photo_url"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

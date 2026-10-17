@@ -6,6 +6,7 @@ Run: python code/test_bot.py
 import sys
 import time
 import unittest
+from datetime import datetime, timedelta, timezone
 import unittest.mock
 from pathlib import Path
 
@@ -13,6 +14,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import blue_bubbles as bot  # noqa: E402
 import messages  # noqa: E402
+
+_voice_patch = None
+
+
+def setUpModule():
+    """Templates are the fallback contract: keep the suite offline by default."""
+    global _voice_patch
+    _voice_patch = unittest.mock.patch.object(bot.voice, "generate", return_value=None)
+    _voice_patch.start()
+
+
+def tearDownModule():
+    _voice_patch.stop()
 
 SAVED = {"ok": True, "report_id": "R-0100", "link": "http://host/r/token1",
          "duplicate_of": None, "matching_reports": 0}
@@ -260,6 +274,83 @@ class ConversationTest(unittest.TestCase):
                                    category_id="not_council_trunk_road"),
                           "+441", "who fixes the motorway?")
         rag_answer.assert_not_called()
+
+
+class VoiceIntegrationTest(unittest.TestCase):
+    def test_a_compliant_voiced_reply_is_used_and_carries_the_link(self):
+        voiced = "nice one, that's logged - pothole on Weston Lane."
+        with unittest.mock.patch.object(bot.voice, "generate", return_value=voiced),              unittest.mock.patch.object(bot.tools, "save_report", return_value=SAVED):
+            reply = bot.reply_for(decision(reason="ok", location="Weston Lane"), "+441")
+        self.assertIn("nice one, that's logged", reply)
+        self.assertIn(SAVED["link"], reply)
+
+    def test_a_corporate_voiced_reply_falls_back_to_the_template(self):
+        bad = "Please be advised that the pothole on Weston Lane has been logged."
+        with unittest.mock.patch.object(bot.voice, "generate", return_value=bad),              unittest.mock.patch.object(bot.tools, "save_report", return_value=SAVED):
+            reply = bot.reply_for(decision(reason="ok", location="Weston Lane"), "+441")
+        self.assertNotIn("Please be advised", reply)
+        self.assertEqual(reply, messages.logged(decision(reason="ok", location="Weston Lane"),
+                                                SAVED))
+
+    def test_an_invented_timescale_falls_back(self):
+        bad = "Logged, pothole on Weston Lane, a crew will be out within 2 hours."
+        with unittest.mock.patch.object(bot.voice, "generate", return_value=bad),              unittest.mock.patch.object(bot.tools, "save_report", return_value=SAVED):
+            reply = bot.reply_for(decision(reason="ok", location="Weston Lane"), "+441")
+        self.assertNotIn("2 hours", reply)
+
+
+class LatePhotoTest(unittest.TestCase):
+    def setUp(self):
+        bot._pending.clear()
+
+    def tearDown(self):
+        bot._pending.clear()
+
+    def _report(self, report_id="R-0300", hours_ago=0):
+        created = (datetime.now(timezone.utc) - timedelta(hours=hours_ago)).isoformat()
+        return {"id": report_id, "created_at": created, "category_id": "pothole",
+                "location": "Alma Road", "link_token": "tok" + report_id}
+
+    def test_one_recent_open_report_receives_the_photo(self):
+        with unittest.mock.patch.object(bot.reports_db, "connect"),              unittest.mock.patch.object(bot.reports_db, "open_reports_for",
+                                        return_value=[self._report()]),              unittest.mock.patch.object(bot.reports_db, "set_photo",
+                                        return_value=True) as set_photo:
+            got = bot.attach_photo_to_open_report(
+                "+443", {"guid": "G-1", "mimeType": "image/jpeg"}, (b"x", "image/jpeg"))
+        self.assertEqual(got["report_id"], "R-0300")
+        self.assertIn("/r/tokR-0300", got["link"])
+        set_photo.assert_called_once()
+
+    def test_two_open_reports_is_not_a_guess(self):
+        with unittest.mock.patch.object(bot.reports_db, "connect"),              unittest.mock.patch.object(bot.reports_db, "open_reports_for",
+                                        return_value=[self._report("R-1"),
+                                                      self._report("R-2")]),              unittest.mock.patch.object(bot.reports_db, "set_photo") as set_photo:
+            got = bot.attach_photo_to_open_report(
+                "+443", {"guid": "G-1", "mimeType": "image/jpeg"}, (b"x", "image/jpeg"))
+        self.assertIsNone(got)
+        set_photo.assert_not_called()
+
+    def test_an_old_report_is_not_matched(self):
+        with unittest.mock.patch.object(bot.reports_db, "connect"),              unittest.mock.patch.object(bot.reports_db, "open_reports_for",
+                                        return_value=[self._report(hours_ago=100)]),              unittest.mock.patch.object(bot.reports_db, "set_photo") as set_photo:
+            got = bot.attach_photo_to_open_report(
+                "+443", {"guid": "G-1", "mimeType": "image/jpeg"}, (b"x", "image/jpeg"))
+        self.assertIsNone(got)
+        set_photo.assert_not_called()
+
+    def test_a_pending_report_wins_over_the_lookup(self):
+        bot.remember_location("+444", "pothole", SAVED, decision())
+        with unittest.mock.patch.object(bot.reports_db, "connect"),              unittest.mock.patch.object(bot.reports_db, "open_reports_for") as lookup,              unittest.mock.patch.object(bot.reports_db, "set_photo", return_value=True):
+            got = bot.attach_photo_to_open_report(
+                "+444", {"guid": "G-2", "mimeType": "image/jpeg"}, (b"x", "image/jpeg"))
+        self.assertEqual(got["report_id"], "R-0100")
+        lookup.assert_not_called()
+
+    def test_the_maps_payload_is_never_a_photo(self):
+        self.assertFalse(bot._is_image_attachment(
+            {"transferName": "abc.pluginPayloadAttachment", "mimeType": None}))
+        self.assertTrue(bot._is_image_attachment(
+            {"transferName": "images.jpeg", "mimeType": "image/jpeg"}))
 
 
 if __name__ == "__main__":

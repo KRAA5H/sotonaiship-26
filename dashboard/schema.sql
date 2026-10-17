@@ -8,6 +8,8 @@ CREATE TABLE reports (
   location      TEXT,                            -- street or address, as the resident said it
   description   TEXT,                            -- what is wrong
   has_photo     INTEGER NOT NULL DEFAULT 0,      -- 0 or 1
+  photo_guid    TEXT,                            -- BlueBubbles attachment guid; the bytes stay there
+  photo_mime    TEXT,                            -- image/jpeg or image/png, checked before serving
   duplicate_of  TEXT,                            -- id of the first report, if a repeat
   reporter_ref  TEXT,                            -- anonymous reference, never a real number
   link_token    TEXT UNIQUE NOT NULL             -- long random string for the resident's page /r/<token>

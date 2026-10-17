@@ -1,10 +1,10 @@
 """The reports database: one SQLite file built from dashboard/schema.sql.
 
-The schema is the 11-column table in dashboard/SCHEMA.md, plus one column
-added here: "area" - which of Southampton's 31 named areas (the Wikipedia
-list of 30, plus Portswood) the report falls into, matched by
-LocationService from the resident's GPS coordinates. The file is local to
-the demo Mac and never committed (*.db is in .gitignore).
+The schema is the table in dashboard/SCHEMA.md: the 11 report columns, the two
+photo reference columns, and "area", which of Southampton's 31 named areas
+(the Wikipedia list of 30, plus Portswood) the report falls into, matched by
+LocationService from the resident's GPS coordinates. The file is local to the
+demo Mac and never committed (*.db is in .gitignore).
 
 Run:
   python code/reports_db.py           create the file and load the synthetic reports if empty
@@ -29,14 +29,20 @@ DB_PATH = Path(os.getenv("DB_PATH") or Path(__file__).with_name("kerbside.db"))
 
 COLUMNS = (
     "id", "created_at", "category_id", "status", "severity", "location", "area",
-    "description", "has_photo", "duplicate_of", "reporter_ref", "link_token",
+    "description", "has_photo", "photo_guid", "photo_mime", "duplicate_of",
+    "reporter_ref", "link_token",
 )
-# What the council dashboard may see. reporter_ref never leaves the database.
-COUNCIL_COLUMNS = tuple(c for c in COLUMNS if c != "reporter_ref")
+# What the council dashboard may see. reporter_ref never leaves the database,
+# and neither does the attachment guid: it is a key to the resident's photo, not
+# something the dashboard reads.
+COUNCIL_COLUMNS = tuple(c for c in COLUMNS if c not in ("reporter_ref", "photo_guid", "photo_mime"))
 STATUSES = ("new", "in_review", "resolved")
 # The webhook threads and the website share one file, so a writer waits for
 # the lock instead of failing with "database is locked".
 BUSY_TIMEOUT_MS = 5000
+# Added after the first reports table was built and populated, so init_db adds
+# them to an existing file instead of relying on schema.sql alone.
+PHOTO_COLUMNS = (("photo_guid", "TEXT"), ("photo_mime", "TEXT"))
 
 
 def connect(path=None):
@@ -121,6 +127,40 @@ def link_duplicate(conn, report_id, original_id):
     return cursor.rowcount == 1
 
 
+def set_photo(conn, report_id, guid, mime):
+    """Attach a photo the resident sent after the report was saved, exactly once.
+
+    The `photo_guid IS NULL` guard makes a replayed webhook a no-op instead of an
+    overwrite. Returns True only if this call is the one that attached it.
+    """
+    if not report_id or not guid:
+        return False
+    cursor = conn.execute(
+        "UPDATE reports SET photo_guid = ?, photo_mime = ?, has_photo = 1 "
+        "WHERE id = ? AND (photo_guid IS NULL OR photo_guid = '')",
+        (guid, mime, report_id),
+    )
+    return cursor.rowcount == 1
+
+
+def open_reports_for(conn, reporter_ref, limit=3):
+    """That sender's unresolved reports still without a photo, newest first.
+
+    The candidates for a photo sent on its own, after the report was saved. The id
+    is here so the caller can attach to it; it never reaches the resident.
+    """
+    if not reporter_ref:
+        return []
+    rows = conn.execute(
+        "SELECT id, created_at, category_id, location, link_token FROM reports "
+        "WHERE reporter_ref = ? AND status <> 'resolved' "
+        "AND (photo_guid IS NULL OR photo_guid = '') "
+        "ORDER BY created_at DESC, id DESC LIMIT ?",
+        (reporter_ref, limit),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def latest_report_for(conn, reporter_ref):
     """That sender's most recent report, used to answer "any update?".
     area added alongside location, since a resident asking for an update
@@ -148,7 +188,7 @@ def _ensure_area_column(conn):
 
 
 def init_db(path=None, seed=True):
-    """Create the table if missing, then load the synthetic reports if it is empty.
+    """Create the table if missing, migrate it, then seed the synthetic reports.
 
     Safe to call on every start. Returns the number of rows in reports.
     """
@@ -160,6 +200,7 @@ def init_db(path=None, seed=True):
         if not exists:
             # schema.sql has no IF NOT EXISTS, so only run it on a fresh file.
             conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+        _add_photo_columns(conn)
 
         _ensure_area_column(conn)
 
@@ -170,6 +211,24 @@ def init_db(path=None, seed=True):
         return count
     finally:
         conn.close()
+
+
+def _add_photo_columns(conn):
+    """Additive migration for a file built before the photo reference columns.
+
+    Idempotent: it reads PRAGMA table_info and only adds what is missing, so a
+    fresh file from schema.sql and a 36-photo legacy file both end up the same.
+    """
+    present = {row["name"] for row in conn.execute("PRAGMA table_info(reports)")}
+    for name, kind in PHOTO_COLUMNS:
+        if name in present:
+            continue
+        try:
+            conn.execute(f"ALTER TABLE reports ADD COLUMN {name} {kind}")
+        except sqlite3.OperationalError as error:
+            # A second process added the column between the check and the ALTER.
+            if "duplicate column" not in str(error).lower():
+                raise
 
 
 def load_reports(conn, reports):
