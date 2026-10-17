@@ -31,8 +31,11 @@ from flask import Blueprint, Flask, Response, current_app, jsonify, render_templ
 
 load_dotenv(Path(__file__).with_name(".env"))
 
+import priority
 import reports_db
 import tools
+
+import loader  # noqa: E402  (agent/loader.py, on the path via tools)
 
 WEB_DIR = Path(__file__).with_name("web")
 STEPS = (
@@ -61,6 +64,17 @@ def _ukdate(iso_day):
     """'2026-10-17' -> '17 Oct 2026', as the prototype shows it."""
     day = datetime.strptime(iso_day, "%Y-%m-%d")
     return f"{day.day} {day:%b %Y}"
+
+
+_GROUPS = {cid: c["group"] for cid, c in loader.load(tools.AGENT_DIR)[0].items()}
+
+
+def _with_priority(reports):
+    """Adds the priority score and its four factors to each report, on read."""
+    scores = priority.score_all(reports, _GROUPS)
+    for report in reports:
+        report["priority"] = scores[report["id"]]
+    return reports
 
 
 def _connect():
@@ -106,7 +120,7 @@ def council():
     if denied:
         return denied
     with _connect() as conn:
-        reports = reports_db.council_reports(conn)
+        reports = _with_priority(reports_db.council_reports(conn))
         stats = reports_db.summary_stats(conn)
     return render_template("council.html", reports=reports, stats=stats, labels=tools.category_labels())
 
@@ -118,7 +132,7 @@ def council_reports_json():
     if denied:
         return denied
     with _connect() as conn:
-        return jsonify({"ok": True, "reports": reports_db.council_reports(conn),
+        return jsonify({"ok": True, "reports": _with_priority(reports_db.council_reports(conn)),
                         "stats": reports_db.summary_stats(conn)})
 
 

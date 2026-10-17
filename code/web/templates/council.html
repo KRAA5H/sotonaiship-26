@@ -63,7 +63,8 @@ function sorted(rows){
   const street=r=>(r.location||"").replace(/^\d+\s/,"");
   const s={newest:(a,b)=>b.created_at.localeCompare(a.created_at),oldest:(a,b)=>a.created_at.localeCompare(b.created_at),
     severity:(a,b)=>(SEV[b.severity]||0)-(SEV[a.severity]||0)||b.created_at.localeCompare(a.created_at),
-    street:(a,b)=>street(a).localeCompare(street(b))||b.created_at.localeCompare(a.created_at)};
+    street:(a,b)=>street(a).localeCompare(street(b))||b.created_at.localeCompare(a.created_at),
+    priority:(a,b)=>((b.priority||{}).score||0)-((a.priority||{}).score||0)||b.created_at.localeCompare(a.created_at)};
   return rows.slice().sort(s[state.sort]);
 }
 const syn=r=>r.synthetic?`<span class="syn" title="Made-up demo data, not a real resident">Synthetic</span>`:"";
@@ -82,6 +83,21 @@ function figures(){
       <div><dt>Time to first action</dt><dd>${wait?`<b>${wait}</b><span>average from report to first status change, over ${s.first_change_count} report${s.first_change_count===1?"":"s"}</span>`:`<b>None yet</b><span>no report has had its status changed</span>`}</dd></div>
     </dl></section>`;
 }
+// Priority: the score never appears without the four factors behind it.
+const factorLine=f=>`Severity ${f.severity.value} · Exposure ${f.exposure.value} · ${f.cluster.value} here · ${f.age_days.value}d old`;
+const prio=r=>r.priority?`<span class="prio"><b class="p-n p-${r.priority.score>=50?"hi":r.priority.score>=25?"mid":"lo"}">${r.priority.score}</b><span class="pf">${esc(factorLine(r.priority.factors))}</span></span>`:"";
+function prioDetail(r){
+  const p=r.priority;if(!p)return "";const f=p.factors;
+  return `<div class="d-prio"><p class="d-label">Priority</p>
+    <p class="p-big"><b>${p.score}</b><span>out of 100</span></p>
+    <p class="p-why">${esc(p.explanation)}</p>
+    <dl class="pfacts">
+      <div><dt>Severity</dt><dd>${esc(f.severity.label)}<span>× ${f.severity.value}</span></dd></div>
+      <div><dt>Exposure</dt><dd>${esc(f.exposure.label)}<span>× ${f.exposure.value}</span></dd></div>
+      <div><dt>Same place</dt><dd>${f.cluster.value} open report${f.cluster.value===1?"":"s"}<span>× ${f.cluster.factor}</span></dd></div>
+      <div><dt>Age</dt><dd>${f.age_days.value} day${f.age_days.value===1?"":"s"}${f.age_days.capped?" (counted as 14)":""}<span>× ${f.age_days.factor}</span></dd></div>
+    </dl></div>`;
+}
 function repeatsOf(id){return DATA.filter(r=>r.duplicate_of===id).map(r=>r.id)}
 const activeCount=()=>Object.keys(blank).filter(k=>state[k]!==blank[k]).length;
 function statusSelect(r){
@@ -99,11 +115,12 @@ function council(){
   const grouped=state.sort==="newest"||state.sort==="oldest";
   let body="",last="";
   rows.forEach(r=>{
-    if(grouped&&dayKey(r.created_at)!==last){last=dayKey(r.created_at);const [a,b]=dayLabel(last);body+=`<tr class="day"><td colspan="7">${a}<span>${b}</span></td></tr>`}
+    if(grouped&&dayKey(r.created_at)!==last){last=dayKey(r.created_at);const [a,b]=dayLabel(last);body+=`<tr class="day"><td colspan="8">${a}<span>${b}</span></td></tr>`}
     body+=`<tr class="rep${fresh.has(r.id)?" is-fresh":""}${openId===r.id?" is-open":""}" data-open="${esc(r.id)}">
       <td class="c-id"><button class="idbtn" data-open="${esc(r.id)}" data-key="o:${esc(r.id)}" aria-label="Open report ${esc(r.id)}">${esc(r.id)}</button>${syn(r)}<span class="time">${grouped?hm(r.created_at):fmt(r.created_at)}</span></td>
       <td class="c-cat">${esc(label(r.category_id))}${r.duplicate_of?`<span class="sub">${ic("copy")}Repeat of ${esc(r.duplicate_of)}</span>`:""}${reps[r.id]?`<span class="sub">${ic("copy")}+${reps[r.id]} repeat${reps[r.id]>1?"s":""}</span>`:""}</td>
       <td class="c-loc">${esc(r.location||"Not given")}</td>
+      <td class="c-prio">${prio(r)}</td>
       <td class="c-sev">${sev(r.severity)}</td>
       <td class="c-status">${statusSelect(r)}</td>
       <td class="c-photo">${r.has_photo?`${ic("camera")}Photo`:`<span class="muted">No photo</span>`}</td>
@@ -132,7 +149,7 @@ function council(){
         <label class="search">Search${ic("search")}<input type="search" id="f-q" placeholder="Street, report ID or category" value="${esc(state.q)}" autocomplete="off"></label>
         <label class="field">Reported<select id="f-range">${[["all","Any time"],["1","Last 24 hours"],["7","Last 7 days"],["30","Last 30 days"]].map(([v,t])=>`<option value="${v}" ${state.range===v?"selected":""}>${t}</option>`).join("")}</select></label>
         <label class="field">Category<select id="f-cat"><option value="all">All categories</option>${Object.keys(count).sort((a,b)=>label(a).localeCompare(label(b))).map(k=>`<option value="${esc(k)}" ${state.cat===k?"selected":""}>${esc(label(k))}</option>`).join("")}</select></label>
-        <label class="field">Sort by<select id="f-sort">${[["newest","Newest first"],["oldest","Oldest first"],["severity","Most severe first"],["street","Street A to Z"]].map(([v,t])=>`<option value="${v}" ${state.sort===v?"selected":""}>${t}</option>`).join("")}</select></label>
+        <label class="field">Sort by<select id="f-sort">${[["newest","Newest first"],["oldest","Oldest first"],["priority","Highest priority first"],["severity","Most severe first"],["street","Street A to Z"]].map(([v,t])=>`<option value="${v}" ${state.sort===v?"selected":""}>${t}</option>`).join("")}</select></label>
       </div>
       <div class="frow">
         <div class="group" role="group" aria-labelledby="g-sev"><span class="glab" id="g-sev">Severity</span>${tg("sev","high","High")}${tg("sev","medium","Medium")}${tg("sev","low","Low")}</div>
@@ -141,7 +158,7 @@ function council(){
         <div class="factive">${active?`<span class="badge">${active} filter${active>1?"s":""} active</span>`:`<span class="hint">No filters active</span>`}<button class="btn-ghost" id="f-reset" data-key="reset" ${active?"":"disabled"}>${ic("x")}Clear all</button></div>
       </div>
     </div>
-    ${rows.length?`<div class="tablewrap"><table><thead><tr><th scope="col">Report</th><th scope="col">Category</th><th scope="col">Location</th><th scope="col">Severity</th><th scope="col">Status</th><th scope="col">Photo</th><th scope="col"><span class="sr">Open</span></th></tr></thead><tbody>${body}</tbody></table></div>`:empty}
+    ${rows.length?`<div class="tablewrap"><table><thead><tr><th scope="col">Report</th><th scope="col">Category</th><th scope="col">Location</th><th scope="col">Priority</th><th scope="col">Severity</th><th scope="col">Status</th><th scope="col">Photo</th><th scope="col"><span class="sr">Open</span></th></tr></thead><tbody>${body}</tbody></table></div>`:empty}
   </section>`;
 }
 function detail(r){
@@ -149,6 +166,7 @@ function detail(r){
   return `<div class="d-head"><div><p class="d-id">${esc(r.id)}${syn(r)}</p><h2 id="d-title">${esc(label(r.category_id))}</h2></div>
       <button class="iconbtn" data-close data-key="close" aria-label="Close details">${ic("x")}</button></div>
     <div class="d-body">
+      ${prioDetail(r)}
       <div><p class="d-label" id="d-st">Status</p>
         <div class="seg" role="group" aria-labelledby="d-st">${Object.entries(STATUS).map(([k,v])=>`<button data-set="${k}" data-key="d:${k}" aria-pressed="${r.status===k}"${busy?" disabled":""}>${ic(STATUS_ICON[k])}${v}</button>`).join("")}</div></div>
       <dl class="facts">
