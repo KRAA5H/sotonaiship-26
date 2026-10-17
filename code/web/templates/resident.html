@@ -1,33 +1,69 @@
 {% extends "base.html" %}
+{% macro icon(name) %}<svg class="ic" aria-hidden="true"><use href="#i-{{ name }}"/></svg>{% endmacro %}
 {% block title %}Your report{% endblock %}
-{% block sub %}Your report and where it has got to.{% endblock %}
+{% block sub %}Your report and where it has got to{% endblock %}
+{% block main_class %} narrow{% endblock %}
 {% block main %}
-<div class="phone">
 {% if report %}
-  <div class="card">
-    <h2>{{ report.category }}</h2>
-    <span class="chip s-{{ report.status }}"><i></i>{{ status_label }}</span>
+{% set headline = {"new": "We have your report", "in_review": "A council officer is looking at your report", "resolved": "The council has resolved your report"} %}
+{% set next_text = {
+  "new": "Your report is waiting for a council officer to look at it. When they do, this page will change to “In review”. You don't need to do anything else.",
+  "in_review": "A council officer is dealing with it. When the council closes the report, this page will change to “Resolved”. You don't need to do anything else.",
+  "resolved": "The council has closed this report. If the problem comes back, send us a new message and we will make a new report.",
+} %}
+{% set status_icon = {"new": "dot", "in_review": "clock", "resolved": "circle-check"} %}
+{% set current = (steps | selectattr("done") | list | length) - 1 %}
+<article class="rcard" aria-labelledby="r-title">
+  <div class="r-hero">
+    <span class="chip s-{{ report.status }}">{{ icon(status_icon.get(report.status, "dot")) }}{{ status_label }}</span>
+    <h1 id="r-title">{{ headline.get(report.status, status_label) }}</h1>
+    <p class="r-what">{{ report.category }}{% if report.location %} at {{ report.location }}{% endif %}</p>
+  </div>
+
+  <section class="r-sec" aria-labelledby="next-h">
+    <h2 id="next-h">What happens next</h2>
+    <div class="next">{{ icon("arrow") }}<p>{{ next_text.get(report.status, "") }}</p></div>
+    {% if report.reported_by_others_too %}
+    <p class="note dup" style="margin-top:12px">{{ icon("copy") }}<span>Someone has already reported this. We joined your report to it so the council only handles it once.</span></p>
+    {% endif %}
+  </section>
+
+  <section class="r-sec" aria-labelledby="prog-h">
+    <h2 id="prog-h">Progress</h2>
+    <ol class="steps">
+      {% for step in steps %}
+      <li class="{{ 'done' if step.done else 'todo' }}{{ ' current' if loop.index0 == current }}"{% if loop.index0 == current %} aria-current="step"{% endif %}>
+        <span class="dot">{% if step.done %}{{ icon("check") }}{% endif %}</span>
+        <span><b>{{ step.title }}{% if not step.done %}<span class="sr"> (not yet)</span>{% endif %}</b>{% if step.done %}{{ step.text }}{% if loop.first %}<span class="when">{{ report.created_at[:10] | ukdate }}</span>{% endif %}{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="r-sec" aria-labelledby="det-h">
+    <h2 id="det-h">Your report</h2>
     <dl class="meta">
+      <dt>Problem</dt><dd>{{ report.category }}</dd>
       <dt>Where</dt><dd>{{ report.location or "Not given" }}</dd>
       <dt>Reported</dt><dd>{{ report.created_at[:10] | ukdate }}</dd>
       <dt>Details</dt><dd>{{ description or "Not given" }}</dd>
+      <dt>Photo</dt><dd>{{ "You sent a photo" if report.has_photo else "No photo" }}</dd>
     </dl>
-    {% if report.reported_by_others_too %}
-    <p class="note">Someone has already reported this. We joined your report to it so the council only handles it once.</p>
-    {% endif %}
-    <ol class="steps">
-      {% for step in steps %}
-      <li class="{{ 'done' if step.done }}"><span class="dot">{{ '✓' if step.done }}</span><span><b>{{ step.title }}</b>{{ step.text if step.done }}</span></li>
-      {% endfor %}
-    </ol>
-  </div>
+  </section>
+</article>
 {% else %}
-  <div class="card">
-    <h2>We can't find that report</h2>
-    <p class="err">The link may be incomplete.</p>
+<article class="rcard" aria-labelledby="r-title">
+  <div class="r-hero">
+    <span class="err-ic">{{ icon("alert") }}</span>
+    <h1 id="r-title">We can't find that report</h1>
+    <p class="r-what">The link may be incomplete.</p>
+  </div>
+  <div class="r-sec">
     <p>Check the link in your message and try again. If you still need help, contact Southampton City Council through its website.</p>
   </div>
+</article>
 {% endif %}
-  <p class="note">This page shows only the report that belongs to this link.</p>
+<div class="r-foot">
+  <p class="note">{{ icon("lock") }}<span>This page shows only the report that belongs to this link.{% if report %} Anyone with the link can open it, so share it only if you want to.{% endif %}</span></p>
 </div>
 {% endblock %}
