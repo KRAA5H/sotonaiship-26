@@ -162,4 +162,17 @@ def normalise(payload):
         "text": (data.get("text") or "").strip(),
         "attachments": data.get("attachments") or [],
         "message_guid": data.get("guid"),
+        "date_created": data.get("dateCreated"),
     }
+
+
+_self_address = None
+
+
+def self_address():
+    """The server's own iMessage address, cached. Used to break self-chat loops."""
+    global _self_address
+    if _self_address is None:
+        code, body = _call("GET", "/api/v1/server/info")
+        _self_address = ((body or {}).get("data") or {}).get("detected_imessage") or ""
+    return _self_address
