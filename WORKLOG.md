@@ -24,6 +24,19 @@ Three places, no more:
 
 ## Log
 
+### 17:10, code, implemented and verified
+- New: `code/bb.py`, `code/send_test.py`, `code/llm.py`, `code/echo_ai.py`, `code/.env.example`, `code/requirements.txt`. `code/.env` exists locally and is gitignored.
+- Rewrote `code/blue_bubbles.py`: `MODE=echo` or `agent`, lazy `IntakeAgent` so echo mode needs no Anthropic key, `/health`, `host=0.0.0.0:5005`.
+- Verified: ping 200; sent to `anirudh.udupi@gmail.com` and to self; emoji and two-line messages; model reply in 8.0s and delivered; stub mode with no key; wrong password fails once with 401 and no traceback; `POST /webhook` returned `mode=model sent=true`; `isFromMe` payloads ignored.
+- Findings: creating a chat requires a first message on macOS Big Sur and later (500 otherwise), so `ensure_chat` creates and sends in one call; `message` is the correct send field on 1.9.9; `openrouter/free` returned junk and was replaced; an old webhook (id 2) points at `localhost:5005` and should be removed by whoever created it.
+- Registered webhook id 3: `http://192.168.0.202:5005/webhook` for `new-message`.
+
+### 17:00, docs and verification, no code
+- `plans/imessage-first.md` rewritten short, per request. Plan is a one-shot build now.
+- Cleared seven stale todos. The board carries only live development work (D25).
+- Verified BlueBubbles: 1.9.9, `private_api: false`, chat list needs `POST /api/v1/chat/query`, GUIDs use `any;-;`.
+- Verified OpenRouter: key works, `openrouter/free` is 0 cost, text and image input, 200k context, returned `ok`.
+
 ### 16:45, docs, no code
 - `PLAN.md`: removed human-to-human chat everywhere (D5). Officer can send a one-way status update only. Added the "is there a human on the other side" answer: no, the model is the counterpart.
 - `DECISIONS.md`: created. D1 to D22, including the four reversals you asked for.

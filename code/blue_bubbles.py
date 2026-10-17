@@ -1,68 +1,99 @@
+"""BlueBubbles webhook receiver.
+
+MODE=echo  : one inbound text becomes one model call with no history, and one
+             reply goes back out. This is the current stage.
+MODE=agent : the original multi-turn IntakeAgent path, untouched.
+
+Run:
+  python code/blue_bubbles.py
+  MODE=echo python code/blue_bubbles.py
+"""
+
 import os
-import requests
-from flask import Flask, request, jsonify
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from dotenv import load_dotenv
+from flask import Flask, jsonify, request
 
-from conversational_ai import ConversationSession, IntakeAgent
+load_dotenv(Path(__file__).with_name(".env"))
 
-load_dotenv()
+import bb
+import llm
+
+MODE = (os.getenv("MODE") or "echo").lower()
+
+SYSTEM = (
+    "You are the street report line for Southampton City Council. "
+    "Reply in at most two short sentences, in plain English, with no jargon. "
+    "Never give safety advice; if life is at risk, tell the person to call 999."
+)
 
 app = Flask(__name__)
-agent = IntakeAgent(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
-BB_URL = os.getenv("BLUEBUBBLES_SERVER_URL")
-BB_PASSWORD = os.getenv("BLUEBUBBLES_PASSWORD")
-
-# One ConversationSession per sender, kept in memory for the demo.
-# A real version would persist these via Sector 3's database instead,
-# so a conversation survives a restart.
-active_sessions: dict[str, ConversationSession] = {}
+# Agent mode keeps the original multi-turn behaviour. It is built lazily so
+# echo mode works with no Anthropic key present.
+_sessions = {}
+_agent = None
 
 
-def send_reply(chat_guid: str, text: str):
-    """Sends a text back out through BlueBubbles to the original sender."""
-    url = f"{BB_URL}/api/v1/message/text?password={BB_PASSWORD}"
-    payload = {"chatGuid": chat_guid, "message": text, "method": "private-api"}
-    requests.post(url, json=payload, timeout=10)
+def get_agent():
+    global _agent
+    if _agent is None:
+        from conversational_ai import IntakeAgent
+
+        _agent = IntakeAgent(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    return _agent
 
 
-@app.route("/webhook", methods=["POST"])
+@app.get("/health")
+def health():
+    return jsonify(
+        {
+            "ok": True,
+            "mode": MODE,
+            "llm_model": llm.MODEL,
+            "bluebubbles": bb.BASE,
+            "method": bb.METHOD,
+        }
+    )
+
+
+@app.post("/webhook")
 def webhook():
-    """BlueBubbles calls this every time a new message arrives.
+    payload = request.get_json(silent=True) or {}
+    inbound = bb.normalise(payload)
+    if not inbound or not inbound.get("chat_guid"):
+        return jsonify({"ok": True, "action": "ignored"}), 200
 
-    IMPORTANT: BlueBubbles' exact payload field names can differ slightly
-    by version. Print `data` the first time you test this and adjust the
-    field lookups below to match what you actually see - don't assume
-    this shape is 100% correct without checking against your own server.
-    """
-    data = request.json
-    print("Raw webhook payload:", data)  # keep this while testing, remove later
+    chat_guid = inbound["chat_guid"]
+    text = inbound.get("text") or ""
 
-    if data.get("type") != "new-message":
-        return jsonify({"status": "ignored"})
+    if not text:
+        bb.send_text(
+            chat_guid,
+            "I can only read text just now. Please describe the problem in a few words.",
+        )
+        return jsonify({"ok": True, "action": "asked"}), 200
 
-    message = data["data"]
-    sender = message["handle"]["address"]  # the phone number / contact
-    chat_guid = message["chats"][0]["guid"]  # where to send the reply back
-    text = message.get("text", "")
+    if MODE == "agent":
+        from conversational_ai import ConversationSession
 
-    # Get or start this sender's session - this is what makes it a real
-    # multi-turn conversation instead of treating every text as brand new.
-    session = active_sessions.get(sender)
-    if session is None or session.status != "open":
-        session = ConversationSession(session_id=sender, phone_number=sender)
-        active_sessions[sender] = session
+        sender = inbound.get("sender") or chat_guid
+        session = _sessions.get(sender)
+        if session is None or session.status != "open":
+            session = ConversationSession(session_id=sender, phone_number=sender)
+            _sessions[sender] = session
+        result = get_agent().handle_message(session, text)
+        bb.send_text(chat_guid, result["reply_text"])
+        return jsonify({"ok": True, "action": result["status"]}), 200
 
-    result = agent.handle_message(session, text)
-    send_reply(chat_guid, result["reply_text"])
-
-    if result["status"] in ("complete", "incomplete"):
-        print(f"Session for {sender} finished: {result['summary']}")
-        # This is the handoff point - pass result["summary"] / session
-        # into Sector 2 (classification) here once that's wired up.
-
-    return jsonify({"status": "handled"})
+    reply, mode = llm.chat(SYSTEM, text)
+    sent, _body = bb.send_text(chat_guid, reply)
+    return jsonify({"ok": True, "action": "replied", "mode": mode, "sent": sent}), 200
 
 
 if __name__ == "__main__":
-    app.run(port=5005)
+    app.run(host="0.0.0.0", port=5005)

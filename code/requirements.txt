@@ -1,0 +1,6 @@
+flask
+requests
+python-dotenv
+
+# Only needed for MODE=agent (the multi-turn IntakeAgent path).
+# anthropic
