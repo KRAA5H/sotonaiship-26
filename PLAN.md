@@ -1,325 +1,353 @@
-# Kerbside: the plan
+# Kerbside: the plan (v2, final)
 
-**SotonShip 2026, Southampton City track. Written Sat 17 Oct 2026, 15:10. Lock is Sun 18 Oct 13:00. That is 22 hours.**
+**This document is the single source of truth. If it is not in here, it is not in the build.**
+Written Sat 17 Oct 2026, 16:40. Submission locks Sun 18 Oct 13:00. About 20 hours.
 
-Working name: **Kerbside**. Alternates: Tideline (if we lean coastal), Fixline (risky, reads as a FixMyStreet clone).
+It supersedes v1 and it supersedes `CRITIQUE-vs-GOMER.md` wherever the two disagree. The argument behind each decision is in `DECISIONS.md`. Do not re-litigate a decision without adding a line to that file.
 
----
-
-## 0. The verdict, in one paragraph
-
-The pitch is not "AI triages council reports". That is the organisers' own example and earns nothing extra. The pitch is **the council's front door moved into the place residents already live**: you text a number, a photo and a sentence, and by the time you have put your phone away the job is on a crew's list for tomorrow with the right kit, the right priority and the right owner of the land. The AI is what makes that possible: it holds the conversation, reads the photo, decides whether it is the 40th report of the same pothole, works out whether the council even owns that verge, then executes every downstream step itself. The differentiator is the **end of the chain**, not the start. Everyone stops at "routes it to the right team". We stop at "booked, scheduled, and the resident gets a text when it is done".
-
-One-sentence test, filling the brief's own template:
-
-> We help **Southampton City Council's street-scene and coastal teams** to **turn residents' messages into scheduled, deduplicated work orders on tomorrow's list** across **the city** using **a conversational agent, vision triage and weather-driven scheduling**.
+Working name: **Kerbside**.
 
 ---
 
-## 1. What we verified today, before planning anything
+## 1. The idea on one page
 
-Never plan on a link someone else gave you. Checked by request from this machine, Sat 17 Oct 2026:
+**Pitch, one sentence.** We help Southampton City Council's street-scene and coastal teams turn residents' messages into deduplicated, prioritised work orders on tomorrow's jobs list, using AI that runs every step from the first text to the crew's schedule.
 
-| Thing | Result | Consequence for the plan |
+**The user.** The primary user is the resident who currently falls out of the council's report portal: the one with a photo and no words, the one who does not know which of the council's 60 services handles a blocked drain, the one who gave up after reporting the same pothole twice. The operational beneficiary is the street-scene officer, and the buyer is the council.
+
+**Why now, in their numbers.** 10,948 fly-tipping incidents in the year to March 2024, the highest in Hampshire. A rate rising 37.6 to 42.7 to 47.1 per 1,000 across three recorded years. 61% on council-owned land. £830,000 already allocated to dedicated pothole crews. 755 fly-tipping cases still open on FixMyStreet for Southampton as of February 2025. The council is spending real money on the symptom and answering residents one email at a time.
+
+**What we do that nobody else in the room does.** Everyone stops at "routes it to the right team". We finish the chain: the work order is created in the works system, the crew and kit are assigned, the job is batched into a route, the resident is told when it will be done and told again when it is done, and the same list also carries work the council did not know it needed yet because the weather and the tide say so.
+
+**The five numbers we will be judged on**, all in `NUMBERS.md` with a source and a date:
+
+1. Category accuracy against the keyword baseline, on 60 real Southampton reports.
+2. Duplicate catch rate against 20 known duplicate pairs.
+3. Interactions to report a pothole, ours versus the council's own portal.
+4. Cost per report, including inference.
+5. Officer minutes saved per 100 reports.
+
+**What we deliberately do not do.** No app, no account, no name. No replacement of Confirm or Empro. No satellite imagery. No general chatbot about Southampton. No claim to reduce fly-tipping or congestion.
+
+---
+
+## 2. Scope, frozen at 17:00 today
+
+Anything not on the "in" list is out. Additions require a line in `DECISIONS.md` and a named person giving up something else.
+
+### In
+
+| # | Thing | Owner |
 |---|---|---|
-| `fixmystreet.com/open311/v2/requests.json` | **200, real JSON**, national reports with description, lat/long, photo URL, service name, agency, timestamps. 1000 records per response cap, and it rate limits (returns an HTML error page if you hammer it) | Use it. Paginate in 3-day windows with 2s backoff, filter by Southampton bbox client-side. This is our real test set |
-| `api.open-meteo.com/v1/forecast` | 200, keyless, hourly soil temperature at 6cm, soil moisture, rain, wind, plus `past_days` history | Grass-growth and leaf-risk index with no key, no signup, no quota story |
-| `marine-api.open-meteo.com/v1/marine` with `sea_level_height_msl` | **200, keyless tide height and wave height** for Southampton Water | The coastal module needs no UKHO key and no EA tide gauge. It is a model, not an observation, so we say so |
-| `flood-api.open-meteo.com/v1/flood` | 200, keyless river discharge forecast (GloFAS) for the Itchen/Test | Tidal plus fluvial risk on one screen, both live |
-| EA flood-monitoring warnings, Hampshire | 200, **0 warnings** on a dry evening | Do not build the demo around a live flood warning. Build it around tide plus rain, which always has data. The empty warnings response is our "missing data" failure case, handed to us for free |
-| Southampton report portal | `southampton.portal.uk.empro.verintcloudservices.com`, an **Empro (Verint)** portal with a separate form per issue type | The council already has a taxonomy we can mirror. Integration target one |
-| Southampton highways delivery | **Balfour Beatty** Southampton Highways Partnership, awarded Oct 2025 on the SCAPE framework; the council historically ran **Causeway Confirm** for highways asset management | "Today list" means a Confirm work order on a Balfour Beatty crew's list. Integration target two |
-| BlueBubbles | Requires a **macOS host** running the server app. Send is `POST /api/v1/message/text` with `{chatGuid, text, method}` (private-api or apple-script), auth by `?password=`. Webhooks POST `{type, data}` with `data.chats[0].guid`, `data.isFromMe`, `data.text` | The Mac question is the single biggest technical risk. Gate it in the first hour, and see the fallback ladder in section 9 |
+| 1 | iMessage intake via BlueBubbles, plus SMS and a simulator behind one interface | A |
+| 2 | One-shot-first intake agent, confirm-back, plain English, 2 question cap | A |
+| 3 | Triage: category, severity, confidence, evidence | B |
+| 4 | Dedupe: 80 metres, 14 days, cluster count | B |
+| 5 | Priority with three visible factors | B |
+| 6 | Ownership resolver, tier-aware (function x location) | B |
+| 7 | Mock works system, work order creation, CSV export | D |
+| 8 | Scheduler: tomorrow list, geo batched, SLA aware | D |
+| 9 | Officer console: inbox, today list, job detail, audit trail, reply, override | C |
+| 10 | Resident loop: acknowledgement, status lookup, completion text, escalation | A |
+| 11 | Predictive pane: rain, tide, growth, leaf | D |
+| 12 | Evaluation harness and the baseline | B |
+| 13 | The seven beat demo, working end to end | all |
 
-**Note on the stray "coastal authority" message.** Treated as accidental. But the coastal data is free and already verified, so it stays as **Module C**, a thin optional layer that makes the same predictive engine worth more to a coastal council. It costs about 90 minutes and it opens the second-city story to Portsmouth and BCP, both coastal and both on the same class of systems. Keep it, do not let it become the spine.
+### Out
 
----
+Auth, billing, multi-tenant, real Confirm access, WhatsApp, video understanding, fine-tuning, satellite imagery, a public map, consultation analysis, full council-service explainers.
 
-## 2. Why this scores
+### Stretch, only if the loop is green by 01:00
 
-| Criterion | Weight | Our evidence |
-|---|---|---|
-| C1 Problem and user | 20% | 10,948 fly-tipping incidents in Southampton in the year to March 2024, highest in Hampshire; rate rising 37.6 to 42.7 to 47.1 per 1,000; 61% on council-owned land; £830,000 already allocated to pothole crews. Plus: the council publishes one form per issue type on a portal nobody opens on a phone, which is why 755 fly-tipping cases sat open on FixMyStreet. Named user: a street-scene officer, and behind them a resident who will not install an app |
-| C2 AI at the core | 20% | Three separate AI steps, each with a stated dumb baseline and a measured comparison on real Southampton data (section 5). Remove the AI and you are left with a keyword list that cannot read a photo, cannot hold a five-turn conversation, and cannot decide that two reports 40 metres apart are the same pothole |
-| C3 Working product | 25% | Full loop on real data: real FixMyStreet report in, real Open-Meteo forecast in, work order out, resident text back out. One command to run. Two failure cases in the video (below) |
-| C4 Business and scale | 20% | Buyer is the council or its highways contractor, both already spending on the problem. £0.006 of inference per report against 2.5 minutes of officer time. Second city is a taxonomy mapping file plus an adapter, 2 to 4 weeks |
-| C5 Responsibility | 15% | No name, no account, no ID. Only the message and the photo reach the model, never the phone number. Every agent action audited. Low confidence goes to a human, never to a guess. Safety and flood guidance links to the EA and to 999, never written by us |
-
-The thing that decides Stage 1 is different from the thing that decides Stage 2. Stage 1 is 70% audience money, so the demo has to land in 30 seconds: **put a phone on the table and let the room text a report to it.** Stage 2 gives the panel their own input to a 2 minute live demo, which a conversational front door survives by design. A form does not.
+Event-driven demand (fixtures, cruise calls, festivals) and the tier resolver demo case. Nothing else.
 
 ---
 
 ## 3. The product
 
-### 3.1 Resident side (iMessage)
+### 3.1 The resident
 
-1. Resident texts the number: photo plus "this has been here weeks, near the school".
-2. Agent replies in one short message, asks only for what is missing (usually the exact location), never a wall of questions.
-3. Capture is capped at 5 turns. If it still lacks something, it submits what it has and says so honestly.
-4. Resident gets a reference number and a plain expectation ("we have logged this, priority: urgent, you will hear by Tuesday").
-5. Resident can text "status AB12" at any time.
-6. When the crew closes the job, the resident gets "the pothole on Weston Lane has been repaired". When it is rejected, they get the reason and who does own it.
+1. Texts a photo, or a photo and a sentence, or just a sentence.
+2. **One-shot by default.** If the message has enough to work with, the reply is one line and a reference. No questions at all.
+3. **Confirm-back, not interrogation.** If something is genuinely ambiguous, the agent reads it back in the resident's own words and asks yes or no. One tap to answer.
+4. **At most one clarifying question**, and only when the report cannot be actioned without it. Never two.
+5. The reply always says what happens next, who owns it, and when to expect it. Plain English, reading age 9 to 11, no jargon, no service names, no internal codes except the reference.
+6. Later, unsolicited: "the hole in the road on Weston Lane has been repaired". Or, if rejected, why, and who does own it.
+7. "status KB-1042" returns the current state at any time.
+8. "not fixed" or "I disagree" routes to the council's formal complaints process and the ward councillor, with the official link.
 
-No app. No account. No password. Works on a lock screen. Voice notes accepted (transcribed). Video accepted if there is time, using first frame plus transcript, clearly labelled as a partial read.
+Voice notes are accepted and transcribed. Nothing requires the resident to install anything, create an account, or remember a password.
 
-A second, bounded door in the same chat: answers about **the report or the service it touches** ("who fixes this?", "what happens next?", "the drains on my road flood every tide, is that the council?"), answered only from a small curated set of official Southampton pages fetched with dates, with the citation and link attached. Bound it tightly on purpose: the brief excludes a general chatbot about Southampton, and a narrow, grounded, cited answer is not one.
+### 3.2 The officer
 
-### 3.2 Officer side
+One console, four panes.
 
-A single console, three panes:
+- **Inbox**: live reports, category, severity, confidence, and the evidence that drove it.
+- **Tomorrow list**: capacity aware, batched by geography, SLA due times, weather and tide flags. This is the artefact a crew reads.
+- **Job detail**: the resident's own words and photo, the cluster ("4 reports, 38m, 2 days"), the asset, the audit trail, **Approve**, **Override** with a reason that becomes a labelled example, and **Send update**. Send update is one-way: the officer sends a status message ("crew coming Thursday"), the resident receives it, and any answer the resident sends is read by the agent and folded back into the report. There is no human-to-human chat, and no inbox for conversations.
+- **Predictive**: ranked work no resident reported, with the source and timestamp of every input, writing into the same Tomorrow list.
 
-- **Inbox**: live reports as they land, with the agent's category, severity, confidence, and what it decided to do.
-- **Today / Tomorrow list**: capacity-aware, batched by geography, SLA due times, weather and tide flags on each job. This is the artefact a crew actually reads.
-- **Job detail**: the full resident thread, the photo, the address, the asset, the duplicate cluster ("also reported by 4 people"), the audit trail of every agent action, and two buttons: **Approve** and **Override**. Override takes a reason, and the reason becomes a labelled example for the evaluation set.
+### 3.3 The agentic chain
 
-A fourth, small pane: **Predictive**. Ranked work generated by the system that no resident reported. This is the Dr Gower ask, and it writes into the same Tomorrow list, not into a separate dashboard.
+The agent runs every step. A human appears in two places only: to approve the first N work orders until the error rate is measured, and to override anything at any time. The autonomy dial exists as a safety feature for a cautious council, not as the headline. Lead with what the system executes.
 
-### 3.3 The agentic workflow, step by step
-
-This table is the spine of the pitch. "Today" is what a human does now; "Agent" is what runs with no human in the loop; "Fallback" is what we show when it fails.
-
-| # | Step | Today | Agent does it | Tool | Fallback |
-|---|---|---|---|---|---|
-| 1 | Intake and completeness | Officer reads email, works out what is missing, replies, waits days | Multi-turn agent, 5 turn cap, structured JSON end state | LLM, JSON schema | Cap hits, submit as `incomplete`, flag for human |
-| 2 | Read the evidence | Officer opens photo, guesses | Vision plus text: defect type, materials, size cues, hazard cues | Vision model | Low confidence, human review queue |
-| 3 | Locate | Officer copies address into another system | Postcode or landmark to lat/long, boundary check against Southampton | postcodes.io, boundary polygon | Outside boundary, honest refusal plus the right council's link |
-| 4 | Whose land is it | Officer knows from experience, or a resident gets bounced for weeks | Ownership resolver: council, EA, National Highways, port, private, MOD | Asset register plus rules table | Says "a human will confirm", gives the resident the likely owner |
-| 5 | Duplicate | Officer search by street, by eye | Haversine within 50m and 14 days, same category or embedding above threshold, merge into a cluster | SQL plus embeddings | Borderline, keep both and link them |
-| 6 | Classify to the council's own codes | Officer picks from a drop-down | Map to Empro service name and Confirm defect code | Taxonomy file | `other`, no silent guess |
-| 7 | Priority | Officer's judgement, inconsistent | Severity times exposure (school route, hospital, bus stop, tidal flood route, coast path) times report count times weather risk | Scoring function, shown as factors not a magic number | Every score shows its three inputs |
-| 8 | Raise the work order | Officer retypes into Confirm | Adapter creates WO: asset, defect, location, priority, SLA due, crew, source=resident, resident ref | Mock Confirm API, plus CSV export | Adapter down, queue and export CSV, say so on screen |
-| 9 | Schedule | Supervisor moves jobs around by hand | Capacity and geography aware: batch nearby jobs, respect SLA, re-optimise when something urgent arrives | Constraint scheduler | Falls back to earliest feasible slot |
-| 10 | Tell the resident | Nothing, usually | Acknowledge, expectation, completion, rejection with reason | BlueBubbles send | SMS via Twilio, same text |
-| 11 | Audit everything | Nothing | Every step logged: input, output, model, latency, confidence, who overrode it | Append-only log | Log write fails, job is not created |
-| 12 | Learn | Nothing | Officer overrides become labelled examples in the eval set, never silent fine-tuning | Eval harness | None needed |
-
-**This is the honest answer to "can the AI do ALL the steps":** it does 1 to 10 without a human, and the human appears at 11 and 12 as an auditor and a corrector. Do not claim full autonomy. Show the switch that turns autonomy down to "suggest only" for a council that wants it, and say why a council would start there.
-
----
-
-## 4. Architecture
-
-One repo, three processes, one command. Resist microservices.
-
-```
-resident phone / demo device
-        |  iMessage (BlueBubbles webhook)  or  SMS (Twilio)  or  web chat simulator
-        v
-  FastAPI service  ── intake agent ── triage ── dedupe ── priority ── scheduler ── adapter
-        |                                   |                                   |
-     SQLite                            eval harness                        mock Confirm API
-        |                                                                   plus CSV export
-        v
-  React console (inbox / tomorrow list / job detail / predictive)
-```
-
-- **Backend**: Python, FastAPI, SQLite (SQLModel), one `llm.py` wrapper that speaks JSON schema and works with whichever key the team actually has. No framework roulette at 2am.
-- **Frontend**: React plus Vite, Tailwind, MapLibre with an OpenStreetMap basemap (ODbL, credit shown). No Next.js, no auth, no build drama.
-- **Jobs**: an in-process queue plus `asyncio`, not Celery. Redis is a distraction.
-- **Adapters**: `channels/` for BlueBubbles, Twilio, and a web simulator, all behind one `Channel` interface. `works/` for the mock Confirm API and the CSV exporter, behind one `WorksSystem` interface. This is what makes the second-city and no-Mac stories true rather than rhetorical.
-
----
-
-## 5. The AI, and the baselines that make it credible
-
-Three steps, three baselines, three numbers on a slide. Build the baseline **first**, in the same afternoon, because it is 40 lines and it is worth a quarter of C2.
-
-### 5.1 Triage: category, severity, duplicate
-
-- **Baseline**: keyword and regex list over the transcript. Pothole words, fly-tip words, light words. Severity from a word list ("huge", "dangerous"). Duplicate by exact street string match.
-- **Model**: vision plus text, forced to JSON with `category` (mapped to the Empro taxonomy), `severity` in {low, medium, high, emergency}, `confidence`, `evidence` (the phrase or region that drove it), `location_confirmed`.
-- **Evaluation set**: 60 real Southampton reports pulled from FixMyStreet Open311, labelled by two of us in about 45 minutes, with a tie-break rule. Stratified on purpose: 15 pothole, 15 fly-tip, 15 street light and other, 15 deliberately ambiguous or multi-issue. Plus 20 real duplicate pairs and 20 hard non-duplicates harvested from the same streets.
-- **Targets to state in the video**: category accuracy and macro-F1 against the keyword baseline, severity agreement against two human labellers, duplicate precision and recall. Quote the real numbers, including where the model loses.
-
-### 5.2 Intake: the conversation
-
-- **Baseline**: a fixed five question form, the thing the council has today.
-- **Evaluation**: 10 scripted messy inputs (photo only, no punctuation, voice-note transcript, three issues at once, a location that is a pub name, a location outside Southampton). Measure completion rate, turns to complete, and whether the final record has location plus category plus photo.
-- **The point**: the form gets a photo-only message and stops. The agent asks "where is this?" and carries on.
-
-### 5.3 Predictive work: weather and tide
-
-- **Baseline**: the fixed calendar. Mow every 21 days, sweep in November, clean gullies annually.
-- **Model**: an inspection-priority score per asset from trailing rain, soil temperature and moisture, wind, leaf season, tide height and river discharge.
-- **Honest framing**: we are not predicting grass height. We are ranking which assets to look at next, given spend. Report the trade-off curve: visits avoided at equal coverage, and the days it gets wrong.
-
-### 5.4 The analysis that pays for itself
-
-One cheap, real, testable finding from the FixMyStreet data, computed tonight:
-
-> Blocked drain and gully reports in Southampton are N times more likely in the 48 hours after more than 10mm of rain, and they cluster on the streets that flood on a high tide.
-
-That single correlation is the justification for the whole predictive module, it uses data we can definitely get, and it survives a judge's question because we can show the query. If the number turns out to be 1.3x, we report 1.3x and drop the module to a single screen. Do not fudge it.
-
----
-
-## 6. Integration, stated honestly
-
-The brief forbids using restricted council systems without prior agreement, so we cannot log into Confirm. What we do instead is more convincing than a fake login:
-
-1. **A real interface contract.** `WorksSystem` with `create_work_order`, `assign_crew`, `get_capacity`, `update_status`, each with the fields a Confirm work order actually carries (asset id, defect code, location, priority, SLA due, crew, source, external ref).
-2. **A working adapter against a mock Confirm API that we also ship**, so the call is real HTTP with real latency and real error paths, and the demo can show the request and response on screen.
-3. **A CSV and XML export** shaped like a real works export, so a council can ingest it on day one without any integration at all. This is the "sell it next month" wedge.
-4. **The honest sentence**: "Confirm has no public API. This is a 3 week adapter job against Causeway's data import, and we have built and tested the contract it plugs into." Judges reward that far more than a mocked screenshot.
-
-The same pattern for the council's **Empro taxonomy**: mirror the service names from the live portal, map our categories to them, and keep the mapping in one file. That file is also the second-city story, because every council keeps its own copy and nothing else changes.
-
----
-
-## 7. Data, with dates and licences
-
-Every number on screen carries its source and its timestamp. `code/data/raw/MANIFEST.json` already records URL, UTC time, bytes and sha256, so the demo can say "collected 6 minutes ago" instead of "live" when it is not.
-
-| Source | Use | Licence | Status |
+| # | Step | What the agent does | Fallback |
 |---|---|---|---|
-| FixMyStreet Open311 | Real reports, photos, duplicates, the evaluation set | Open data, attribute mySociety and note the collection date | Verified working today; paginate slowly |
-| Open-Meteo forecast and archive | Rain, wind, soil temperature and moisture, growth index | CC BY 4.0, attribute Open-Meteo | Verified, keyless |
-| Open-Meteo marine | Tide height, wave height in Southampton Water | CC BY 4.0, **model output, not a gauge** | Verified, keyless |
-| Open-Meteo flood | River discharge, Itchen and Test | CC BY 4.0 | Verified, keyless |
-| EA flood-monitoring | Warnings, flood areas, stations | Open Government Licence v3 | Verified; empty on a dry day |
-| postcodes.io | Geocoding and boundary | Free, OGL derived | Verified |
-| Southampton council pages | Taxonomy, service codes, official links | Quoted and cited, not redistributed wholesale | Portal confirmed live |
-| OpenStreetMap | Basemap | ODbL, credit required | Standard tiles |
-
-Never present cached as live. Never present synthetic as real. The demo device's phone number is a burner, and the test conversations are labelled synthetic in the UI.
+| 1 | Intake | Reads text, photo and metadata; decides complete, confirm, ask or decline | Declines to guess |
+| 2 | Evidence | Defect type, severity cues, hazard cues, from the image and the words | Low confidence goes to human review |
+| 3 | Locate | Postcode or landmark to lat/long, boundary check | Outside area, names the right authority |
+| 4 | Ownership | Function x location to (authority, team): SCC, Hampshire County, Eastleigh, parish, National Highways, EA, private | Says a human will confirm, gives the likely owner |
+| 5 | Dedupe | 80m and 14 days, same category or embedding, merge into a cluster | Borderline keeps both and links them |
+| 6 | Classify | Maps to the council's taxonomy in `taxonomy.json` | `other`, never a silent guess |
+| 7 | Priority | severity x exposure x report factor, all three shown | Score is never a black box |
+| 8 | Work order | Creates it in the works system: asset, defect, location, priority, SLA, crew, source | Queue and CSV export, stated on screen |
+| 9 | Schedule | Batches nearby jobs, respects SLA and capacity, re-optimises on an urgent arrival | Earliest feasible slot |
+| 10 | Resident comms | Acknowledge, expectation, completion, rejection with reason, escalation route | SMS fallback |
+| 11 | Audit | Every step: input, output, model, latency, confidence, override | Job is not created if the log fails |
 
 ---
 
-## 8. The demo, to the second
+## 4. Contracts, frozen. This is what lets four people work at once.
 
-Stage 2 gives the panel their own input. Stage 1 gives the room a phone. Same 2 minutes both times.
+Nobody invents a field, a status, an endpoint or a category. If something is missing, add it to `DECISIONS.md` and A merges it.
 
-The submission video is a trailer with a real product spine: AI b-roll for the world, continuous real screen capture for the workflow, about 1:46 of 2:40 real. That rule comes straight from the submission page, which says mock-ups or slides alone do not count as a demo, so the trailer can never carry the product on its own. Full beat sheet, shot list and edit settings are in `VIDEO.md`. Declared format: video 2:40 plus a 20 second live call to action.
+### 4.1 Vocabulary
 
-| Time | Beat |
+| Thing | Values |
 |---|---|
-| 0:00 | Judge or volunteer types "there's a massive pothole outside the school on Weston Lane, nearly took my wheel off" with a photo |
-| 0:10 | Agent: "Got it. Which school? I have Weston Lane but two entrances." One question, one answer |
-| 0:25 | Agent: "Logged. Ref KB-1042. Priority urgent, Highways." Resident screen shows the reference |
-| 0:35 | Console: the report lands, category pothole, severity high, confidence 0.91, with the evidence highlighted on the photo |
-| 0:50 | Duplicate card: "also reported 4 times, 38m away, last one 2 days ago". Cluster merged, priority bumped. Say the number out loud |
-| 1:05 | Agent has already raised WO-4471 in the works system. Show the request and 201 response. Crew assigned, tomorrow 08:00, batched with 3 jobs within 900m |
-| 1:20 | Predictive pane: Thursday's tide is 4.9m with 18mm of rain on saturated ground, so 3 gullies on that route are pulled forward to today, in the same list. Timestamp on screen |
-| 1:40 | Failure case one: a photo of a private car park. The agent does not guess. "That looks like private land, here is who to contact", and the report is marked for human review, not routed |
-| 1:55 | Failure case two: the classifier hits a 6 second timeout, the keyword baseline still logs the report, the console says "degraded, human review". The job is never lost |
-| 2:10 | Close the loop: officer presses Resolved, phone buzzes "the pothole on Weston Lane has been repaired" |
+| Category (enum) | `pothole`, `road_defect`, `dumped_rubbish`, `street_light`, `drain_flooding`, `pavement`, `graffiti`, `tree`, `other` |
+| Severity | `low`, `medium`, `high`, `emergency` |
+| Status | `received`, `needs_info`, `triaged`, `scheduled`, `in_progress`, `resolved`, `rejected`, `referred` |
+| Report id | `KB-` plus 4 hex, e.g. `KB-1042` |
+| Work order id | `WO-` plus 4 digits |
+| Cluster id | `C-` plus 4 digits |
+| Timestamps | ISO 8601 UTC, always |
 
-The two failure cases are deliberate. The judging page asks for at least one and rewards honesty; two, with different failure modes, is a stronger signal than a polished lie.
+`taxonomy.json` is the only place that maps enum to plain English to the council's Empro service name. The console fetches it from `/taxonomy`; it never hardcodes labels.
+
+### 4.2 The report object
+
+This is the only object that crosses a module boundary. Anything not here is internal.
+
+```json
+{
+  "id": "KB-1042",
+  "created_at": "2026-10-17T17:02:11Z",
+  "channel": "imessage",
+  "sender_hash": "9f2c...",
+  "raw_text": "massive pothole outside the school nearly took my wheel off",
+  "has_photo": true,
+  "photo_path": "data/attachments/9f2c-1.jpg",
+  "category": "pothole",
+  "category_display": "a hole in the road",
+  "severity": "high",
+  "confidence": 0.91,
+  "evidence": "deep crater, kerb line visible, no white paint marking",
+  "description": "Deep pothole outside the school on Weston Lane",
+  "location_text": "Weston Lane",
+  "lat": 50.9025,
+  "lon": -1.4044,
+  "in_area": true,
+  "owner": {"authority": "Southampton City Council", "team": "Highways", "reason": "adopted highway inside the city boundary"},
+  "cluster_id": "C-0007",
+  "reports_in_cluster": 4,
+  "priority": 9.6,
+  "priority_factors": {"severity": 3, "exposure": 2, "report_factor": 1.6},
+  "status": "scheduled",
+  "work_order_id": "WO-4471",
+  "official_link": null,
+  "audit": [{"at": "2026-10-17T17:02:12Z", "actor": "agent", "action": "classified", "detail": "pothole, high, 0.91"}]
+}
+```
+
+### 4.3 Endpoints
+
+| Method | Path | Body / query | Returns |
+|---|---|---|---|
+| POST | `/webhook/bluebubbles` | BlueBubbles payload | `{ok, action, reply}` always 200 |
+| POST | `/simulate` | `{sender?, text?, photo_path?}` | `{ok, action, reply, report_id}` |
+| GET | `/reports` | `?status=&limit=&since=` | list of report summaries |
+| GET | `/reports/{id}` | | full report object |
+| POST | `/reports/{id}/status` | `{status, note, actor}` | updated report, resident texted |
+| POST | `/reports/{id}/notify` | `{text, officer}` | one-way update sent to the resident |
+| GET | `/workorders` | `?date=` | tomorrow list |
+| GET | `/taxonomy` | | enum, display, empro name |
+| GET | `/health` | | mode, model, counts, version |
+
+### 4.4 Database tables
+
+`reports`, `sessions`, `work_orders`, `events` (append only audit), `attachments`. One `schema.sql`, `IF NOT EXISTS`, run at startup. No phone number in `reports`. A salted hash identifies the sender; the chat id lives in `sessions` only so a reply can be delivered, and has a delete path.
+
+### 4.5 Interfaces
+
+```python
+class Channel:            # channels.py
+    def send(self, chat_guid: str, text: str) -> bool
+    def fetch_attachment(self, guid: str) -> str | None
+    def normalise(self, payload: dict) -> Inbound | None
+
+class WorksSystem:        # works.py
+    def create(self, report: dict) -> dict      # {"work_order_id", "crew", "slot"}
+    def set_status(self, wo_id: str, status: str) -> None
+    def capacity(self, date: str) -> dict
+
+class Brain:              # llm.py
+    def decide(self, system: str, messages: list, image_path: str | None) -> dict
+```
+
+`llm.py` must work with **no API key** by falling back to a deterministic stub, because the stub is also our C2 baseline. Every response carries `mode: "model" | "stub"` and the console shows it. Never present stub output as AI output.
 
 ---
 
-## 9. The BlueBubbles decision, and the ladder under it
+## 5. Who does what, and how we merge
 
-**Gate at 16:00 today** (30 minutes, no more):
-
-- Is there a Mac in the room with an Apple ID that can send iMessages? BlueBubbles needs macOS and a signed-in Messages app. If yes: install, set the server password, expose with Cloudflare tunnel or ngrok, point the webhook at our FastAPI, enable the Private API helper if the Mac allows it, send one test message to an iPhone.
-- If no: **Twilio SMS sandbox**. Real phone channel, real webhook, ten minutes of setup, and it makes the architecture honestly channel-agnostic.
-- If neither: the web simulator, which looks like Messages and is labelled as a simulator in the UI and in the video. Acceptable for development, not for the video, because the judges explicitly do not count mock-ups.
-
-The pitch line is written to survive all three: **"the messaging layer is swappable, iMessage today, SMS already working, because a council cannot ask residents to install anything."** That is also true, and it is the actually important insight.
-
-Two rules we keep even on a burner: only the message and the photo go to the model, never the handle or the number; and any real number that ever arrives during a demo is deleted the same day and we say so on the slide.
-
----
-
-## 10. Four people, 22 hours
-
-Roles are ownership, not isolation. Everyone touches the demo at the end.
-
-| Who | Owns | Not their job |
+| Person | Owns these files, and only these | First deliverable |
 |---|---|---|
-| **A** | Channel plus intake agent. BlueBubbles or Twilio, webhook, session state, turn cap, resident comms, status lookups | The console |
-| **B** | Triage. Vision, taxonomy mapping, severity, dedupe, priority score, and the entire evaluation harness with the baseline numbers | Scheduling |
-| **C** | Console. Inbox, tomorrow list, job detail with audit trail, approve and override, predictive pane. The thing on screen | Model prompts |
-| **D** | Works adapter, mock Confirm, CSV export, scheduler, predictive engine, data pipeline and manifest | Frontend polish |
+| **A** | `code/app.py`, `code/channels.py`, `code/intake.py`, `code/llm.py`, `code/schema.sql`, `code/.env.example` | The webhook running and replying, with the stub brain |
+| **B** | `code/triage.py`, `code/taxonomy.json`, `code/eval/**`, `NUMBERS.md` | Triage plus the baseline and the labelled set |
+| **C** | `code/web/**` | Inbox and job detail reading from `/reports` |
+| **D** | `code/works.py`, `code/predict.py`, `code/data/**` | Mock works system and the tomorrow list |
 
-### The schedule
+**Rules.**
 
-| Window | Milestone | Gate |
+1. `main` is always runnable. `python code/smoke.py` must pass before any merge.
+2. Branch per person. Merge only at a gate, or when a dependency is blocking someone.
+3. Never edit a file you do not own. Need a change in someone else's file? Write it in `DECISIONS.md` and message them.
+4. Contract changes need one line in `DECISIONS.md`, signed with a name.
+5. One home for code: `code/`. The duplicate `.py` files at the repo root are frozen and get deleted before the judged repo exists. Do not edit them.
+6. Every number quoted in the pitch, the video or the README comes from `NUMBERS.md`. No ad hoc numbers.
+7. Five minute standup at each gate. One sentence each: done, next, blocked.
+
+---
+
+## 6. Schedule and gates, re-baselined at 16:40
+
+| Window | What has to be true | Gate |
 |---|---|---|
-| 15:15 to 16:00 | Scope freeze. Flat 25 word problem statement. Repo created, public, empty of secrets. BlueBubbles feasibility test | **Gate 1, 16:00: channel chosen, keys confirmed, repo live** |
-| 16:00 to 19:30 | Skeleton end to end with a stub model: message in, row in SQLite, card in the console, work order in the mock. No AI yet | **Gate 2, 19:30: ugly but complete loop** |
-| 19:30 to 01:00 | Real AI in. Intake agent, vision triage, dedupe, priority, resident replies. Data pull starts in the background | **Gate 3, 01:00: the rehearsed demo runs without hands** |
-| 01:00 to 04:00 | Predictive engine, scheduler, adapter polish, analysis of drain reports against rain. Two of us sleep 04:00 to 08:00, two carry the polish | **Gate 4, 08:00: predictive pane has real numbers** |
-| 08:00 to 10:30 | Evaluation numbers into the UI and the README. Failure cases made repeatable. Freeze features | **Gate 5, 10:30: feature freeze, no new ideas** |
-| 10:30 to 12:00 | Video: capture the four real clips in one 40 minute block, assemble to the `VIDEO.md` beat sheet, upload unlisted. 150 word summary. README finished | **Gate 6, 12:00: video link in hand** |
-| 12:00 to 12:45 | Submit everything, tick partner opt-in, verify the repo from a clean clone, demo rehearsal on the actual laptop | **Gate 7, 12:45: submitted, 15 minutes before the lock** |
+| 16:40 to 18:00 | Contracts agreed, repo tidy, channel decision made, stub brain answering `/simulate`, console showing one report | **G1 18:00: a message becomes a row and a card** |
+| 18:00 to 21:00 | Real model in, triage, dedupe, work order, priority, tomorrow list | **G2 21:00: the seven beats run without hands** |
+| 21:00 to 02:00 | Resident loop, officer reply, escalation, eval set labelled, scheduler, predictive pane | **G3 02:00: demo repeatable three times in a row** |
+| 02:00 to 04:00 | Resilience, failure cases, tier resolver, video capture rig tested, two people sleep | **G4 04:00: everything on the demo path works or is cut** |
+| 08:00 to 10:30 | Numbers into the UI and README, readability pass, freeze | **G5 10:30: feature freeze** |
+| 10:30 to 12:00 | Video captured and uploaded, summary written, README complete | **G6 12:00: link in hand** |
+| 12:00 to 12:45 | Submit, verify clean clone, rehearse on the laptop | **G7 12:45: submitted** |
 
-Hard rules inside the schedule: nobody merges to `main` after 10:30. Nothing new is built after 10:30, only fixed. The video is recorded before the last hour, because the last hour is for submission and rehearsal.
-
----
-
-## 11. What we cut, and why saying so helps
-
-Cut list, stated on the trust slide because it is more credible than pretending:
-
-- **Satellite imagery for grass cutting.** Sentinel-2 revisit is about 5 days, October is cloudy, and there is no ground truth for grass height. It would be a slide, not a demo, and the brief explicitly excludes a prediction that does not lead to a decision. We use soil temperature and moisture instead, and we say why.
-- **Video understanding.** Accepted as an input, transcribed and first frame only, labelled as partial. Full video reasoning is a cost and latency trap in a live demo.
-- **Real Confirm integration.** Restricted system, forbidden without agreement. Contract plus mock plus CSV instead.
-- **Auth, multi-tenant, billing.** Not this weekend.
-- **WhatsApp.** No time, and it needs Meta approval that will not arrive by Sunday.
-- **Fine-tuning.** No.
+Nothing new after 10:30. Only copy and fixes.
 
 ---
 
-## 12. The business case, with numbers you can say out loud
+## 7. The demo, frozen. Seven beats, in this order.
 
-- **Cost per report**: one vision call plus one classification call, about £0.006 to £0.012. Hosting £60 a month. At 20,000 street reports a year, total running cost under £400.
-- **Value per report**: 2.5 minutes of officer triage time at about £22 an hour loaded is roughly £0.90 of officer time, plus the avoided duplicate visit, which is the bigger number. A crew rolling to a duplicate pothole costs about £90.
-- **Price**: £0.50 per report, or £25,000 a year uncapped, or £15,000 as a pilot on one service.
-- **Payback**: about 830 officer hours a year, plus a plausible 8% cut in duplicate attended jobs on 6,000 jobs, is more than £40,000 of avoided cost. Say the assumption, do not hide it.
-- **First three customers**: Southampton City Council street scene; Balfour Beatty under the Southampton Highways Partnership, who are paid against response times so a faster, cleaner queue is their incentive too; then a coastal authority on the same class of systems, Portsmouth or BCP, where the tide module is already built.
-- **Second city**: change the taxonomy mapping file and the adapter, 2 to 4 weeks. The model does not change, the category list does.
-- **What stops a big player**: FixMyStreet owns the report, not the work order. Causeway owns the work order, not the conversation. Nobody owns the join, and the join is the product.
+This is what every module is optimised for. If a feature does not appear in these seven beats, it does not exist.
 
----
-
-## 13. Trust, in one slide
-
-Minimal data by design: no name, no account, no address book access. The phone number is used to send a reply and is stored hashed, and it is never sent to a model. Photos and text only. Retention 30 days unless the job is open, deletion on request, and a one word "STOP" that works.
-
-Human control: an autonomy dial from "suggest" to "execute", low confidence always to a human, and an override that always works and is always logged. The audit trail is append only, so a council can answer "why did the machine do that" in a complaint.
-
-Safety: flood and road hazard guidance is a link to the Environment Agency and to 999, never our own words. Accessibility: works on any phone, voice notes accepted, plain English out, no app to install, no data plan beyond a text. And the honest limit, on screen: the tide figure is a model, the FixMyStreet sample is a sample, and ambiguous photos go to a person.
-
----
-
-## 14. Risk register
-
-| Risk | Chance | Response |
+| Beat | What the room sees | Proven by |
 |---|---|---|
-| No Mac, BlueBubbles impossible | High | Twilio SMS tonight, same interface. Channel-agnostic line in the pitch, which is true anyway |
-| FixMyStreet rate limits dry up the eval set mid-build | Medium | Pull the 60 labelled reports first, cache to disk with the manifest, never rebuild the set |
-| Open-Meteo overloaded (it answered "service overloaded" twice today) | Medium | Cache with timestamps, show the timestamp on screen, retry with backoff, fall back to the 14 day history already downloaded |
-| Judged repo contaminated with pre-event code | Medium | New empty public repo for the entry, copy in only what is written after 20:00 Friday, state it in the README |
-| The loop is not finished by 01:00 | Medium | Cut the predictive pane to one screen and the scheduler to earliest feasible slot. Never cut the resident reply, it is the demo |
-| Team collapse at 04:00 | High | Sleep rotation, hard freeze at 10:30, one person owns submission and never codes after 11:30 |
-| Video does not play or is over 3:00 | Medium | Record 2:40, upload at 12:00, play it back on the submission laptop before 12:45 |
-| A judge asks "is this just FixMyStreet" | Certain | The answer is in section 16. Lead with the work order, not the report |
+| 1 | A photo with no words at all, and one line back with a reference | A |
+| 2 | A vague message, one confirm-back, then the reference | A |
+| 3 | The report landing on the officer's card with the photo evidence and the confidence | C |
+| 4 | The duplicate cluster: 4 reports, 38m, 2 days, priority bumped | B |
+| 5 | The work order created, crew and tomorrow 08:00, batched with 3 nearby jobs | D |
+| 6 | The predictive pane: Thursday's 4.9m tide and 18mm of rain pull 3 gullies forward to today | D |
+| 7 | The officer presses Resolved, the resident gets the completion text | A, C |
+
+**Failure cases, both shown, both rehearsed.**
+
+- A report from outside Southampton: the agent names the right authority instead of accepting it.
+- The model times out: the stub logs the report, the console says degraded, nothing is lost.
 
 ---
 
-## 15. Questions we will be asked, and the answers
+## 8. Data, with dates and licences
 
-**"Isn't this FixMyStreet with extra steps?"** FixMyStreet ends where the report is sent. Our product starts there, and then does the eleven things an officer does afterwards, ending with a work order on a crew's list and a text to the resident. FixMyStreet is our data source, not our competitor.
+Every number on screen carries a source and a timestamp. `code/data/raw/MANIFEST.json` records URL, UTC time, bytes and sha256.
 
-**"Would a council let an AI create work orders?"** Not on day one. That is why the autonomy dial exists, and why every action is logged and reversible. Start in suggest mode, move to execute on the two categories where it is measured to be right.
+| Source | Use | Licence | Verified |
+|---|---|---|---|
+| FixMyStreet Open311 | Real reports, photos, duplicates, the labelled set | Open, attribute mySociety, record the date | 17 Oct, 200 with a 1000 cap and rate limits |
+| Open-Meteo forecast and archive | Rain, wind, soil temperature and moisture, growth index | CC BY 4.0 | 17 Oct, keyless |
+| Open-Meteo marine | Tide and wave height | CC BY 4.0, **model output not a gauge**, say so | 17 Oct, keyless |
+| Open-Meteo flood | River discharge, Itchen and Test | CC BY 4.0 | 17 Oct, keyless |
+| EA flood-monitoring | Warnings, areas, stations | OGL v3 | 17 Oct, empty on a dry day, that is the missing-data case |
+| postcodes.io | Geocoding | Free, OGL derived | 17 Oct |
+| Southampton portal | Taxonomy, official links | Quoted and cited | Portal live, Empro |
+| OpenStreetMap | Basemap, ODbL credit | ODbL | standard |
 
-**"What if the resident lies or sends a joke photo?"** Same as now: a human confirms. The difference is that geography, duplicates and ownership checks happen before anyone drives anywhere.
-
-**"Why iMessage instead of a form?"** Because the form already exists and 755 fly-tipping cases sat open on a third party site. The barrier is not the form's design, it is opening it. Nobody installs an app for a pothole. Everyone can send a photo.
-
-**"Is the AI doing the work or decorating it?"** Three measured steps against three baselines, numbers from real Southampton reports, and the failures shown. If the model were removed, the product would be a keyword filter that cannot read a photo.
-
-**"What about people without an iPhone?"** SMS runs on the same pipeline today, and it is already working. Voice notes are accepted. That is the access answer, and it is a fair criticism of an iMessage-only product.
+Never present cached as live, or synthetic as real. The test device number is a burner, and the video says so.
 
 ---
 
-## 16. Between now and the lock
+## 9. Evaluation, and the numbers we will quote
 
-1. **Right now, 16:00**: decide the channel, create the public entry repo, confirm which model keys the team holds, and read this plan out loud once so nobody is surprised.
-2. **Tonight**: ugly complete loop by 19:30. That is the only milestone that matters today.
-3. **The two numbers to chase**: the triage baseline gap, and the drain-report rain correlation. Everything else is polish.
-4. **Submit at 12:45**, not 12:59. The organiser's wording is that an incomplete submission is not shown in Stage 1 at all, which is a zero, not a low score.
+B owns this. The labelled set is built first, because it is the thing everyone else's claims rest on.
 
-Nothing here needs a slide.
+- **60 real Southampton reports**, labelled by two people with a tie-break rule. 15 pothole, 15 dumped rubbish, 15 street light and other, 15 deliberately ambiguous or multi-issue.
+- **20 real duplicate pairs and 20 hard non-duplicates**, harvested from the same streets.
+- **Baselines**: keyword and regex list for triage; fixed five-question form for intake; fixed calendar for predictive.
+- **Deliverable**: one table in `NUMBERS.md` with model versus baseline, per case, including the losses.
+- **Live robustness**: five random unseen FixMyStreet reports per hour, run through `/simulate`, to make sure the panel's own input cannot break it.
+
+---
+
+## 10. Business case
+
+- **Cost**: about £0.006 to £0.012 per report in inference, £60 a month hosting, under £400 a year at 20,000 reports.
+- **Value**: 2.5 officer minutes per report at about £22 an hour loaded, plus the avoided duplicate visit, roughly £90 a crew roll.
+- **Price**: £0.50 per report, or £25,000 a year uncapped, or £15,000 for a one-service pilot.
+- **Payback**: about 830 officer hours a year plus an 8% cut in duplicate attended jobs. State the assumption.
+- **First three customers**: Southampton City Council street scene; Balfour Beatty under the Southampton Highways Partnership, paid against response times; then a coastal authority on the same systems, Portsmouth or BCP.
+- **Second city**: taxonomy mapping file plus the ownership resolver. Two to four weeks. The model does not change.
+- **The moat**: FixMyStreet owns the report, Causeway owns the work order, nobody owns the join. The join is the product.
+
+---
+
+## 11. Trust
+
+No name, no account, no address book. A salted hash identifies the sender; the number is never sent to a model. Photo and text only. Thirty day retention, deletion on request, STOP works. Every agent action is logged and reversible. Low confidence always goes to a human. Safety and flood guidance is a link to the Environment Agency or 999, never our own words. Accessibility: any phone, voice notes, plain English, no install, freephone number in the real deployment. Named service manager accountable, and every decision exported as one readable paragraph so a councillor can answer for it.
+
+---
+
+## 12. Risks
+
+| Risk | Response |
+|---|---|
+| No Mac for BlueBubbles | Twilio SMS tonight behind the same `Channel` interface; simulator for development. Channel-agnostic is true anyway |
+| Model key missing or rate limited | Stub brain keeps the loop alive; the console labels it |
+| Open311 rate limits | Cache the 60 labelled reports first, never rebuild the set |
+| Open-Meteo overloaded | Cache with timestamps, retry with backoff |
+| Loop not green by 21:00 | Cut the predictive pane, keep all seven beats |
+| Merge conflict at 2am | Ownership rules above, `main` always runnable |
+| Video too long | 2:40 plus a 20 second live call to action, declared at submission |
+| Team collapse | Sleep rotation, freeze at 10:30, one person owns submission and stops coding at 11:30 |
+
+---
+
+## 13. Submission checklist
+
+- [ ] Seven beats work live, three times in a row
+- [ ] Two failure cases demonstrated
+- [ ] `NUMBERS.md` complete, every number sourced and dated
+- [ ] Public judged repo, created after hacking opened, no duplicate root files
+- [ ] README: setup, data with dates and licences, what the AI does, what was AI-generated, test results, known limits
+- [ ] One command to run, tested from a clean clone
+- [ ] No keys or secrets in the repo, `.env.example` blank
+- [ ] Synthetic data labelled synthetic in the UI
+- [ ] Safety guidance links to an official source
+- [ ] Video 1:00 to 3:00, shows the real product, uploaded unlisted by 12:00
+- [ ] 150 word summary
+- [ ] Format declared: video 2:40 plus 20 second live call to action
+- [ ] Partner opt-in ticked if wanted
+- [ ] Everyone on the team page
+
+---
+
+## 14. The four answers to rehearse
+
+**"Isn't this FixMyStreet with extra steps?"** FixMyStreet ends when the report is sent. We start there and finish the eleven things an officer then does, ending with a work order on a crew's list and a text to the resident. They are our data source, not our competitor.
+
+**"Why a chat interface when councils have rejected chatbots?"** This is not a chat about the council. It is a photo, one line back and a reference, with at most one question when the message is unusable. It exists for the residents who cannot get through the portal at all, and the existing channels all stay.
+
+**"Is there a human on the other side?"** No. The counterpart is the model, and it answers in seconds at 3am, which is the point. A human enters in two places: to approve the first few work orders until the error rate is measured, and whenever the resident asks for a person or disagrees, which routes to the council's complaints process and their ward councillor. We are not building a messaging service and there is no human DM channel to staff.
+
+**"Who is accountable when it books a crew to the wrong place?"** A named service manager, a suggest-only mode that can be switched on, and an append-only audit a councillor can read in one paragraph. The machine never spends public money without approval until its error rate on that category is measured.
+
+**"Does the AI really do all of that?"** Yes, all eleven steps, and the demo shows each one. Where it cannot, it says so and hands to a human, which is also in the demo.

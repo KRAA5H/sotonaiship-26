@@ -1,0 +1,55 @@
+# Decisions
+
+The short record of what we decided and what we rejected, so nobody re-opens a settled question at 2am.
+
+**Rules.** Every contract change, scope change or feature removal gets one line here. One line each: what, why, who. `PLAN.md` is the source of truth; this file explains how it got that way.
+
+---
+
+## The identity decisions
+
+| # | Decision | Why | Decided by |
+|---|---|---|---|
+| D1 | The problem statement stays **volume and money**: 10,948 incidents, the rising rate, 755 open cases, £830,000 on potholes | It is the strongest evidence in the brief, it is local, and a public audience feels it immediately. The "asymmetric information" reframe is a supporting line, not the headline | Team |
+| D2 | The pitch leads with **the agent executing every step**. We do not open with "one human decision, ten machine steps" | That is the ambition, and it is what the demo shows. The autonomy dial and the approvals stay as safety features, described when asked, not as the headline | Team |
+| D3 | **One-shot first.** Photo and words in, one line and a reference out. Zero questions when the message is complete, one confirm-back when it is ambiguous, never a second form | It answers the "not another chatbot" objection structurally, and it makes the demo faster | Team |
+| D4 | The **primary user is the resident who falls out of the portal**, the officer is the operational beneficiary, the council is the buyer | It gives C1 a named user with a measurable inclusion claim, and it uses the one case where conversational intake is clearly justified | Team |
+| D5 | **The only counterpart is the model.** No human-to-human chat, no shared inbox for conversations, no DM product. An officer can send a **one-way status update**, and anything the resident sends back is read by the agent | We are not building a messaging service. Staffing a human chat is out of scope and it is not the product. Escalation to the complaints process covers the case where a person is genuinely needed | Team |
+
+## What we kept from the Gomer review
+
+| # | Decision | Why |
+|---|---|---|
+| D6 | **Neighbour count** on the acknowledgement and the officer card ("3 other people nearby reported this") | Cheap, and it turns a private report into visible collective action without exposing anyone's data |
+| D7 | **Escalation route**: "not fixed" or "I disagree" routes to the council's formal complaints process and the ward councillor, with official links | The machine must never be a wall. This is two hours of work and it protects the weakest moment in the product |
+| D8 | **Tier-aware ownership resolver**: function x location to (authority, team) | In Hampshire the same defect belongs to county, district or parish depending on the function. A single routing table would be wrong one mile outside the city, and it is also our best failure case |
+| D9 | **Plain English** everywhere resident-facing: "hole in the road", not pothole. Reading age 9 to 11, measured | It is the inclusion claim made real, and it takes an afternoon |
+| D10 | **Photo-only opening** in the video | It proves the inclusion claim in seven seconds, better than any statistic |
+
+## What we rejected
+
+| # | Rejected | Why |
+|---|---|---|
+| D11 | Reframing the problem statement around "the council cannot see the problem" | The council can see it. The volume and cost evidence is stronger and less arguable |
+| D12 | "One human decision, ten machine steps" as the headline | Honest, but it under-sells what the system does and it is not what the judges are asking about |
+| D13 | Officer free-text chat with the resident | Out of scope, needs staffing, and it turns the product into a messaging service |
+| D14 | Consultation comment analysis | Good second product, different user, different week. Roadmap only |
+| D15 | Satellite imagery | Five day revisit, October cloud, no ground truth. Cannot be demonstrated live |
+| D16 | Building an auth system, billing, or multi-tenancy | Not this weekend |
+
+## Engineering decisions
+
+| # | Decision | Why |
+|---|---|---|
+| D17 | **One home for code: `code/`.** The duplicate `.py` files at the repo root are frozen, and are deleted before the judged repo is created | Two copies of the truth is the fastest way to lose an hour. Do not edit the root copies |
+| D18 | **The brain must run with no API key**, falling back to a deterministic stub, and every response says whether it came from the model or the stub | Unblocks everyone tonight, and the stub is also our C2 baseline. Never present stub output as AI output |
+| D19 | **Contracts are frozen**: vocabulary, report JSON, endpoints, tables, interfaces, as written in `PLAN.md` section 4 | Four people cannot merge against moving shapes |
+| D20 | **`main` is always runnable**, `python code/smoke.py` passes before any merge | Demo risk is the biggest risk we have |
+| D21 | **Every quoted number comes from `NUMBERS.md`** | The video, the pitch and the README must not drift apart |
+| D22 | Video is a **trailer with a real product spine**, 2:40 plus a 20 second live call to action, declared at submission | The submission page requires real product footage, so the trailer can never carry it alone |
+
+## How to change something
+
+1. Write the line in this file first: what, why, who.
+2. If it touches a contract, message the file owner and let them merge it.
+3. If it adds scope, say what is being dropped to pay for it.

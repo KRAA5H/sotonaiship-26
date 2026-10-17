@@ -2,6 +2,8 @@
 
 Companion to `PLAN.md`. Read the constraint first, because it decides the whole edit.
 
+Where this document and `DECISIONS.md` disagree, `DECISIONS.md` wins. The beat sheet below already reflects D5 (no human chat, no officer reply shot) and D10 (photo-only opening).
+
 ## The one rule that shapes everything
 
 The submission page, verbatim:
