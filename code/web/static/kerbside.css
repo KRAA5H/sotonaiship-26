@@ -331,3 +331,16 @@ dialog.drawer::backdrop{background:var(--backdrop);animation:fade var(--med) var
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
   .live .pulse::after{display:none}
 }
+
+/* Key figures strip on /council (all numbers come from the server) */
+.figures .ph{align-items:center}
+.fig-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px 24px;margin:0}
+.figs div{min-width:0}
+.figs dt{font-size:.8125rem;font-weight:700;color:var(--ink-3);margin-bottom:4px}
+.figs dd{margin:0;display:flex;flex-direction:column;gap:2px}
+.figs dd b{font-size:1.5rem;font-weight:700;line-height:1.15;letter-spacing:-.01em}
+.figs dd span{font-size:.8125rem;color:var(--ink-3)}
+.figs dd.fig-list{display:block;font-size:.9375rem;color:var(--ink-2);overflow-wrap:anywhere}
+/* Marks a synthetic demo row, as the rules require */
+.syn{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;background:var(--surface-2);color:var(--ink-3);font-size:.6875rem;font-weight:700;letter-spacing:.02em;vertical-align:middle;white-space:nowrap}

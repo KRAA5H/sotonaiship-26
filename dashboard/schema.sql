@@ -10,5 +10,7 @@ CREATE TABLE reports (
   has_photo     INTEGER NOT NULL DEFAULT 0,      -- 0 or 1
   duplicate_of  TEXT,                            -- id of the first report, if a repeat
   reporter_ref  TEXT,                            -- anonymous reference, never a real number
-  link_token    TEXT UNIQUE NOT NULL             -- long random string for the resident's page /r/<token>
+  link_token    TEXT UNIQUE NOT NULL,            -- long random string for the resident's page /r/<token>
+  area          TEXT,                            -- named Southampton area, from LocationService (may be empty)
+  status_changed_at TEXT                         -- when the status FIRST changed, for time to first action
 );

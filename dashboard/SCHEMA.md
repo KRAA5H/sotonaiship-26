@@ -13,6 +13,8 @@
 | duplicate_of | id, or empty | R-0004 |
 | reporter_ref | anonymous text | synthetic-2408 |
 | link_token | random text (unique) | k3Jx9Qw2mZpV7tRb |
+| area | named Southampton area, or empty | Portswood |
+| status_changed_at | text (ISO date), or empty: when the status first changed | 2026-10-18T09:30:00+00:00 |
 
 ## Pages
 - `/council`: all reports, filters, duplicate grouping, status buttons (login or private).

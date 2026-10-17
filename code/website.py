@@ -15,7 +15,9 @@ Set COUNCIL_PASSWORD in code/.env. Without it /council is switched off rather
 than left open.
 """
 
+import csv
 import hmac
+import io
 import os
 import sys
 from contextlib import closing
@@ -105,7 +107,8 @@ def council():
         return denied
     with _connect() as conn:
         reports = reports_db.council_reports(conn)
-    return render_template("council.html", reports=reports, labels=tools.category_labels())
+        stats = reports_db.summary_stats(conn)
+    return render_template("council.html", reports=reports, stats=stats, labels=tools.category_labels())
 
 
 @site.get("/council/reports.json")
@@ -115,7 +118,40 @@ def council_reports_json():
     if denied:
         return denied
     with _connect() as conn:
-        return jsonify({"ok": True, "reports": reports_db.council_reports(conn)})
+        return jsonify({"ok": True, "reports": reports_db.council_reports(conn),
+                        "stats": reports_db.summary_stats(conn)})
+
+
+@site.get("/council/stats.csv")
+def council_stats_csv():
+    """The same figures as the strip on /council, one per row, for NUMBERS.md."""
+    denied = _council_denied()
+    if denied:
+        return denied
+    with _connect() as conn:
+        stats = reports_db.summary_stats(conn)
+    labels = tools.category_labels()
+    rows = [
+        ("generated_at", datetime.now().astimezone().isoformat(timespec="seconds")),
+        ("total_reports", stats["total"]),
+        ("synthetic_reports", stats["synthetic"]),
+        ("open_reports", stats["open"]),
+        *((f"open_severity_{level.replace(' ', '_')}", n) for level, n in stats["open_by_severity"].items()),
+        *((f"open_category_{cid}", n) for cid, n in stats["open_by_category"].items()),
+        ("reports_with_photo", stats["with_photo"]),
+        ("duplicates_caught", stats["duplicates_caught"]),
+        ("reports_with_a_status_change", stats["first_change_count"]),
+        ("avg_hours_to_first_status_change", "" if stats["first_change_avg_hours"] is None
+         else stats["first_change_avg_hours"]),
+    ]
+    out = io.StringIO()
+    writer = csv.writer(out, lineterminator="\n")
+    writer.writerow(("metric", "value", "label"))
+    for metric, value in rows:
+        label = labels.get(metric[len("open_category_"):], "") if metric.startswith("open_category_") else ""
+        writer.writerow((metric, value, label))
+    return Response(out.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": 'attachment; filename="council-stats.csv"'})
 
 
 @site.post("/council/reports/<report_id>/status")

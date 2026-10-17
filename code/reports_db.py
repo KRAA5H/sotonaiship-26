@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -29,7 +30,7 @@ DB_PATH = Path(os.getenv("DB_PATH") or Path(__file__).with_name("kerbside.db"))
 
 COLUMNS = (
     "id", "created_at", "category_id", "status", "severity", "location", "area",
-    "description", "has_photo", "duplicate_of", "reporter_ref", "link_token",
+    "description", "has_photo", "duplicate_of", "reporter_ref", "link_token", "status_changed_at",
 )
 # What the council dashboard may see. reporter_ref never leaves the database.
 COUNCIL_COLUMNS = tuple(c for c in COLUMNS if c != "reporter_ref")
@@ -52,9 +53,15 @@ def connect(path=None):
 
 
 def council_reports(conn):
-    """Every report for the dashboard, newest first, without reporter_ref."""
+    """Every report for the dashboard, newest first, without reporter_ref.
+
+    `synthetic` is worked out here from reporter_ref, so the page can label
+    synthetic rows without ever receiving the reference itself.
+    """
     rows = conn.execute(
-        f"SELECT {', '.join(COUNCIL_COLUMNS)} FROM reports ORDER BY created_at DESC"
+        f"SELECT {', '.join(COUNCIL_COLUMNS)}, "
+        "COALESCE(reporter_ref LIKE 'synthetic-%', 0) AS synthetic "
+        "FROM reports ORDER BY created_at DESC"
     ).fetchall()
     return [dict(row) for row in rows]
 
@@ -63,7 +70,14 @@ def set_status(conn, report_id, status):
     """Council action. Returns True if the report exists and was updated."""
     if status not in STATUSES:
         raise ValueError(f"status must be one of {', '.join(STATUSES)}")
-    cursor = conn.execute("UPDATE reports SET status = ? WHERE id = ?", (status, report_id))
+    # status_changed_at records the FIRST real change only, for "time to first
+    # action". SQLite evaluates every SET expression against the old row.
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    cursor = conn.execute(
+        "UPDATE reports SET status_changed_at = CASE WHEN status_changed_at IS NULL AND status != ? "
+        "THEN ? ELSE status_changed_at END, status = ? WHERE id = ?",
+        (status, now, status, report_id),
+    )
     return cursor.rowcount == 1
 
 
@@ -136,6 +150,13 @@ def latest_report_for(conn, reporter_ref):
     return dict(row) if row else None
 
 
+def _ensure_status_changed_column(conn):
+    """Adds status_changed_at to a database that predates it. Safe on every start."""
+    existing_columns = {row["name"] for row in conn.execute("PRAGMA table_info(reports)").fetchall()}
+    if "status_changed_at" not in existing_columns:
+        conn.execute("ALTER TABLE reports ADD COLUMN status_changed_at TEXT")
+
+
 def _ensure_area_column(conn):
     """Adds the area column to an existing database that predates it,
     without needing to touch schema.sql or delete the file. Safe to call
@@ -162,6 +183,7 @@ def init_db(path=None, seed=True):
             conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
 
         _ensure_area_column(conn)
+        _ensure_status_changed_column(conn)
 
         count = conn.execute("SELECT COUNT(*) FROM reports").fetchone()[0]
         if seed and count == 0:
@@ -239,6 +261,45 @@ def reports_by_area(conn):
         ORDER BY count DESC
     """).fetchall()
     return [dict(row) for row in rows]
+
+
+OPEN_STATUSES = ("new", "in_review")
+
+
+def summary_stats(conn):
+    """The figures for the strip above the council list and /council/stats.csv.
+
+    Computed from the database on every call, never stored or hardcoded.
+    "Open" means new or in review. Time to first status change is measured
+    only on reports whose status has changed at least once.
+    """
+    rows = conn.execute(
+        "SELECT category_id, status, severity, has_photo, duplicate_of, created_at, status_changed_at, "
+        "COALESCE(reporter_ref LIKE 'synthetic-%', 0) AS synthetic FROM reports"
+    ).fetchall()
+    open_rows = [r for r in rows if r["status"] in OPEN_STATUSES]
+
+    by_severity = {level: 0 for level in ("high", "medium", "low", "not set")}
+    by_category = {}
+    for r in open_rows:
+        by_severity[r["severity"] if r["severity"] in by_severity else "not set"] += 1
+        by_category[r["category_id"]] = by_category.get(r["category_id"], 0) + 1
+
+    waits = [
+        (datetime.fromisoformat(r["status_changed_at"]) - datetime.fromisoformat(r["created_at"])).total_seconds() / 3600
+        for r in rows if r["status_changed_at"]
+    ]
+    return {
+        "total": len(rows),
+        "open": len(open_rows),
+        "synthetic": sum(r["synthetic"] for r in rows),
+        "open_by_severity": by_severity,
+        "open_by_category": dict(sorted(by_category.items(), key=lambda kv: (-kv[1], kv[0]))),
+        "with_photo": sum(r["has_photo"] for r in rows),
+        "duplicates_caught": sum(1 for r in rows if r["duplicate_of"]),
+        "first_change_count": len(waits),
+        "first_change_avg_hours": round(sum(waits) / len(waits), 1) if waits else None,
+    }
 
 
 def main():

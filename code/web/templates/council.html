@@ -11,6 +11,7 @@
 {% block scripts %}
 <script type="application/json" id="reports">{{ reports | tojson }}</script>
 <script type="application/json" id="labels">{{ labels | tojson }}</script>
+<script type="application/json" id="stats">{{ stats | tojson }}</script>
 <script>
 // Same views and filters as dashboard/prototype/index.html, reading the real
 // database. Status changes are saved to the server before the screen changes.
@@ -19,6 +20,9 @@ const REPORTS_URL={{ url_for('website.council_reports_json') | tojson }};
 const REFRESH_MS=15000;
 let saving=0,lastJSON=JSON.stringify(DATA),updated=new Date(),offline=false;
 const CATS=JSON.parse(document.getElementById("labels").textContent);
+// Figures computed by the server from kerbside.db; refreshed with the list.
+let STATS=JSON.parse(document.getElementById("stats").textContent);
+const STATS_CSV={{ url_for('website.council_stats_csv') | tojson }};
 const STATUS_URL={{ url_for('website.set_status', report_id='__ID__') | tojson }};
 const RESIDENT_URL={{ url_for('website.resident', token='__TOKEN__') | tojson }};
 const STATUS={new:"New",in_review:"In review",resolved:"Resolved"};
@@ -62,6 +66,22 @@ function sorted(rows){
     street:(a,b)=>street(a).localeCompare(street(b))||b.created_at.localeCompare(a.created_at)};
   return rows.slice().sort(s[state.sort]);
 }
+const syn=r=>r.synthetic?`<span class="syn" title="Made-up demo data, not a real resident">Synthetic</span>`:"";
+function hours(h){if(h==null)return null;const t=n=>n.toFixed(1).replace(/\.0$/,"");return h<48?`${t(h)} hours`:`${t(h/24)} days`}
+function figures(){
+  const s=STATS,sv=s.open_by_severity,cats=Object.entries(s.open_by_category).sort((a,b)=>b[1]-a[1]||label(a[0]).localeCompare(label(b[0]))),top=cats.slice(0,5),wait=hours(s.first_change_avg_hours);
+  const synNote=s.synthetic?`<span class="badge">${s.synthetic===s.total?"All":`${s.synthetic} of`} ${s.total} reports are synthetic demo data</span>`:"";
+  return `<section class="panel figures" aria-labelledby="fig-h"><div class="ph"><h2 id="fig-h">Key figures</h2>
+    <span class="fig-meta">${synNote}<a class="btn-ghost" href="${esc(STATS_CSV)}" download>${ic("text")}Download CSV</a></span></div>
+    <dl class="figs">
+      <div><dt>Open</dt><dd><b>${s.open}</b><span>of ${s.total} reports are new or in review</span></dd></div>
+      <div><dt>Open, by severity</dt><dd class="fig-list">High ${sv.high} · Medium ${sv.medium} · Low ${sv.low}${sv["not set"]?` · Not set ${sv["not set"]}`:""}</dd></div>
+      <div><dt>Open, by category</dt><dd class="fig-list">${top.length?top.map(([id,n])=>`${esc(label(id))} ${n}`).join(" · ")+(cats.length>5?` · ${cats.length-5} more`:""):"None open"}</dd></div>
+      <div><dt>With a photo</dt><dd><b>${s.with_photo}</b><span>of ${s.total} reports</span></dd></div>
+      <div><dt>Duplicates caught</dt><dd><b>${s.duplicates_caught}</b><span>repeats joined to an earlier report</span></dd></div>
+      <div><dt>Time to first action</dt><dd>${wait?`<b>${wait}</b><span>average from report to first status change, over ${s.first_change_count} report${s.first_change_count===1?"":"s"}</span>`:`<b>None yet</b><span>no report has had its status changed</span>`}</dd></div>
+    </dl></section>`;
+}
 function repeatsOf(id){return DATA.filter(r=>r.duplicate_of===id).map(r=>r.id)}
 const activeCount=()=>Object.keys(blank).filter(k=>state[k]!==blank[k]).length;
 function statusSelect(r){
@@ -81,7 +101,7 @@ function council(){
   rows.forEach(r=>{
     if(grouped&&dayKey(r.created_at)!==last){last=dayKey(r.created_at);const [a,b]=dayLabel(last);body+=`<tr class="day"><td colspan="7">${a}<span>${b}</span></td></tr>`}
     body+=`<tr class="rep${fresh.has(r.id)?" is-fresh":""}${openId===r.id?" is-open":""}" data-open="${esc(r.id)}">
-      <td class="c-id"><button class="idbtn" data-open="${esc(r.id)}" data-key="o:${esc(r.id)}" aria-label="Open report ${esc(r.id)}">${esc(r.id)}</button><span class="time">${grouped?hm(r.created_at):fmt(r.created_at)}</span></td>
+      <td class="c-id"><button class="idbtn" data-open="${esc(r.id)}" data-key="o:${esc(r.id)}" aria-label="Open report ${esc(r.id)}">${esc(r.id)}</button>${syn(r)}<span class="time">${grouped?hm(r.created_at):fmt(r.created_at)}</span></td>
       <td class="c-cat">${esc(label(r.category_id))}${r.duplicate_of?`<span class="sub">${ic("copy")}Repeat of ${esc(r.duplicate_of)}</span>`:""}${reps[r.id]?`<span class="sub">${ic("copy")}+${reps[r.id]} repeat${reps[r.id]>1?"s":""}</span>`:""}</td>
       <td class="c-loc">${esc(r.location||"Not given")}</td>
       <td class="c-sev">${sev(r.severity)}</td>
@@ -102,6 +122,7 @@ function council(){
     ${tile("resolved","status","resolved","Resolved",n("resolved"),"Closed by the council","circle-check")}
     ${tile("week","range","7","This week",DATA.filter(thisWeek).length,"Reported in the last 7 days","calendar")}
   </section>
+  ${figures()}
   <section class="panel" aria-labelledby="cat-h"><div class="ph"><h2 id="cat-h">Reports by category</h2><span class="hint">Select a category to filter the list</span></div>
     <div class="bars">${entries.map(([id,c])=>`<button class="bar" data-f="cat" data-v="${esc(id)}" data-key="b:${esc(id)}" aria-pressed="${state.cat===id}"><span class="name" title="${esc(label(id))}">${esc(label(id))}</span><span class="track"><span class="fill" style="width:${c/max*100}%"></span></span><span class="n">${c}</span></button>`).join("")}</div>
   </section>
@@ -125,7 +146,7 @@ function council(){
 }
 function detail(r){
   const reps=repeatsOf(r.id),busy=busyIds.has(r.id);
-  return `<div class="d-head"><div><p class="d-id">${esc(r.id)}</p><h2 id="d-title">${esc(label(r.category_id))}</h2></div>
+  return `<div class="d-head"><div><p class="d-id">${esc(r.id)}${syn(r)}</p><h2 id="d-title">${esc(label(r.category_id))}</h2></div>
       <button class="iconbtn" data-close data-key="close" aria-label="Close details">${ic("x")}</button></div>
     <div class="d-body">
       <div><p class="d-label" id="d-st">Status</p>
@@ -189,7 +210,7 @@ async function refresh(){
     const added=out.reports.filter(r=>!seen.has(r.id));
     added.forEach(r=>seen.add(r.id));
     fresh=new Set(added.map(r=>r.id));
-    DATA=out.reports;lastJSON=json;render();
+    DATA=out.reports;if(out.stats)STATS=out.stats;lastJSON=json;render();
     if(added.length){toast(`${added.length} new report${added.length>1?"s":""}`,"inbox");setTimeout(()=>{fresh=new Set()},3000)}
   }catch(err){offline=true;showLive()}  // offline or server restarting: try again next time
 }
