@@ -8,7 +8,7 @@ Every number we quote comes from this table. Each row has a source and a date. L
 | Category accuracy, our agent (`code/triage.py`) | **Not measured yet.** Ready to run with `score.py --agent`; it sends the 60 real reports to the external text model, so it waits for a go-ahead | same | not run |
 | Duplicate rule: real repeats caught | **8 of 10** | `score.py`, rule from `code/tools.py` `check_duplicate` (same category, same street text, open, 30 days) | 2026-10-17 |
 | Duplicate rule: false positives | **17 of 40** non-duplicates wrongly flagged; 0 of 19 hard negatives flagged | same | 2026-10-17 |
-| Cost per report | **Not measured yet.** No component logs model token usage today, so there is nothing measured to read | `code/llm.py` (no usage logging) | 2026-10-17 |
+| Cost per report | **Not measured yet.** Every model call now logs its tokens and latency to `code/logs/llm_usage.jsonl`; `python code/agents/smoke.py` turns that into a cost per turn at DeepSeek's published prices. It needs the API key, which is not on the machine these numbers were built on | `code/llm.py`, `code/agents/smoke.py` | 2026-10-17 |
 
 ## Wins
 

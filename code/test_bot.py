@@ -16,18 +16,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import blue_bubbles as bot  # noqa: E402
 import messages  # noqa: E402
 
-_voice_patch = None
+_patches = []
 
 
 def setUpModule():
-    """Templates are the fallback contract: keep the suite offline by default."""
-    global _voice_patch
-    _voice_patch = unittest.mock.patch.object(bot.voice, "generate", return_value=None)
-    _voice_patch.start()
+    """Templates are the fallback contract: keep the suite offline by default.
+
+    The location agent's map link writes the pin database; these tests check
+    the words, so it is stubbed (test_agents.py covers the link itself).
+    """
+    _patches.append(unittest.mock.patch.object(bot.voice, "generate", return_value=None))
+    _patches.append(unittest.mock.patch.object(bot.ORCHESTRATOR.location, "map_link", return_value=None))
+    for patch in _patches:
+        patch.start()
 
 
 def tearDownModule():
-    _voice_patch.stop()
+    for patch in _patches:
+        patch.stop()
 
 SAVED = {"ok": True, "report_id": "R-0100", "link": "http://host/r/token1",
          "duplicate_of": None, "matching_reports": 0}

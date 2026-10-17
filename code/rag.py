@@ -136,13 +136,13 @@ def answer(question, category_id=None):
     if category_id:
         system += f"\nThe message was triaged as: {category_id}."
 
-    raw, mode = llm.chat(system, question)
+    raw, mode = llm.chat(system, question, temperature=0.2, timeout=8, purpose="rag")
     if mode != "model":
         return "", []
 
     data = _json_object(raw)
     if data is None:
-        raw, mode = llm.chat(system, question + RETRY)
+        raw, mode = llm.chat(system, question + RETRY, temperature=0.2, timeout=8, purpose="rag")
         data = _json_object(raw) if mode == "model" else None
     if data is None:
         return "", []

@@ -1,17 +1,22 @@
-"""BlueBubbles webhook receiver.
+"""BlueBubbles webhook receiver: the channel. The agents do the thinking.
 
-MODE=triage : one inbound message is classified, saved as a report when it is a
-              council matter, and the resident gets a link to their own page.
+MODE=triage : every message goes to the triage agent, the orchestrator of the
+              multi-agent workflow in code/agents/ (plans/agents.md). It runs
+              safety, location, photo, triage, category, duplicate, records and
+              reply, and hands back one text.
 MODE=echo   : one inbound text becomes one model call with no history, and one
               plain reply goes back out. No database write.
 MODE=agent  : the original multi-turn IntakeAgent path, untouched.
 
-Two operational rules, both learned from real traffic:
-  1. Return 200 immediately and reply from a background thread. A model call
-     takes 4 to 11 seconds, and BlueBubbles retries anything it thinks timed
-     out, which produced duplicate replies.
-  2. Deduplicate on the inbound message GUID. A retry of the same message must
-     never be answered twice or billed twice.
+What stays here is the channel itself, learned from real traffic:
+  1. Return 200 immediately and reply from a background thread. BlueBubbles
+     retries anything it thinks timed out, which produced duplicate replies.
+  2. Deduplicate on the inbound message GUID.
+  3. Coalesce a burst of quick messages into one turn, one turn per sender.
+  4. Words first, the link as its own message.
+
+The same server also serves the council site (/council, /r/<token>) and the
+drop-a-pin map (/p/<token>), so SITE_URL is the one address residents need.
 
 Run:
   python code/blue_bubbles.py
@@ -22,7 +27,6 @@ import re
 import sys
 import threading
 import time
-from datetime import datetime, timedelta, timezone
 from collections import OrderedDict
 from pathlib import Path
 
@@ -35,14 +39,29 @@ load_dotenv(Path(__file__).with_name(".env"))
 
 import bb
 import llm
-import location
+import location  # noqa: F401  kept for callers that patch location.LocationService
 import messages
-import rag
-import reports_db
 import photos  # noqa: F401  registers /r/<token>/photo on the site blueprint
-import tools
-import triage
-import voice
+import pin_service
+import rag  # noqa: F401  patched by tests; the agents use it
+import reports_db  # noqa: F401  patched by tests; the agents use it
+import tools  # noqa: F401  patched by tests; the agents use it
+import triage  # noqa: F401
+import voice  # noqa: F401  patched by tests; the agents use it
+from agents import ORCHESTRATOR, Turn
+from agents import memory
+from agents.location_agent import is_location_card
+from agents.triage_agent import (  # noqa: F401  the names this module has always offered
+    NO_CONTENT,
+    STILL_WORDS,
+    URL_PATTERN,
+    apply_place,
+    is_question,
+    wants_greeting,
+    wants_silence,
+    wants_status,
+)
+from geo import southampton as city
 from website import site
 
 MODE = (os.getenv("MODE") or "triage").lower()
@@ -54,11 +73,13 @@ IGNORE_SENDERS = {
     for address in (os.getenv("IGNORE_SENDERS") or "sidhari25@outlook.com").split(",")
     if address.strip()
 }
+
+
 def detect_self_address():
     """Probe BlueBubbles once at startup, never at import.
 
     Importing this module must not need the Mac: the simulator and the tests
-    both import reply_for without a running iMessage host.
+    both import it without a running iMessage host.
     """
     try:
         detected = bb.self_address().strip().lower()
@@ -66,6 +87,7 @@ def detect_self_address():
             IGNORE_SENDERS.add(detected)
     except Exception as error:  # noqa: BLE001
         print(f"[warn] could not read the server's own address: {error}")
+
 
 # BlueBubbles replays recent messages when the server or the webhook restarts.
 # Answering yesterday's messages on startup is worse than ignoring them.
@@ -83,6 +105,8 @@ SYSTEM = (
 app = Flask(__name__)
 # /council and /r/<token> on the same port, so SITE_URL links work.
 app.register_blueprint(site)
+# The drop-a-pin map too: /p/<token>, its /api/ and /static/ files.
+pin_service.mount(app)
 
 _sessions = {}
 _agent = None
@@ -90,12 +114,22 @@ _seen = OrderedDict()
 _seen_lock = threading.Lock()
 SEEN_LIMIT = 500
 
-# When we ask "where is it?" the next short message from that person is their
-# answer, not a new report. Remember the first half so the two join up.
-_pending = OrderedDict()
-_pending_lock = threading.Lock()
-PENDING_SECONDS = 600
-PENDING_LIMIT = 200
+# The agents' short-term memory, under the names this module has always used.
+_pending = memory.PENDING
+_pending_lock = memory.PENDING_LOCK
+PENDING_SECONDS = memory.PENDING_SECONDS
+PENDING_LIMIT = memory.PENDING_LIMIT
+_places = memory.PLACES
+PLACE_SECONDS = memory.PLACE_SECONDS
+remember_location = memory.remember_location
+merge_pending = memory.merge_pending
+remember_place = memory.remember_place
+take_place = memory.take_place
+
+# The orchestrator's steps, under their old names.
+reply_for = ORCHESTRATOR.act
+status_reply = ORCHESTRATOR.status_reply
+attach_photo_to_open_report = ORCHESTRATOR.attach_photo_to_open_report
 
 
 def already_handled(message_guid):
@@ -120,53 +154,6 @@ def get_agent():
     return _agent
 
 
-def merge_pending(sender, text):
-    """Join a short follow-up onto the message we asked a location for."""
-    if not sender or not text:
-        return text, None
-    with _pending_lock:
-        entry = _pending.get(sender)
-    if not entry or len(text) > 140:
-        return text, None
-    if time.time() - entry["asked_at"] > PENDING_SECONDS:
-        return text, None
-    with _pending_lock:
-        _pending.pop(sender, None)
-    joined = f"{entry['text']}\n\nThe resident then said where it is: {text}"
-    return joined, entry
-
-
-def remember_location(sender, text, saved, decision):
-    """Hold the incomplete report, so the answer becomes its street, not a new row."""
-    if not sender or not text:
-        return
-    with _pending_lock:
-        _pending[sender] = {
-            "text": text,
-            "asked_at": time.time(),
-            "report_id": saved["report_id"],
-            "link": saved["link"],
-            "category_id": decision["category_id"],
-            "has_photo": bool(decision.get("has_photo")),
-        }
-        while len(_pending) > PENDING_LIMIT:
-            _pending.popitem(last=False)
-
-
-def _voice_facts(decision, saved=None, **extra):
-    """The facts the voice layer may use. The link is appended by voice.say."""
-    facts = {
-        "category_id": decision.get("category_id"),
-        "category_label": decision.get("category_label"),
-        "location": decision.get("location"),
-        "has_photo": bool(decision.get("has_photo")),
-    }
-    if saved and saved.get("link"):
-        facts["link"] = saved["link"]
-    facts.update({key: value for key, value in extra.items() if value})
-    return facts
-
-
 def _is_image_attachment(attachment):
     """Apple Maps pins and other plugin payloads are not photos."""
     name = (attachment.get("transferName") or "").lower()
@@ -178,216 +165,9 @@ def _is_image_attachment(attachment):
     )
 
 
-def attach_photo_to_open_report(sender, attachment, image):
-    """Attach a late photo to the one open report that needs one."""
-    guid = (attachment or {}).get("guid")
-    if not guid or not sender:
-        return None
-    mime = (attachment.get("mimeType") or (image[1] if image else "") or "").strip()
-
-    pending = _pending.get(sender) or {}
-    if pending.get("report_id") and pending.get("link"):
-        report_id, link = pending["report_id"], pending["link"]
-    else:
-        reference = tools.reporter_ref(sender)
-        rows = _with_db(lambda c: reports_db.open_reports_for(c, reference))
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=72)
-        fresh = []
-        for row in rows or []:
-            try:
-                created = datetime.fromisoformat(str(row.get("created_at")))
-            except (TypeError, ValueError):
-                continue
-            if created >= cutoff:
-                fresh.append(row)
-        # One report, or we ask which one. Never guess.
-        if len(fresh) != 1:
-            return None
-        report_id = fresh[0]["id"]
-        link = f"{tools.SITE_URL}/r/{fresh[0]['link_token']}"
-
-    if not _with_db(lambda c: reports_db.set_photo(c, report_id, guid, mime)):
-        return None
-    print(f"[photo] attached {guid[:8]} to {report_id}")
-    return {"report_id": report_id, "link": link}
-
-
-def reply_for(decision, sender, text="", has_photo=False, pending=None, relink_to=None,
-              photo=None):
-    """Save what triage accepted, and return the one text the resident gets back."""
-    decision = dict(decision)
-    decision["has_photo"] = bool(has_photo)
-    reason = decision["reason"]
-
-    # The resident answered our question about where it is: fill that report in.
-    if (reason == "ok" and pending and pending.get("report_id")
-            and decision["category_id"] == pending.get("category_id")):
-        if _with_db(lambda c: reports_db.set_location(
-                c, pending["report_id"], decision["location"])):
-            print(f"[located] {pending['report_id']} -> {decision['location']}")
-            decision["has_photo"] = bool(pending.get("has_photo",
-                                                     decision.get("has_photo")))
-            template = messages.logged(decision, {"link": pending["link"]})
-            return voice.say("saved", _voice_facts(decision, link=pending["link"]), template)
-
-    if reason == "ok":
-        saved = tools.save_report(
-            category_id=decision["category_id"],
-            location=decision["location"],
-            description=decision["description"],
-            severity=decision["severity"],
-            has_photo=has_photo,
-            reporter=sender,
-        )
-        if not saved.get("ok"):
-            print(f"[save] refused: {saved.get('error')}")
-            return voice.say("incomplete", _voice_facts(decision),
-                             messages.need_location(decision))
-
-        print(f"[saved] {saved['report_id']} {decision['category_id']} "
-              f"sev={decision['severity']} duplicate_of={saved['duplicate_of']}")
-
-        if photo and photo[0]:
-            _with_db(lambda c: reports_db.set_photo(
-                c, saved["report_id"], photo[0], photo[1]))
-
-        if saved.get("duplicate_of"):
-            template = messages.duplicate(decision, saved)
-            return voice.say("duplicate", _voice_facts(decision, saved), template)
-
-        if relink_to:
-            _with_db(lambda c: reports_db.link_duplicate(c, saved["report_id"], relink_to))
-            print(f"[relink] {saved['report_id']} -> {relink_to}")
-
-        template = messages.logged(decision, saved)
-        return voice.say("saved", _voice_facts(decision, saved), template)
-
-    if reason == "no_location":
-        # Act first: keep the report, then ask for the one thing only they know.
-        saved = tools.save_report(
-            category_id=decision["category_id"],
-            location="Not given",
-            description=decision["description"],
-            severity=decision["severity"],
-            has_photo=has_photo,
-            reporter=sender,
-        )
-        if saved.get("ok"):
-            remember_location(sender, text, saved, decision)
-            if photo and photo[0]:
-                _with_db(lambda c: reports_db.set_photo(
-                    c, saved["report_id"], photo[0], photo[1]))
-            print(f"[saved] {saved['report_id']} {decision['category_id']} "
-                  "incomplete, waiting for the street")
-        else:
-            print(f"[save] refused: {saved.get('error')}")
-        return voice.say("incomplete", _voice_facts(decision),
-                         messages.need_location(decision))
-
-    if reason == "emergency":
-        # Safety wording is never model-written.
-        return messages.emergency()
-
-    if reason.startswith("no_report_for_") or reason == "model_says_not_a_report":
-        if has_photo and decision["description"]:
-            seen = re.sub(r"^(the )?(photo|image) (shows|showing|is of)\s+", "",
-                          decision["description"].strip(), flags=re.IGNORECASE).rstrip(".")
-            return (f"From your photo: {seen}. That is not something the council "
-                    "can act on, so nothing has been logged.")
-
-        contact = messages.contact_for(decision.get("category_id"))
-        is_not_council = (decision.get("outcome") == "not_council" or
-                          str(decision.get("category_id") or "").startswith("not_council"))
-        if is_not_council:
-            facts = _voice_facts(
-                decision,
-                link=contact.get("page"),
-                link_label="Details",
-                org=contact.get("org"),
-                contact=contact.get("contact"),
-            )
-            return voice.say("not_council", facts, messages.not_council(decision))
-
-        if is_question(text):
-            grounded, _ = rag.answer(text, decision.get("category_id"))
-            if grounded:
-                return messages.answered(grounded)
-
-        page = messages.contact_for(decision.get("category_id")).get("page") \
-            or messages.COUNCIL_CONTACT
-        facts = _voice_facts(decision, link=page, link_label="The council page",
-                             page=page)
-        return voice.say("no_answer", facts, messages.no_answer(decision))
-
-    return voice.say("unclear", _voice_facts(decision), messages.unclear())
-
-
-STATUS_WORDS = re.compile(
-    r"\b(any )?updates?\b|\bstatus\b|\bany news\b|\bwhat'?s happening\b|"
-    r"\bis (it|this) (fixed|done)\b|\bheard (anything|back)\b|\bprogress\b",
-    re.IGNORECASE,
-)
-STILL_WORDS = re.compile(
-    r"still (there|not fixed|not done|broken|a problem)|not (been )?fixed|"
-    r"no ?one (came|fixed)|nobody (came|fixed)",
-    re.IGNORECASE,
-)
-SILENCE_WORDS = re.compile(
-    r"^(thanks|thank you|cheers|ta|ok|okay|cool|got it|perfect|great|nice one)[\s!.,]*$",
-    re.IGNORECASE,
-)
-GREETING_WORDS = re.compile(
-    r"^(hi|hello|hey|hiya|good (morning|afternoon|evening))( there)?[\s!.,]*$",
-    re.IGNORECASE,
-)
-QUESTION_WORDS = re.compile(
-    r"^(how|what|when|where|who|why|can|could|do|does|is|are|will|should)\b",
-    re.IGNORECASE,
-)
-
-
-def _with_db(work):
-    """One short-lived connection, always closed."""
-    conn = reports_db.connect()
-    try:
-        return work(conn)
-    finally:
-        conn.close()
-
-
-def wants_status(text):
-    """True for a short question about the report they already made."""
-    return bool(text) and len(text) <= 120 and bool(STATUS_WORDS.search(text))
-
-
-def wants_silence(text):
-    """A thank you or an acknowledgement. Answering it would be noise."""
-    return bool(text) and len(text) <= 25 and bool(SILENCE_WORDS.search(text))
-
-
-def wants_greeting(text):
-    return bool(text) and len(text) <= 25 and bool(GREETING_WORDS.search(text))
-
-
-def is_question(text):
-    text = (text or "").strip()
-    return text.endswith("?") or bool(QUESTION_WORDS.search(text))
-
-
-def status_reply(sender):
-    """Answer from the database, not the model. None when there is nothing to say."""
-    report = _with_db(lambda c: reports_db.latest_report_for(c, tools.reporter_ref(sender)))
-    if not report:
-        return None
-    report["link"] = f"{tools.SITE_URL}/r/{report['link_token']}"
-    report["status_text"] = tools.STATUS_TEXT.get(report["status"], report["status"])
-    facts = {
-        "category_id": report["category_id"],
-        "location": report["location"],
-        "status_text": report["status_text"],
-        "link": report["link"],
-    }
-    return report, voice.say("status", facts, messages.status(report))
+def place_from_text(text):
+    """A shared Apple or Google Maps pin, checked against the city boundary. None if absent."""
+    return ORCHESTRATOR.location.shared_place(text)
 
 
 BURST_SECONDS = float(os.getenv("BURST_SECONDS") or "2.5")
@@ -480,9 +260,20 @@ def take_pending(sender):
     return entry
 
 
+def _late_text(sender):
+    """Words that arrived during the turn join it; a late photo gets its own turn next."""
+    late = take_pending(sender)
+    if not late:
+        return None
+    if late["attachments"]:
+        print(f"[burst] a photo arrived late from {sender}, handling it next")
+        enqueue_message({**late["inbound"], "text": "", "attachments": late["attachments"]})
+    return "\n".join(late["texts"]).strip() or None
+
+
 LINK_DELAY = float(os.getenv("LINK_DELAY") or "0.8")
-URL_PATTERN = re.compile(r"https?://\S+")
-LINK_LABELS = {"follow it", "details", "council page", "the council page"}
+LINK_LABELS = {"follow it", "details", "council page", "the council page", "form",
+               "drop a pin", "your report"}
 
 
 def split_reply(text):
@@ -515,88 +306,44 @@ def deliver(chat_guid, text):
         bb.send_text(chat_guid, link)
 
 
-PLACE_SECONDS = 600
-_places = {}
-_places_lock = threading.Lock()
-MAPS_PATTERN = re.compile(
-    r"(?:coordinate=|ll=|center=|q=)(-?\d{1,3}\.\d{3,}),\s*(-?\d{1,3}\.\d{3,})",
-    re.IGNORECASE,
-)
+# A pin confirmed on the map, or a status the council changed, reaches the
+# resident here, on the chat they last used.
+ORCHESTRATOR.set_notifier(deliver)
 
 
-def remember_place(sender, place):
-    if not sender or not place:
-        return
-    with _places_lock:
-        _places[sender] = {"place": place, "at": time.time()}
-        while len(_places) > 200:
-            _places.popitem(last=False)
+def read_attachments(attachments):
+    """(image, photo_ref, card): the first photo, and a shared-location card's text.
+
+    Only real images are downloaded for the photo agent. A maps plugin payload
+    is never sent to a vision model, and a location card is read as text.
+    """
+    image, photo_ref, card = None, None, ""
+    for attachment in attachments or []:
+        if is_location_card(attachment):
+            if not card:
+                fetched = bb.download_attachment(attachment.get("guid"), width=None)
+                if fetched:
+                    card = fetched[0][:4096].decode("utf-8", "replace")
+        elif image is None and _is_image_attachment(attachment):
+            image = bb.download_attachment(attachment.get("guid"))
+            if image:
+                photo_ref = (attachment.get("guid"), attachment.get("mimeType") or image[1])
+    return image, photo_ref, card
 
 
-def take_place(sender):
-    """The pin the resident shared just before this message, if it is still fresh."""
-    if not sender:
-        return None
-    with _places_lock:
-        entry = _places.pop(sender, None)
-    if not entry:
-        return None
-    if time.time() - entry["at"] > PLACE_SECONDS:
-        return None
-    return entry["place"]
-
-
-def place_from_text(text):
-    """Apple and Google maps links carry lat,lon in the query string."""
-    match = MAPS_PATTERN.search(text or "")
-    if not match:
-        return None
-    try:
-        latitude, longitude = float(match.group(1)), float(match.group(2))
-    except ValueError:
-        return None
-    try:
-        place = location.LocationService().reverse_geocode(latitude, longitude)
-    except Exception as error:  # noqa: BLE001 - a pin must never break a reply
-        print(f"[place] reverse geocode failed: {error}")
-        return None
-    if not place or not place.get("street_name"):
-        return None
-    print(f"[place] {latitude:.4f},{longitude:.4f} -> {place.get('street_name')} "
-          f"({place.get('area')})")
-    return place
-
-
-def apply_place(decision, place):
-    """A pin is a location. Use it instead of asking for one."""
-    if not place or not place.get("street_name"):
-        return decision
-    decision = dict(decision)
-    if decision.get("location"):
-        return decision
-    if decision.get("outcome") != "council_report":
-        return decision
-    decision["location"] = place["street_name"]
-    if decision.get("reason") in ("no_location", "model_says_not_a_report"):
-        decision["reason"] = "ok"
-        decision["is_report"] = True
-    return decision
+def _trace_line(outcome):
+    return " | ".join(f"{step['agent']} {step['ms']}ms {step['note']}".strip()
+                      for step in outcome.trace)
 
 
 def handle_inbound(inbound):
     chat_guid = inbound["chat_guid"]
     text = inbound.get("text") or ""
     try:
-        image = None
-        attachments = inbound.get("attachments") or []
-        if attachments:
-            image = bb.download_attachment(attachments[0].get("guid"))
+        image, photo_ref, card = read_attachments(inbound.get("attachments") or [])
 
-        if not text and not image:
-            bb.send_text(
-                chat_guid,
-                "I can only read text and photos just now. Please describe the problem in a few words.",
-            )
+        if not text and not image and not card:
+            bb.send_text(chat_guid, NO_CONTENT)
             return
 
         if MODE == "agent":
@@ -614,103 +361,24 @@ def handle_inbound(inbound):
         if MODE == "echo":
             # Plain chat with no database write: useful for testing the channel.
             reply, mode = llm.chat(
-                SYSTEM, text or "The resident sent this photo with no words.", image
+                SYSTEM, text or "The resident sent this photo with no words.", image, purpose="echo"
             )
             print(f"[reply] mode={mode} vision={bool(image)} to={chat_guid}: {reply[:120]}")
             deliver(chat_guid, reply)
             return
 
         sender = inbound.get("sender") or chat_guid
-        if wants_silence(text):
-            print(f"[silent] acknowledgement from {sender}")
-            return
-        if wants_greeting(text):
-            print(f"[greeting] {sender}")
-            deliver(chat_guid, voice.say("greeting", {}, messages.greeting()))
-            return
-        relink_to = None
-        if wants_status(text):
-            found = status_reply(sender)
-            if found:
-                report, status_text = found
-                if report["status"] != "resolved" or not STILL_WORDS.search(text):
-                    print(f"[status] {report['id']} -> {report['status']}")
-                    deliver(chat_guid, status_text)
-                    return
-                relink_to = report["id"]
-        if image and not text and attachments and _is_image_attachment(attachments[0]):
-            if sender not in _pending:
-                candidates = _with_db(
-                    lambda c: reports_db.open_reports_for(c, tools.reporter_ref(sender))) or []
-                cutoff = datetime.now(timezone.utc) - timedelta(hours=72)
-                fresh = []
-                for row in candidates:
-                    try:
-                        created = datetime.fromisoformat(str(row.get("created_at")))
-                    except (TypeError, ValueError):
-                        continue
-                    if created >= cutoff:
-                        fresh.append(row)
-                if len(fresh) > 1:
-                    print(f"[photo] {len(fresh)} open reports for {sender}, asking which")
-                    deliver(chat_guid, messages.which_report(fresh))
-                    return
-            attached = attach_photo_to_open_report(sender, attachments[0], image)
-            if attached:
-                facts = {"link": attached["link"], "link_label": "Your report"}
-                reply = voice.say("photo_added", facts,
-                                  messages.photo_added(attached["link"]))
-                print(f"[reply] to={chat_guid}: {reply[:120]}")
-                deliver(chat_guid, reply)
-                return
-
-        place = place_from_text(text)
-        if place:
-            rest = URL_PATTERN.sub("", text).strip(" ,-\n")
-            postcode = (place.get("postcode") or "").upper()
-            if postcode and not postcode.startswith("SO"):
-                deliver(chat_guid, messages.pin_outside(place))
-                return
-            if not rest:
-                remember_place(sender, place)
-                deliver(chat_guid, messages.pin_received(place))
-                return
-            text = f"{rest}\nThe resident shared a pin at {place['street_name']}."
-        else:
-            place = take_place(sender)
-            if place and text:
-                text = f"{text}\nThe resident shared a pin at {place['street_name']}."
-
-        text, pending = merge_pending(sender, text)
-        if pending:
-            print(f"[pending] joined a follow-up from {sender}")
-        decision = triage.triage(text, image)
-        late = take_pending(sender)
-        if late and late["texts"]:
-            extra = "\n".join(late["texts"]).strip()
-            if extra:
-                text = f"{text}\n{extra}".strip()
-                print(f"[burst] folded a late message from {sender} into this turn")
-                decision = triage.triage(text, image)
-        late_photo = take_pending(sender)
-        if late_photo and late_photo["attachments"] and not late_photo["texts"]:
-            print(f"[burst] a photo arrived late from {sender}, handling it next")
-            enqueue_message({**late_photo["inbound"], "text": "",
-                             "attachments": late_photo["attachments"]})
-        decision = apply_place(decision, place)
-        print(f"[triage] report={decision['is_report']} {decision['category_id']} "
-              f"sev={decision['severity']} conf={decision['confidence']} "
-              f"why={decision['reason']} to={chat_guid}")
-        photo = None
-        if image and attachments and _is_image_attachment(attachments[0]):
-            photo = (attachments[0].get("guid"),
-                     attachments[0].get("mimeType") or image[1])
-        reply = reply_for(decision, sender, text, bool(image), pending, relink_to, photo)
-        if not reply:
+        started = time.perf_counter()
+        outcome = ORCHESTRATOR.handle(Turn(
+            sender=sender, text=text, chat=chat_guid, image=image, photo_ref=photo_ref,
+            card=card, late=lambda: _late_text(sender),
+        ))
+        print(f"[agents] {round((time.perf_counter() - started) * 1000)}ms {_trace_line(outcome)}")
+        if not outcome.reply:
             print(f"[silent] nothing to send to {chat_guid}")
             return
-        print(f"[reply] to={chat_guid}: {reply[:120]}")
-        deliver(chat_guid, reply)
+        print(f"[reply] to={chat_guid}: {outcome.reply[:120]}")
+        deliver(chat_guid, outcome.reply)
     except Exception as error:  # noqa: BLE001 - a webhook must never die silently
         print(f"[error] handling {chat_guid}: {error}")
         try:
@@ -721,15 +389,21 @@ def handle_inbound(inbound):
 
 @app.get("/health")
 def health():
+    deepseek = bool(os.getenv("DEEPSEEK_API_KEY"))
     return jsonify(
         {
             "ok": True,
             "mode": MODE,
-            "text_provider": "deepseek" if os.getenv("DEEPSEEK_API_KEY") else "openrouter",
+            "orchestrator": "triage agent",
+            "agents": ["safety", "triage", "photo", "category", "location", "duplicate",
+                       "records", "reply", "status"],
+            "text_provider": "deepseek" if deepseek else "openrouter",
             "text_model": llm.DS_MODEL,
-            "vision_model": llm.DS_MODEL if os.getenv("DEEPSEEK_API_KEY")
-                            else llm.VISION_MODEL,
+            "thinking": "off",
+            "vision_model": llm.DS_MODEL if deepseek else llm.VISION_MODEL,
             "vision_fallback": llm.VISION_MODEL,
+            "city_boundary": city.in_city(50.9097, -1.4044) is not None,
+            "streets": city.street_count(),
             "site_url": tools.SITE_URL,
             "bluebubbles": bb.BASE,
             "method": bb.METHOD,

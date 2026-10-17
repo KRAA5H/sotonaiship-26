@@ -281,13 +281,21 @@ class Confirm(PinCase):
         self.assertEqual([r["report_ref"] for r in self.db("SELECT report_ref FROM report_locations")], ["R-0001"])
         self.assertIsNone(pin_service.get_location("R-0002"))
 
-    def test_both_geocoders_down_still_saves_unverified(self):
+    def test_both_geocoders_down_still_saves_and_the_boundary_still_knows(self):
+        # The council boundary is local, so "inside the city" survives every lookup failing.
         self.web.down = True
         r = self.confirm(self.link())
         self.assertEqual(r.status_code, 200)
         row = self.db("SELECT * FROM report_locations")[0]
-        self.assertEqual(row["coverage"], "unverified")
+        self.assertEqual(row["coverage"], "inside")
         self.assertIsNone(row["street"])
+
+    def test_without_the_boundary_file_it_is_unverified(self):
+        self.web.down = True
+        with unittest.mock.patch.object(pin_service, "city", None):
+            r = self.confirm(self.link())
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(self.db("SELECT * FROM report_locations")[0]["coverage"], "unverified")
 
     def test_expired_link_cannot_confirm(self):
         token = self.link()
@@ -487,7 +495,7 @@ class StaticFiles(unittest.TestCase):
         self.assertIn('id="results"', self.html)
 
     def test_page_copy(self):
-        for text in ("Where is the problem?", "Use my phone's location (optional)", "Confirm location",
+        for text in ("Where is the problem?", "Use my current location", "Confirm location",
                      "Reply to our text with the road name instead", "OpenStreetMap", "Open Government Licence",
                      'role="status"', 'aria-live="polite"', 'for="pc"', 'href="/privacy"', 'id="submitBtn"'):
             self.assertIn(text, self.html)
@@ -497,6 +505,92 @@ class StaticFiles(unittest.TestCase):
         texts = [self.html, self.js, pin_service.privacy_html(), *pin_service.MSG.values()]
         for text in texts:
             self.assertNotIn("—", text)
+
+
+class StreetDropDown(PinCase):
+    def test_the_street_list_is_served_and_cached(self):
+        r = self.client.get("/static/streets.json")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.mimetype, "application/json")
+        self.assertIn("max-age=86400", r.headers.get("Cache-Control", ""))
+        names = {row[0] for row in r.get_json()["streets"]}
+        for street in ("Lawn Road", "Portswood Road", "Shirley High Street", "Above Bar Street"):
+            self.assertIn(street, names)
+        r.close()
+
+    def test_the_drop_down_is_a_combobox_filtered_on_the_phone(self):
+        html, js = StaticFiles.html, StaticFiles.js
+        self.assertRegex(html, r'id="pc"[^>]*role="combobox"')
+        self.assertIn('aria-controls="results"', html)
+        self.assertIn('role="listbox"', html)
+        self.assertIn('"/static/streets.json"', js)
+        self.assertIn("aria-activedescendant", js)
+        # Typing never calls the server: the search API is only used on Find.
+        typing = js[js.index('el.query.addEventListener("input"'):js.index('el.query.addEventListener("keydown"')]
+        self.assertNotIn("api(", typing)
+        self.assertNotIn("fetch(", typing)
+
+    def test_the_pin_drops_and_respects_reduced_motion(self):
+        css = StaticFiles.css
+        self.assertIn("@keyframes pin-drop", css)
+        self.assertIn(".map-wrap.dropped .centre-pin", css)
+        self.assertIn("prefers-reduced-motion: reduce", css)
+        self.assertIn('class="pin-shadow" aria-hidden="true"', StaticFiles.html)
+
+
+class Hooks(PinCase):
+    def tearDown(self):
+        pin_service.HOOKS.update({"on_confirm": None, "describe": None})
+        super().tearDown()
+
+    def test_check_names_the_problem(self):
+        pin_service.HOOKS["describe"] = lambda ref: "pothole" if ref == "R-0074" else None
+        self.assertEqual(self.post("/api/check", token=self.link("R-0074")).get_json()["what"], "pothole")
+
+    def test_check_works_without_the_bot(self):
+        self.assertIsNone(self.post("/api/check", token=self.link()).get_json()["what"])
+
+    def test_confirm_tells_the_bot_with_no_coordinates(self):
+        seen = []
+        pin_service.HOOKS["on_confirm"] = lambda ref, place, source: seen.append((ref, place, source))
+        self.assertEqual(self.post("/api/confirm", token=self.link("R-0074"), lat=INSIDE[0], lng=INSIDE[1],
+                                   source="gps").status_code, 200)
+        ref, place, source = seen[0]
+        self.assertEqual((ref, source, place["street"]), ("R-0074", "gps", "Windsor Terrace"))
+        self.assertFalse({"lat", "lng"} & set(place))
+
+    def test_a_failing_hook_never_loses_the_pin(self):
+        def broken(*args):
+            raise RuntimeError("bot down")
+        pin_service.HOOKS["on_confirm"] = broken
+        self.assertEqual(self.post("/api/confirm", token=self.link(), lat=INSIDE[0], lng=INSIDE[1]).status_code, 200)
+        self.assertEqual(len(self.db("SELECT * FROM report_locations")), 1)
+
+    def test_the_boundary_refuses_eastleigh_before_any_lookup(self):
+        self.web.down = True   # no third party answers: the local boundary still decides
+        r = self.post("/api/preview", token=self.link(), lat=EASTLEIGH[0], lng=EASTLEIGH[1])
+        self.assertEqual(r.status_code, 422)
+
+
+class Mounted(unittest.TestCase):
+    def test_a_host_app_serves_the_map_and_keeps_its_own_api(self):
+        from flask import Flask
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        env = unittest.mock.patch.dict(os.environ, {"SOTONFIX_DB": str(Path(tmp.name) / "pin.db")})
+        env.start()
+        self.addCleanup(env.stop)
+        host = Flask(__name__)
+
+        @host.post("/api/turn")
+        def turn():
+            return "host"
+
+        pin_service.mount(host)
+        client = host.test_client()
+        self.assertEqual(client.post("/api/turn").get_data(as_text=True), "host")
+        self.assertEqual(client.get("/static/pin.css").status_code, 200)
+        self.assertIn("Where is the problem?", client.get("/p/AbCdEfGh1234").get_data(as_text=True))
 
 
 class BotAndPages(PinCase):

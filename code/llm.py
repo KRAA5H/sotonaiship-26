@@ -1,22 +1,32 @@
-"""One-shot model call with a provider ladder.
+"""One-shot model call with a provider ladder. DeepSeek first, thinking off.
 
-DeepSeek V4.1 Flash does text and images, so it goes first for both. Photos fall
-back to a vision model on OpenRouter, then to a text reply that asks for a
-description, so the resident always gets an answer.
+DeepSeek V4.1 Flash does text and images and is the model for every call:
+triage, the photo agent and the reply agent. Thinking is switched off
+explicitly ("thinking": {"type": "disabled"}), because DeepSeek thinks by
+default and thinking costs seconds a resident on a phone can feel.
 
-DeepSeek returns HTTP 200 with EMPTY content for an image unless the request
-carries a `reasoning` object. That is why the image candidates set reasoning.
+One exception, measured on the live line: for an image DeepSeek has returned
+HTTP 200 with EMPTY content when thinking was off. So an image is sent with
+thinking off first, and only if that comes back empty is it retried once with
+low-effort thinking. That retry is logged, so its real rate can be counted.
 
-No history, no session, no state. Falls back to a deterministic stub when no
-provider can answer, and every caller can say which mode answered.
+Fallbacks, in order: deepseek-v4-pro (text only), then an OpenRouter model,
+then a fixed stub. Every caller gets (text, mode) and can say who answered.
 
-Rule learned the hard way: reasoning traces must NEVER reach a resident. Some
-models return an empty `content` with a populated `reasoning` field.
+Rule learned the hard way: reasoning traces must NEVER reach a resident. Only
+`content` is ever returned.
+
+Usage: each call appends one line to logs/llm_usage.jsonl with the model, the
+purpose, the latency and the token counts. Never the message text. That file
+is how cost per report gets measured instead of estimated.
 """
 
 import base64
+import json
 import os
+import threading
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -33,7 +43,11 @@ BASE_URL = (os.getenv("LLM_BASE_URL") or "https://openrouter.ai/api/v1").rstrip(
 MODEL = os.getenv("LLM_MODEL") or "nvidia/nemotron-3-super-120b-a12b:free"
 VISION_MODEL = os.getenv("LLM_VISION_MODEL") or "nvidia/nemotron-3.5-super-vl:free"
 
-TIMEOUT = 30
+# Seconds. A resident is waiting on a phone; a slow provider is skipped, not waited for.
+TIMEOUT = float(os.getenv("LLM_TIMEOUT") or "15")
+RETRY_PAUSE = 0.3
+USAGE_LOG = Path(os.getenv("LLM_USAGE_LOG") or (HERE / "logs" / "llm_usage.jsonl"))
+
 STUB_REPLY = (
     "Thanks, that is logged. A crew will take a look and you will get an update here."
 )
@@ -41,9 +55,11 @@ PHOTO_FALLBACK = (
     "I can't open that photo. Can you tell me in a few words what it shows and where it is?"
 )
 
+_usage_lock = threading.Lock()
+
 
 def _candidates(image):
-    """Provider order for this call."""
+    """Provider order for this call. DeepSeek never thinks unless an image comes back empty."""
     ds_key = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
     or_key = (os.getenv("LLM_API_KEY") or "").strip()
     out = []
@@ -51,23 +67,24 @@ def _candidates(image):
     if image:
         if ds_key:
             out.append({"base": DS_BASE, "model": DS_MODEL, "key": ds_key,
-                        "image": True, "reasoning": True})
+                        "image": True, "thinking": False, "provider": "deepseek"})
+            # Only reached when the thinking-off call returned empty content.
+            out.append({"base": DS_BASE, "model": DS_MODEL, "key": ds_key,
+                        "image": True, "thinking": True, "provider": "deepseek",
+                        "only_after_empty": True})
         if or_key:
             out.append({"base": BASE_URL, "model": VISION_MODEL, "key": or_key,
-                        "image": True, "reasoning": True})
+                        "image": True, "thinking": True, "provider": "openrouter"})
         return out
 
     if ds_key:
-        # DeepSeek defaults to high effort and can spend the whole output budget
-        # thinking, returning empty content. Low effort keeps it short and cheap.
         out.append({"base": DS_BASE, "model": DS_MODEL, "key": ds_key,
-                    "image": False, "reasoning": False})
+                    "image": False, "thinking": False, "provider": "deepseek"})
         out.append({"base": DS_BASE, "model": "deepseek-v4-pro", "key": ds_key,
-                    "image": False, "reasoning": False})
-
-    if not image and or_key:
+                    "image": False, "thinking": False, "provider": "deepseek"})
+    if or_key:
         out.append({"base": BASE_URL, "model": MODEL, "key": or_key,
-                    "image": False, "reasoning": True})
+                    "image": False, "thinking": True, "provider": "openrouter"})
     return out
 
 
@@ -88,29 +105,61 @@ def _payload(system, user, image, candidate, max_tokens=None, temperature=None):
             {"role": "system", "content": system},
             {"role": "user", "content": content},
         ],
-        "max_tokens": max_tokens or (800 if candidate["reasoning"] else 300),
+        "max_tokens": max_tokens or 300,
         "temperature": 0.7 if temperature is None else temperature,
     }
-    if candidate["reasoning"]:
-        # Images need the reasoning object, or DeepSeek returns empty content.
-        # Thinking also counts against the budget, so keep a floor.
+    if candidate["provider"] == "deepseek":
+        if candidate["thinking"]:
+            # The empty-image retry only: short thinking, with room left for the answer.
+            payload["thinking"] = {"type": "enabled"}
+            payload["reasoning_effort"] = "low"
+            payload["max_tokens"] = max(payload["max_tokens"], 600)
+        else:
+            payload["thinking"] = {"type": "disabled"}
+    elif candidate["thinking"]:
+        # OpenRouter's free fallbacks are reasoning models: keep it short.
         payload["max_tokens"] = max(payload["max_tokens"], 400)
-        payload["reasoning"] = {"effort": "low"}
-    else:
-        # Text does not need thinking. DeepSeek still thinks by default, so the
-        # switch has to be explicit; effort "none" and enabled:false are ignored.
-        payload["thinking"] = {"type": "disabled"}
+        payload["reasoning"] = {"effort": "low", "exclude": True}
     return payload
 
 
-def chat(system, user, image=None, max_tokens=None, temperature=None):
-    """Return (reply_text, mode) where mode is 'model' or 'stub'."""
+def _log_usage(candidate, purpose, started, status, data):
+    """One line per call: model, purpose, latency and tokens. Never the text."""
+    usage = (data or {}).get("usage") or {}
+    line = {
+        "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "provider": candidate["provider"],
+        "model": candidate["model"],
+        "thinking": candidate["thinking"],
+        "purpose": purpose or "",
+        "status": status,
+        "ms": round((time.time() - started) * 1000),
+        "prompt_tokens": usage.get("prompt_tokens"),
+        "completion_tokens": usage.get("completion_tokens"),
+        "cache_hit_tokens": usage.get("prompt_cache_hit_tokens"),
+    }
+    try:
+        with _usage_lock:
+            USAGE_LOG.parent.mkdir(parents=True, exist_ok=True)
+            with USAGE_LOG.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(line) + "\n")
+    except OSError:
+        pass  # a full disk must never stop a reply
+    return line
+
+
+def chat(system, user, image=None, max_tokens=None, temperature=None, timeout=None, purpose=None):
+    """Return (reply_text, mode) where mode is 'model', 'stub' or 'fallback'."""
     candidates = _candidates(image)
     if not candidates:
         return (PHOTO_FALLBACK if image else STUB_REPLY), "fallback"
 
+    empty_image = False
     for candidate in candidates:
+        if candidate.get("only_after_empty") and not empty_image:
+            continue
         for attempt in (1, 2):
+            started = time.time()
             try:
                 response = requests.post(
                     candidate["base"] + "/chat/completions",
@@ -119,28 +168,37 @@ def chat(system, user, image=None, max_tokens=None, temperature=None):
                         "Content-Type": "application/json",
                     },
                     json=_payload(system, user, image, candidate, max_tokens, temperature),
-                    timeout=TIMEOUT,
+                    timeout=timeout or TIMEOUT,
                 )
             except requests.RequestException as error:
                 print(f"[llm] {candidate['model']} transport error: {error}")
-                time.sleep(1.0)
-                continue
+                _log_usage(candidate, purpose, started, "transport_error", None)
+                break  # a timeout already cost the resident seconds: next provider
 
             if response.status_code in (429, 500, 502, 503) and attempt == 1:
-                time.sleep(1.2)
+                _log_usage(candidate, purpose, started, response.status_code, None)
+                time.sleep(RETRY_PAUSE)
                 continue
             if response.status_code != 200:
                 print(f"[llm] {candidate['model']} HTTP {response.status_code} {response.text[:100]}")
+                _log_usage(candidate, purpose, started, response.status_code, None)
                 break
 
-            message = ((response.json().get("choices") or [{}])[0].get("message") or {})
+            data = response.json()
+            line = _log_usage(candidate, purpose, started, 200, data)
+            message = ((data.get("choices") or [{}])[0].get("message") or {})
             text = (message.get("content") or "").strip()
             if text:
+                if candidate["thinking"] and candidate["provider"] == "deepseek":
+                    print(f"[llm] image answered only with thinking on ({line['ms']} ms)")
                 return text, "model"
-            # DeepSeek sometimes returns an empty content with a populated
-            # reasoning field. One more try usually answers.
+            if image and candidate["provider"] == "deepseek" and not candidate["thinking"]:
+                print("[llm] image came back empty with thinking off, retrying with low thinking")
+                empty_image = True
+                break
+            # An empty text reply: one quick retry usually answers.
             if attempt == 1:
-                time.sleep(0.5)
+                time.sleep(RETRY_PAUSE)
                 continue
             print(f"[llm] {candidate['model']} empty content twice")
             break
@@ -153,4 +211,4 @@ def chat(system, user, image=None, max_tokens=None, temperature=None):
 
 
 if __name__ == "__main__":
-    print(chat("Reply in one short sentence.", "there is a pothole on Weston Lane"))
+    print(chat("Reply in one short sentence.", "there is a pothole on Weston Lane", purpose="cli"))

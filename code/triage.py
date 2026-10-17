@@ -25,6 +25,11 @@ import tools  # noqa: E402
 
 MAX_TEXT = 700
 CONFIDENCE_DEFAULT = 0.5
+# One short JSON object: a small budget, low temperature for a steady category,
+# and a timeout a phone user will tolerate.
+TRIAGE_TOKENS = 220
+TRIAGE_TEMPERATURE = 0.1
+TRIAGE_TIMEOUT = 10
 _FENCE = re.compile(r"```(?:json)?\s*(.*?)```", re.S)
 _RETRY = ("\n\nYour previous reply could not be read as JSON. Reply with the JSON "
           "object only, no other words.")
@@ -189,13 +194,16 @@ def triage(text=None, image=None):
         return _emergency_decision(text)
     system = _system()
 
-    reply, mode = llm.chat(system, user, image)
+    reply, mode = llm.chat(system, user, image, max_tokens=TRIAGE_TOKENS,
+                           temperature=TRIAGE_TEMPERATURE, timeout=TRIAGE_TIMEOUT, purpose="triage")
     if mode != "model":
         return _decision(mode, description=user[:400])
 
     data = _raw_object(reply)
     if data is None:
-        reply, mode = llm.chat(system, user + _RETRY, image)
+        reply, mode = llm.chat(system, user + _RETRY, image, max_tokens=TRIAGE_TOKENS,
+                               temperature=TRIAGE_TEMPERATURE, timeout=TRIAGE_TIMEOUT,
+                               purpose="triage")
         data = _raw_object(reply) if mode == "model" else None
     if data is None:
         return _decision("unparseable", description=user[:400])
