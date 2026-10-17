@@ -78,7 +78,11 @@ CREATE TABLE IF NOT EXISTS tickets (
     urgency INTEGER,
     status TEXT NOT NULL,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    report_id TEXT,      -- linked row in the website's reports table (kerbside.db)
+    reporter_ref TEXT,   -- salted hash of the sender, same as reports.reporter_ref
+    duplicate_of TEXT,   -- ref_code of the original ticket, if this is a repeat
+    web_status TEXT      -- website status last seen by the sync (new/in_review/resolved)
 );
 CREATE TABLE IF NOT EXISTS actions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,17 +114,35 @@ CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
 """
 
 
+class _Conn(sqlite3.Connection):
+    """`with connect() as conn:` commits (or rolls back) AND closes."""
+    def __exit__(self, *exc):
+        super().__exit__(*exc)
+        self.close()
+        return False
+
+
 def connect():
-    conn = sqlite3.connect(TICKETS_DB_PATH, timeout=10)
+    conn = sqlite3.connect(TICKETS_DB_PATH, timeout=10, factory=_Conn)
     conn.row_factory = sqlite3.Row  # read columns by name
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")  # lets teammates read while we write
     return conn
 
 
+LINK_COLUMNS = ("report_id", "reporter_ref", "duplicate_of", "web_status")
+
+
 def init_db():
     with connect() as conn:
         conn.executescript(SCHEMA)
+        # Databases made before the website link existed: add the new columns.
+        have = {r["name"] for r in conn.execute("PRAGMA table_info(tickets)")}
+        for col in LINK_COLUMNS:
+            if col not in have:
+                conn.execute(f"ALTER TABLE tickets ADD COLUMN {col} TEXT")
+        # One website report can only ever be one ticket.
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_tickets_report_id ON tickets(report_id)")
 
 
 def _new_ref_code(conn):
@@ -162,18 +184,24 @@ def set_status(ref_code, new_status, actor, conn=None):
 
 
 def create_ticket(phone, category, summary, location_text, postcode, lat, lng, urgency,
-                  actor="ai_agent", status="TRIAGED", created_at=None):
+                  actor="ai_agent", status="TRIAGED", created_at=None,
+                  report_id=None, tracking_token=None, reporter_ref=None, web_status=None):
     """Saves a new complaint. It starts as RECEIVED, then moves to `status`
-    (TRIAGED by default, since the agent has triaged it). Returns the row."""
+    (TRIAGED by default, since the agent has triaged it). Returns the row.
+
+    report_id / tracking_token / reporter_ref / web_status link it to the
+    website's reports row (see bridge.py); leave them out when standalone."""
     ts = created_at or now()
     with connect() as conn:
         ref = _new_ref_code(conn)
         cur = conn.execute(
             """INSERT INTO tickets (ref_code, tracking_token, phone, category, summary,
-                   location_text, postcode, lat, lng, urgency, status, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'RECEIVED', ?, ?)""",
-            (ref, secrets.token_urlsafe(32), phone, category, summary, location_text,
-             postcode, lat, lng, urgency, ts, ts),
+                   location_text, postcode, lat, lng, urgency, status, created_at, updated_at,
+                   report_id, reporter_ref, web_status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'RECEIVED', ?, ?, ?, ?, ?)""",
+            (ref, tracking_token or secrets.token_urlsafe(32), phone, category, summary,
+             location_text, postcode, lat, lng, urgency, ts, ts,
+             report_id, reporter_ref, web_status),
         )
         ticket_id = cur.lastrowid
         log_event(conn, ticket_id, "ticket created", actor)
@@ -225,22 +253,44 @@ def distance_m(lat1, lng1, lat2, lng2):
     return 2 * r * math.asin(math.sqrt(a))
 
 
-def find_nearby_open(lat, lng, category, radius_m=200):
-    """Open tickets of the same category within radius_m, nearest first.
-    Distance is checked in Python: fine at hackathon scale."""
+def open_tickets(category, originals_only=True):
+    """Open (not COMPLETED/REJECTED) tickets of one category, oldest first.
+    Distance and street matching happen in Python: fine at hackathon scale."""
     placeholders = ",".join("?" * len(CLOSED_STATUSES))
+    extra = "AND duplicate_of IS NULL" if originals_only else ""
     with connect() as conn:
         rows = conn.execute(
-            f"""SELECT * FROM tickets WHERE category = ? AND lat IS NOT NULL AND lng IS NOT NULL
-                AND status NOT IN ({placeholders})""",
+            f"""SELECT * FROM tickets WHERE category = ? AND status NOT IN ({placeholders})
+                {extra} ORDER BY created_at, id""",
             (category, *CLOSED_STATUSES),
         ).fetchall()
-    hits = []
-    for r in rows:
-        d = distance_m(lat, lng, r["lat"], r["lng"])
-        if d <= radius_m:
-            hits.append({**dict(r), "distance_m": round(d)})
-    return sorted(hits, key=lambda t: t["distance_m"])
+    return [dict(r) for r in rows]
+
+
+def count_duplicates(ref_code):
+    """How many other tickets point at this one as their original."""
+    with connect() as conn:
+        return conn.execute("SELECT COUNT(*) FROM tickets WHERE duplicate_of = ?", (ref_code,)).fetchone()[0]
+
+
+def tickets_by_report_id():
+    with connect() as conn:
+        rows = conn.execute("SELECT * FROM tickets WHERE report_id IS NOT NULL").fetchall()
+    return {r["report_id"]: dict(r) for r in rows}
+
+
+def update_link_fields(ref_code, **fields):
+    """Sync bookkeeping only (web_status, duplicate_of, location_text, phone,
+    lat/lng/postcode). Status changes must go through set_status()."""
+    allowed = {"web_status", "duplicate_of", "location_text", "phone", "lat", "lng", "postcode"}
+    bad = set(fields) - allowed
+    if bad:
+        raise ValueError(f"update_link_fields cannot change {bad}")
+    if not fields:
+        return
+    sets = ", ".join(f"{k} = ?" for k in fields)
+    with connect() as conn:
+        conn.execute(f"UPDATE tickets SET {sets} WHERE ref_code = ?", (*fields.values(), ref_code))
 
 
 # --------------------------------------------------------------------------

@@ -1,2 +1,3 @@
-﻿mcp>=2.3,<3
+mcp>=2.3,<3
 httpx
+python-dotenv  # code/reports_db.py and code/tools.py load code/.env

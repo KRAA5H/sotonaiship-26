@@ -1,7 +1,7 @@
 """End-to-end test: starts server.py as a real MCP server over stdio and calls
 every tool, including the cases that must be rejected.
 
-Uses a throwaway database (test_tickets.db) so the live one is untouched.
+Uses throwaway databases (test_tickets.db, test_kerbside.db) so the live ones are untouched.
 Run:  python test_client.py
 """
 import asyncio
@@ -15,6 +15,7 @@ from mcp.client.stdio import stdio_client
 
 HERE = Path(__file__).resolve().parent
 TEST_DB = HERE / "test_tickets.db"
+TEST_WEB_DB = HERE / "test_kerbside.db"  # throwaway copy of the website database
 PHONE = "+447700900123"
 results = []
 
@@ -41,11 +42,11 @@ async def call(session, tool, args, expect_error=False):
 
 
 async def main():
-    for f in HERE.glob("test_tickets.db*"):
+    for f in [*HERE.glob("test_tickets.db*"), *HERE.glob("test_kerbside.db*")]:
         f.unlink()
     params = StdioServerParameters(
         command=sys.executable, args=[str(HERE / "server.py")],
-        env={**os.environ, "TICKETS_DB_PATH": str(TEST_DB)},
+        env={**os.environ, "TICKETS_DB_PATH": str(TEST_DB), "DB_PATH": str(TEST_WEB_DB)},
     )
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:
@@ -59,7 +60,8 @@ async def main():
             await call(session, "list_services", {})
             await call(session, "find_service", {"category": "pothole"})
             pc = await call(session, "lookup_postcode", {"postcode": "SO17 1BJ"})
-            await call(session, "find_nearby_tickets", {"lat": 50.9265, "lng": -1.3925, "category": "pothole"})
+            # A pothole from the website's synthetic reports (no coordinates: matched on street text)
+            await call(session, "find_nearby_tickets", {"category": "pothole", "location_text": "46 Portswood Road"})
             lat, lng = (pc["lat"], pc["lng"]) if isinstance(pc, dict) and pc.get("ok") else (50.9358, -1.3963)
             t = await call(session, "create_ticket", {
                 "phone": PHONE, "category": "fly_tipping",
@@ -67,6 +69,22 @@ async def main():
                 "location_text": "Alley behind 120 Portswood Road", "urgency": 2,
                 "postcode": "SO17 1BJ", "lat": lat, "lng": lng})
             ref = t["ref_code"]
+            assert t["tracking_link"] and "/r/" in t["tracking_link"], "no resident link"
+            assert not t["already_reported"], "fresh complaint wrongly treated as a repeat"
+
+            print("\n===== No repeated complaints =====")
+            again = await call(session, "create_ticket", {
+                "phone": PHONE, "category": "fly_tipping", "summary": "Still there",
+                "location_text": "Alley behind 120 Portswood Road", "urgency": 2, "lat": lat, "lng": lng})
+            results.append(again["already_reported"] and again["ref_code"] == ref)
+            print(f"{'PASS' if results[-1] else 'FAIL'}  same resident again -> same ticket, nothing new")
+            other = await call(session, "create_ticket", {
+                "phone": "+447700900456", "category": "fly_tipping", "summary": "Mattress in the alley",
+                "location_text": "alley behind 120 portswood road", "urgency": 2})
+            results.append(other["duplicate_of"] == ref and not other["already_reported"])
+            print(f"{'PASS' if results[-1] else 'FAIL'}  another resident -> own ticket, linked to {ref}")
+
+            print("\n===== Officer flow =====")
             await call(session, "propose_action", {
                 "ref_code": ref, "team": "Street cleansing", "priority": 2,
                 "note": "Collect fly-tipped mattress and bags; no hazardous items reported."})
@@ -87,6 +105,8 @@ async def main():
             await call(session, "lookup_postcode", {"postcode": "SW1A 1AA"})  # valid, but not Southampton
             await call(session, "lookup_postcode", {"postcode": "NOTAPOSTCODE"})
 
+    for f in [*HERE.glob("test_tickets.db*"), *HERE.glob("test_kerbside.db*")]:
+        f.unlink(missing_ok=True)
     print(f"\n{sum(results)}/{len(results)} checks passed")
     sys.exit(0 if all(results) else 1)
 
