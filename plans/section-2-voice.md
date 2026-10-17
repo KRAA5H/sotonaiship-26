@@ -102,7 +102,7 @@ One writer per file. A and B run in parallel on disjoint files. I wire the seam 
 - [x] Me: `photo_url` in `get_report_status`, resident template bound to it
 - [x] Me: update the five broken bot tests to assert facts rather than wording
 - [x] Me: ten new eval cases, run twice, templates only and voice on
-- [ ] All: six scripted live texts and one late photo through the real server
+- [x] All: six scripted live texts and one late photo through the real server
 
 ## Verification
 
