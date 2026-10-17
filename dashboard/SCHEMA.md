@@ -16,6 +16,7 @@
 | area | named Southampton area, or empty | Portswood |
 | status_changed_at | text (ISO date), or empty: when the status first changed | 2026-10-18T09:30:00+00:00 |
 | photo_path | path under `code/photos/`, or empty. Never sent to a page; served only at `/council/photos/<id>` | synthetic/pothole.png |
+| photo_features | JSON, or empty: what_is_visible, estimated_size, surface, hazard, label. Shape and checks in `code/photo_features.py`. Never holds a location | {"hazard": "yes", ...} |
 
 ## Pages
 - `/council`: all reports, filters, duplicate grouping, status buttons (login or private).

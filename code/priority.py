@@ -3,7 +3,8 @@
 The score is computed on read from four factors, and every factor is returned
 alongside it so an officer can see why a report sits where it does:
 
-  severity   high 3, medium 2, low 1 (not set counts as medium, and says so)
+  severity   high 3, medium 2, low 1 (not set counts as medium, and says so),
+             adjusted by the photo's structured features when there are any
   exposure   how many people the place affects, from the category's group
   cluster    open reports of the same category at the same place, matched with
              the duplicate rule's own location normalisation
@@ -15,6 +16,7 @@ A resolved report scores 0. Nothing is stored, so there is no migration.
 
 from datetime import datetime, timezone
 
+import photo_features
 import tools
 
 # Exposure by category group: roughly how many people one problem affects.
@@ -32,6 +34,9 @@ EXPOSURE = {
 EXPOSURE_DEFAULT = (1.0, "exposure unknown for this category")
 
 SEVERITY = {"high": 3, "medium": 2, "low": 1}
+# What a photo can add to severity, only when validated features exist.
+PHOTO_HAZARD = 1.0                                   # "hazard": "yes"
+PHOTO_SIZE = {"large": 0.5, "small": -0.5}           # "estimated_size"
 CLUSTER_STEP = 0.5     # each extra open report at the same place adds half again
 CLUSTER_CAP = 5        # beyond five reports the factor stops growing
 AGE_CAP_DAYS = 14      # older than two weeks counts as two weeks
@@ -41,10 +46,25 @@ MAX_RAW = (max(SEVERITY.values()) * max(e for e, _ in EXPOSURE.values())
 OPEN = ("new", "in_review")
 
 
-def severity_factor(severity):
+def severity_factor(severity, features=None):
+    """Severity from the report, nudged by the photo's features if present."""
     if severity in SEVERITY:
-        return SEVERITY[severity], severity.capitalize()
-    return SEVERITY["medium"], "Not set (counted as medium)"
+        value, label = SEVERITY[severity], severity.capitalize()
+    else:
+        value, label = SEVERITY["medium"], "Not set (counted as medium)"
+    if not features:
+        return value, label
+    notes, change = [], 0.0
+    if features.get("hazard") == "yes":
+        change += PHOTO_HAZARD
+        notes.append("hazard seen")
+    if features.get("estimated_size") in PHOTO_SIZE:
+        change += PHOTO_SIZE[features["estimated_size"]]
+        notes.append(f"{features['estimated_size']} in photo")
+    if not notes:
+        return value, label
+    adjusted = min(max(value + change, min(SEVERITY.values())), max(SEVERITY.values()))
+    return adjusted, f"{label}, photo: {', '.join(notes)}"
 
 
 def exposure_factor(category_id, groups):
@@ -82,7 +102,7 @@ def priority(report, reports, groups, now=None):
     groups:  {category_id: group} from categories.json.
     """
     now = now or datetime.now(timezone.utc)
-    sev, sev_label = severity_factor(report.get("severity"))
+    sev, sev_label = severity_factor(report.get("severity"), photo_features.from_stored(report.get("photo_features")))
     exp, exp_label = exposure_factor(report.get("category_id"), groups)
     count = cluster_count(report, reports)
     cluster = 1 + CLUSTER_STEP * (min(count, CLUSTER_CAP) - 1)

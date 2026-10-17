@@ -31,7 +31,7 @@ DB_PATH = Path(os.getenv("DB_PATH") or Path(__file__).with_name("kerbside.db"))
 COLUMNS = (
     "id", "created_at", "category_id", "status", "severity", "location", "area",
     "description", "has_photo", "duplicate_of", "reporter_ref", "link_token", "status_changed_at",
-    "photo_path",
+    "photo_path", "photo_features",
 )
 # What the council dashboard may see. reporter_ref never leaves the database.
 # photo_path is a server path: the page gets photo_stored instead and asks the
@@ -161,6 +161,21 @@ def _ensure_column(conn, name):
         conn.execute(f"ALTER TABLE reports ADD COLUMN {name} TEXT")
 
 
+def set_photo_features(conn, report_id, raw):
+    """Store a photo's structured features, validated against photo_features.
+
+    Returns (stored, problems). Nothing is stored unless the features fit the
+    shape; a location in the model's reply is never stored.
+    """
+    import photo_features  # noqa: PLC0415
+    features, problems = photo_features.validate(raw)
+    if features is None:
+        return False, problems
+    cursor = conn.execute("UPDATE reports SET photo_features = ? WHERE id = ?",
+                          (json.dumps(features), report_id))
+    return cursor.rowcount == 1, problems
+
+
 def photo_path(conn, report_id):
     """The stored photo's path, relative to code/photos/, or None."""
     row = conn.execute("SELECT photo_path FROM reports WHERE id = ?", (report_id,)).fetchone()
@@ -193,7 +208,7 @@ def init_db(path=None, seed=True):
             conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
 
         _ensure_area_column(conn)
-        for column in ("status_changed_at", "photo_path"):
+        for column in ("status_changed_at", "photo_path", "photo_features"):
             _ensure_column(conn, column)
 
         count = conn.execute("SELECT COUNT(*) FROM reports").fetchone()[0]
@@ -213,6 +228,7 @@ def load_reports(conn, reports):
         row["duplicate_of"] = row["duplicate_of"] or None
         row["status_changed_at"] = row["status_changed_at"] or None
         row["photo_path"] = row["photo_path"] or None
+        row["photo_features"] = row["photo_features"] or None
         row["has_photo"] = int(bool(row["has_photo"]))
         rows.append(row)
 

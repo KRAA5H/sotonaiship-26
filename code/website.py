@@ -31,6 +31,7 @@ from flask import Blueprint, Flask, Response, current_app, jsonify, render_templ
 
 load_dotenv(Path(__file__).with_name(".env"))
 
+import photo_features
 import priority
 import reports_db
 import tools
@@ -74,7 +75,13 @@ _GROUPS = {cid: c["group"] for cid, c in loader.load(tools.AGENT_DIR)[0].items()
 
 
 def _with_priority(reports):
-    """Adds the priority score and its four factors to each report, on read."""
+    """Adds the priority score and its four factors to each report, on read.
+
+    Photo features are validated again here, so the page only ever receives the
+    fixed shape (or nothing), never raw model text and never a location.
+    """
+    for report in reports:
+        report["photo_features"] = photo_features.from_stored(report.get("photo_features"))
     scores = priority.score_all(reports, _GROUPS)
     for report in reports:
         report["priority"] = scores[report["id"]]

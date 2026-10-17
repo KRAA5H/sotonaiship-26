@@ -36,6 +36,9 @@ sys.path.insert(0, str(here))
 from make_fake_photos import photo_for  # noqa: E402
 for r in rows:
     r["photo_path"] = photo_for(r["category_id"]) if r["has_photo"] else ""
+    # Left empty: no model has looked at these placeholders, and hand-written
+    # text must never be shown under the "AI-generated description" label.
+    r["photo_features"] = ""
 # When an officer first changed the status, for "time to first action". Its own
 # seeded generator per report, so adding it does not shift the data above.
 for r in rows:
