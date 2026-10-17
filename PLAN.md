@@ -9,6 +9,63 @@ Working name: **Kerbside**.
 
 ---
 
+## 0. Where we are (updated Sat 17 Oct, after 17:55)
+
+**Read this section first. It overrides anything below it that disagrees.**
+
+### 0.1 What has changed since this plan was written
+
+| Change | Where it is recorded |
+|---|---|
+| Reports follow `CLAUDE.md` and `dashboard/schema.sql`: 11 columns, `R-0001` ids, statuses `new` / `in_review` / `resolved`, no coordinates, no channel. **Sections 4.1 (report id, status), 4.2 and 4.4 below are retired.** A resident's link uses `/r/<link_token>`, never an id | `DECISIONS.md` D26 |
+| Duplicate rule is now: open report (new or in_review), same category, same location text, within 30 days. The 80 m / 14 day rule (section 2 item 4, section 3.3 step 5) is retired | `DECISIONS.md` D26, `agent/categories.json` |
+| iMessage guards exist because the agent replied to itself: own-account ignore list, stale-message skip, GUID dedupe, 200-then-thread | `WORKLOG.md` 17:35 |
+| Model access is OpenAI-compatible over HTTP (OpenRouter), not the Anthropic SDK. `conversational_ai.py` and `database.py` are the old path and the new tools do not use them | `DECISIONS.md` D23 |
+
+### 0.2 Status by area
+
+| Area | State | Where |
+|---|---|---|
+| iMessage in and out (BlueBubbles) | **Works, verified on real traffic.** Replies from a background thread, deduplicated, own account ignored, stale replay skipped | `code/bb.py`, `code/blue_bubbles.py` |
+| Photo understanding | **Works.** Attachment download plus a vision model, about 12 s | `code/llm.py`, `code/bb.py` |
+| Model call | **One-shot only.** One system message, one user message, no history, no tools. Stub fallback when there is no key or the reply is empty | `code/llm.py` |
+| Rulebook and fact sheet | **Done.** 22 confirmed categories, 53 dated facts, loader joins them | `agent/` |
+| Reports database | **Done, on branch `aadil/agent-tools`, not on `main` yet.** SQLite built from `schema.sql`, 68 synthetic reports | `code/reports_db.py` |
+| The four agent tools | **Done and tested (34 tests), same branch.** `find_category_facts`, `check_duplicate`, `save_report`, `get_report_status`, plus tool schemas and `call_tool()` | `code/tools.py`, `code/test_tools.py` |
+| **Agent loop (the model calls the tools)** | **Not started. This is the main gap.** The webhook still sends one-shot text and never reads the rulebook or writes a report | `code/blue_bubbles.py` |
+| Follow-up conversation (max 5 exchanges, per-sender state) | Not started. Only the old Anthropic-SDK `IntakeAgent` has it | |
+| Website: `/council` and `/r/<link_token>` | Prototype only (static HTML with embedded fake data). No server route reads the database | `dashboard/prototype/index.html` |
+| Council actions (set `in_review` / `resolved`) | Not started. No tool or route changes a status | |
+| Evaluation, baseline, `NUMBERS.md` | Not started. `NUMBERS.md` does not exist | |
+| Submission (README, video, summary) | Not started | section 13 |
+
+### 0.3 Open questions that need a team decision
+
+1. **Scope.** Section 2 still lists a mock works system, scheduler, priority and a predictive pane. `CLAUDE.md` describes a smaller product (answer from verified facts, take a structured report, send a private link). D26 only retired the report shape. Decide whether items 5 to 8 and 11 of section 2 stay in, or `CLAUDE.md` wins. Until then the backend builds only what `CLAUDE.md` describes.
+2. **Where the backend runs on demo day.** The webhook runs on a Windows machine (`192.168.0.202:5005`); `CLAUDE.md` says the database lives on the demo Mac. The resident's private link (`SITE_URL`) has to open on a phone, so it needs an address the phone can reach, not `localhost`.
+3. **Council out-of-hours number** appears as both 023 8023 3344 and 023 8083 3344. Do not quote either until checked.
+4. **A36/A33 National Highways status** is not confirmed. Do not name roads.
+5. **Tool calling on the free models is untested.** Nothing in the log shows that the pinned model follows a tool schema. Check this first (task 1 below).
+
+### 0.4 Next backend tasks, in order
+
+| # | Task | Why now | Done when |
+|---|---|---|---|
+| 1 | **Check tool calling.** Send one request with `tools=tool_schemas()` to the pinned model, then to one or two fallbacks. Record which return a valid tool call | Everything below depends on it. If no free model can, the loop becomes a fixed flow where the model only classifies and writes replies | Worklog line with model names and pass or fail |
+| 2 | **Agent loop.** `llm.chat` takes `tools` and `messages`. Loop: model answers, run `call_tool`, feed the result back, stop at a text reply or 5 exchanges. System prompt built from the `categories.json` outcomes and location rule | This is the product. Without it the tools are unused | A scripted chat creates a row and returns a link |
+| 3 | **Per-sender state and the 5-exchange cap.** Keep history per sender, pass the sender to `call_tool(reporter=...)` so only a hash is stored. At the cap, save as incomplete | `CLAUDE.md` rule | A sixth message never asks another question |
+| 4 | **Wire the webhook.** Replace the echo branch in `handle_inbound` with the loop. Keep every guard. A photo sets `has_photo` | Closes the path from phone to database | A real text from a second phone creates a report |
+| 5 | **Website routes.** Flask routes `/r/<link_token>` and `/council` reading `kerbside.db`. Reuse the prototype markup. Council view private (a shared password is enough) | Residents need the link to work. Staff need the list | The link from task 4 opens that report and no other |
+| 6 | **Council status change.** One function and one route to set `in_review` / `resolved`, with allowed transitions | Makes the status page real | A button on `/council` changes what `/r/<token>` shows |
+| 7 | **Database robustness.** WAL mode and a busy timeout, because the webhook threads and the website will use the file at once | Avoids "database is locked" during the demo | Concurrent save-and-read test |
+| 8 | **Refusals and edges.** Emergency, outside Southampton, not-council and info questions: no save, official link, date shown. Tests use a fake model so they run without a key | The judges send their own input | One test per outcome |
+| 9 | **Evaluation.** Short labelled set, keyword baseline, one table in `NUMBERS.md` | Section 9. Every quoted number must come from it | Table exists with sources and dates |
+| 10 | **Retire the old path.** Remove `MODE=agent`, `conversational_ai.py` and `database.py` once task 4 works | One path, one database | `grep -ri anthropic code/` returns nothing |
+
+Tasks 5 and 6 do not depend on tasks 1 to 4, so a second person can take them. Task 9 can start now.
+
+---
+
 ## 1. The idea on one page
 
 **Pitch, one sentence.** We help Southampton City Council's street-scene and coastal teams turn residents' messages into deduplicated, prioritised work orders on tomorrow's jobs list, using AI that runs every step from the first text to the crew's schedule.

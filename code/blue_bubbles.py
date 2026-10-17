@@ -31,6 +31,7 @@ load_dotenv(Path(__file__).with_name(".env"))
 
 import bb
 import llm
+from website import site
 
 MODE = (os.getenv("MODE") or "echo").lower()
 
@@ -62,6 +63,8 @@ SYSTEM = (
 )
 
 app = Flask(__name__)
+# /council and /r/<token> on the same port, so SITE_URL links work.
+app.register_blueprint(site)
 
 _sessions = {}
 _agent = None

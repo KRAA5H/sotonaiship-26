@@ -12,17 +12,11 @@
     "duplicate_rule": {
       "default": {
         "same_category": true,
-        "radius_metres": 50,
-        "window_days": 30
+        "same_location_text": true,
+        "window_days": 30,
+        "open_statuses_only": ["new", "in_review"]
       },
-      "address_based_categories": [
-        "missed_bin",
-        "lost_damaged_bin",
-        "council_housing_repair",
-        "private_rented_disrepair",
-        "hmo_concern"
-      ],
-      "note": "Geo radius makes no sense for bins and housing. Match those on address or postcode plus category instead. Window_days is a starting guess, tune it on test data."
+      "note": "Same rule as CLAUDE.md, implemented in code/tools.py check_duplicate. Location text is compared ignoring case, spacing and punctuation. Resolved reports are never matched. No coordinates are stored, so there is no radius. Window_days is a placeholder, tune it on test data."
     },
     "conversation": {
       "max_exchanges": 5,

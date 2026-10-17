@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Council view · Southampton Reports{% endblock %}
+{% block sub %}Council view. Every report the assistant has saved.{% endblock %}
+{% block scripts %}
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script type="application/json" id="reports">{{ reports | tojson }}</script>
+<script type="application/json" id="labels">{{ labels | tojson }}</script>
+<script>
+// Same views and filters as dashboard/prototype/index.html, reading the real
+// database. Status changes are saved to the server before the screen changes.
+let DATA=JSON.parse(document.getElementById("reports").textContent);
+const REPORTS_URL={{ url_for('website.council_reports_json') | tojson }};
+const REFRESH_MS=15000;
+let saving=0,lastJSON=JSON.stringify(DATA),updated=new Date();
+const CATS=JSON.parse(document.getElementById("labels").textContent);
+const STATUS_URL={{ url_for('website.set_status', report_id='__ID__') | tojson }};
+const RESIDENT_URL={{ url_for('website.resident', token='__TOKEN__') | tojson }};
+const STATUS={new:"New",in_review:"In review",resolved:"Resolved"};
+const SEV={high:3,medium:2,low:1};
+const NOW=new Date();
+const DAY=864e5;
+const blank={status:"all",cat:"all",sev:"all",photo:"all",range:"all",q:"",hideDup:false};
+const state={sort:"newest",...blank};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const label=id=>CATS[id]||id;
+const fmt=iso=>new Date(iso).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
+const dayKey=iso=>iso.slice(0,10);
+function dayLabel(k){const d=new Date(k+"T12:00:00Z"),n=Math.round((new Date(dayKey(NOW.toISOString())+"T12:00:00Z")-d)/DAY);
+  const base=d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});return n===0?["Today",base]:n===1?["Yesterday",base]:[base,""]}
+function chip(cls,t,dot){return `<span class="chip ${esc(cls)}">${dot?"<i></i>":""}${esc(t)}</span>`}
+const cap=s=>s?s[0].toUpperCase()+s.slice(1):"Not set";
+function filtered(){
+  const lim={all:Infinity,"1":1,"7":7,"30":30}[state.range];
+  return DATA.filter(r=>(state.status==="all"||r.status===state.status)&&(state.cat==="all"||r.category_id===state.cat)
+   &&(state.sev==="all"||r.severity===state.sev)&&(state.photo==="all"||String(r.has_photo)===state.photo)
+   &&(NOW-new Date(r.created_at))/DAY<=lim
+   &&(!state.q||(r.id+" "+(r.location||"")+" "+label(r.category_id)).toLowerCase().includes(state.q.toLowerCase()))
+   &&!(state.hideDup&&r.duplicate_of));
+}
+function sorted(rows){
+  const street=r=>(r.location||"").replace(/^\d+\s/,"");
+  const s={newest:(a,b)=>b.created_at.localeCompare(a.created_at),oldest:(a,b)=>a.created_at.localeCompare(b.created_at),
+    severity:(a,b)=>(SEV[b.severity]||0)-(SEV[a.severity]||0)||b.created_at.localeCompare(a.created_at),
+    street:(a,b)=>street(a).localeCompare(street(b))||b.created_at.localeCompare(a.created_at)};
+  return rows.slice().sort(s[state.sort]);
+}
+function council(){
+  const n=k=>DATA.filter(r=>r.status===k).length;
+  const count={};DATA.forEach(r=>count[r.category_id]=(count[r.category_id]||0)+1);
+  const entries=Object.entries(count).sort((a,b)=>b[1]-a[1]);const max=entries.length?entries[0][1]:1;
+  const reps={};DATA.forEach(r=>{if(r.duplicate_of)reps[r.duplicate_of]=(reps[r.duplicate_of]||0)+1});
+  const rows=sorted(filtered());
+  const active=Object.keys(blank).filter(k=>state[k]!==blank[k]).length;
+  const grouped=state.sort==="newest"||state.sort==="oldest";
+  let body="",last="";
+  rows.forEach(r=>{
+    if(grouped&&dayKey(r.created_at)!==last){last=dayKey(r.created_at);const [a,b]=dayLabel(last);body+=`<tr class="day"><td colspan="7">${a}<span>${b}</span></td></tr>`}
+    body+=`<tr><td><span class="id">${esc(r.id)}</span>${grouped?"":`<div class="dup">${fmt(r.created_at)}</div>`}</td>
+      <td>${esc(label(r.category_id))}${r.duplicate_of?`<div class="dup">Repeat of ${esc(r.duplicate_of)}</div>`:""}${reps[r.id]?`<div class="dup">+${reps[r.id]} repeat${reps[r.id]>1?"s":""}</div>`:""}</td>
+      <td>${esc(r.location)}</td><td>${r.severity?chip(r.severity,cap(r.severity),true):`<span class="dup">Not set</span>`}</td>
+      <td><select data-id="${esc(r.id)}" aria-label="Status for ${esc(r.id)}">${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${r.status===k?"selected":""}>${v}</option>`).join("")}</select></td>
+      <td>${r.has_photo?"Yes":"No"}</td><td><a class="link" href="${esc(RESIDENT_URL.replace("__TOKEN__",encodeURIComponent(r.link_token)))}" target="_blank" rel="noopener noreferrer">Resident view</a></td></tr>`});
+  if(!rows.length)body=`<tr><td colspan="7" class="empty">No reports match these filters.</td></tr>`;
+  const tg=(k,v,t)=>`<button class="tg" data-f="${k}" data-v="${v}" aria-pressed="${state[k]===v}">${t}</button>`;
+  return `
+  <div class="kpis">
+    <button class="kpi" data-f="status" data-v="all" aria-pressed="${state.status==="all"}"><b>${DATA.length}</b><span>All reports</span></button>
+    ${Object.entries(STATUS).map(([k,v])=>`<button class="kpi" data-f="status" data-v="${k}" aria-pressed="${state.status===k}"><b>${n(k)}</b><span>${v}</span></button>`).join("")}
+    <button class="kpi" data-f="hideDup" data-v="toggle" aria-pressed="${state.hideDup}"><b>${DATA.filter(r=>r.duplicate_of).length}</b><span>Repeat reports${state.hideDup?" (hidden)":""}</span></button>
+  </div>
+  <div class="panel"><div class="ph"><h2>Reports by category</h2><span class="hint">Select a bar to filter the list</span></div>
+    <div class="bars">${entries.map(([id,c])=>`<button class="bar" data-f="cat" data-v="${esc(id)}" aria-pressed="${state.cat===id}"><span class="name" title="${esc(label(id))}">${esc(label(id))}</span><span><span class="fill" style="width:${c/max*100}%"></span></span><span class="n">${c}</span></button>`).join("")}</div>
+  </div>
+  <div class="panel"><div class="ph"><h2>All reports</h2><span class="hint" id="updated">Updates every 15 seconds. Last checked ${updated.toLocaleTimeString("en-GB")}</span></div>
+    <div class="toolbar">
+      <div class="row">
+        <input type="text" id="f-q" placeholder="Search street, ID or category" value="${esc(state.q)}" aria-label="Search">
+        <select id="f-range" aria-label="Date range">${[["all","All time"],["1","Last 24 hours"],["7","Last 7 days"],["30","Last 30 days"]].map(([v,t])=>`<option value="${v}" ${state.range===v?"selected":""}>${t}</option>`).join("")}</select>
+        <select id="f-sort" aria-label="Sort by">${[["newest","Newest first"],["oldest","Oldest first"],["severity","Most severe first"],["street","Street A to Z"]].map(([v,t])=>`<option value="${v}" ${state.sort===v?"selected":""}>${t}</option>`).join("")}</select>
+        <select id="f-cat" aria-label="Category"><option value="all">All categories</option>${Object.keys(count).sort((a,b)=>label(a).localeCompare(label(b))).map(k=>`<option value="${esc(k)}" ${state.cat===k?"selected":""}>${esc(label(k))}</option>`).join("")}</select>
+      </div>
+      <div class="row">
+        <div class="chips"><span class="lab">Severity</span>${tg("sev","high","High")}${tg("sev","medium","Medium")}${tg("sev","low","Low")}</div>
+        <div class="chips"><span class="lab">Photo</span>${tg("photo","1","With photo")}${tg("photo","0","No photo")}</div>
+        <div class="chips"><button class="tg" data-f="hideDup" data-v="toggle" aria-pressed="${state.hideDup}">Hide repeats</button></div>
+        <span class="count">${rows.length} of ${DATA.length} reports${active?` <button class="link" id="f-reset">Clear ${active} filter${active>1?"s":""}</button>`:""}</span>
+      </div>
+    </div>
+    <div class="tablewrap"><table><thead><tr><th>Report</th><th>Category</th><th>Location</th><th>Severity</th><th>Status</th><th>Photo</th><th></th></tr></thead><tbody>${body}</tbody></table></div>
+  </div>`;
+}
+let toastTimer;
+function toast(text){const t=$("#toast");t.textContent=text;t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.hidden=true,3500)}
+async function saveStatus(select){
+  const id=select.dataset.id,next=select.value,prev=DATA.find(x=>x.id===id).status;
+  select.disabled=true;select.classList.add("saving");saving++;
+  let final=prev;
+  try{
+    const res=await fetch(STATUS_URL.replace("__ID__",encodeURIComponent(id)),{method:"POST",credentials:"same-origin",
+      headers:{"Content-Type":"application/json","X-Requested-With":"kerbside"},body:JSON.stringify({status:next})});
+    const out=await res.json().catch(()=>({}));
+    if(!res.ok||!out.ok)throw new Error(out.error||`server said ${res.status}`);
+    final=out.status;toast(`${id} marked ${STATUS[final]}`);
+  }catch(err){toast(`Not saved: ${err.message}`)}
+  saving--;
+  // Look the row up again: DATA may have been replaced while the save was in flight.
+  const r=DATA.find(x=>x.id===id);if(r)r.status=final;
+  lastJSON=JSON.stringify(DATA);
+  render();
+}
+// Auto-refresh. Skips a beat while a status is being changed or saved, and
+// re-renders only when something changed, so filters and scroll stay put.
+function busy(){
+  const a=document.activeElement;
+  return saving>0||document.hidden||(a&&a.matches&&a.matches("select[data-id]"));
+}
+async function refresh(){
+  if(busy())return;
+  try{
+    const res=await fetch(REPORTS_URL,{credentials:"same-origin",cache:"no-store"});
+    if(!res.ok)return;
+    const out=await res.json();
+    updated=new Date();
+    if(busy())return;  // someone started changing a status while we fetched
+    const json=JSON.stringify(out.reports);
+    if(json===lastJSON){const h=$("#updated");if(h)h.textContent=`Updates every 15 seconds. Last checked ${updated.toLocaleTimeString("en-GB")}`;return}
+    DATA=out.reports;lastJSON=json;render();
+  }catch(err){/* offline or server restarting: try again next time */}
+}
+function render(){
+  const q=document.activeElement&&document.activeElement.id==="f-q"?[$("#f-q").selectionStart,$("#f-q").selectionEnd]:null;
+  const y=window.scrollY;
+  $("#view").innerHTML=council();
+  window.scrollTo(0,y);
+  if(q){const f=$("#f-q");f.focus();f.setSelectionRange(q[0],q[1])}
+  document.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{const k=b.dataset.f,v=b.dataset.v;
+    if(v==="toggle")state[k]=!state[k];else state[k]=state[k]===v&&v!=="all"?"all":v;render()});
+  const sel=(id,k)=>{$(id).onchange=e=>{state[k]=e.target.value;render()}};
+  sel("#f-range","range");sel("#f-sort","sort");sel("#f-cat","cat");
+  $("#f-q").oninput=e=>{state.q=e.target.value;render()};
+  const rs=$("#f-reset");if(rs)rs.onclick=()=>{Object.assign(state,blank);render()};
+  document.querySelectorAll("select[data-id]").forEach(s=>s.onchange=()=>saveStatus(s));
+}
+render();
+setInterval(refresh,REFRESH_MS);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
+</script>
+{% endblock %}
