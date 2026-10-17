@@ -54,12 +54,18 @@ IGNORE_SENDERS = {
     for address in (os.getenv("IGNORE_SENDERS") or "sidhari25@outlook.com").split(",")
     if address.strip()
 }
-try:
-    _detected = bb.self_address().strip().lower()
-    if _detected:
-        IGNORE_SENDERS.add(_detected)
-except Exception as _error:  # noqa: BLE001
-    print(f"[warn] could not read the server's own address: {_error}")
+def detect_self_address():
+    """Probe BlueBubbles once at startup, never at import.
+
+    Importing this module must not need the Mac: the simulator and the tests
+    both import reply_for without a running iMessage host.
+    """
+    try:
+        detected = bb.self_address().strip().lower()
+        if detected:
+            IGNORE_SENDERS.add(detected)
+    except Exception as error:  # noqa: BLE001
+        print(f"[warn] could not read the server's own address: {error}")
 
 # BlueBubbles replays recent messages when the server or the webhook restarts.
 # Answering yesterday's messages on startup is worse than ignoring them.
@@ -765,4 +771,5 @@ def webhook():
 
 
 if __name__ == "__main__":
+    detect_self_address()
     app.run(host="0.0.0.0", port=5005, threaded=True)

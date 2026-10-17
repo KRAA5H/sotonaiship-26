@@ -9,6 +9,15 @@ Three places, no more:
 
 ---
 
+## 23:25, Saturday: a simulator while the Mac is away
+
+- `code/simulator.py`: a second app on port 5007, mobile-first, no BlueBubbles. It runs the real triage, voice, reply and save path, keeps a per-browser reporter id, and shows the debug decision, model time and typing time.
+- Simulated latency: 350ms plus 9ms per character, capped at 3.5s, toggleable. Links come back as a separate bubble after 0.8s, matching the real line.
+- Photo upload works without the Mac: the bytes go straight to triage and the vision model.
+- `blue_bubbles.detect_self_address()` moved out of import into startup, so `reply_for` can be imported without a Mac on the network. That was blocking the simulator.
+- Tests: 301 pass, 31 evaluation cases. Live turn: broken glass on Alma Road saved `R-0102`, body and link split, 4.1s model, 1.5s simulated typing.
+- Run: `python code/simulator.py`, then http://192.168.0.202:5007 on a phone on the same wifi.
+
 ## 23:05, Saturday: text stops thinking
 
 - DeepSeek ignores `reasoning: {effort: none}`, `enabled: false` and `reasoning_effort: none`, but `thinking: {"type": "disabled"}` really works: output dropped from 64 to 170 tokens to 3 to 4, with no reasoning content.
