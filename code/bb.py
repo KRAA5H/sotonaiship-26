@@ -140,7 +140,8 @@ def send_text(chat_guid, text, method=None):
         payload.pop("message", None)
         payload["text"] = text
         code, body = _call("POST", "/api/v1/message/text", payload=payload)
-    ok = code < 400
+    # Status 0 means a transport failure, which must never count as success.
+    ok = 200 <= code < 400
     if ok:
         print(f"[bb] sent to {chat_guid}: {text.encode('ascii', 'backslashreplace').decode()}")
     return ok, body

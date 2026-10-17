@@ -1,13 +1,14 @@
-"""One-shot model call over any OpenAI-compatible endpoint.
+"""One-shot model call with a provider ladder.
 
-No history, no session, no state: exactly one system message and one user
-message per call. Falls back to a deterministic stub when no key is set or the
-model returns nothing usable, so the loop keeps working and every caller can
-say which mode answered.
+Text goes to DeepSeek first. Photos go to a vision model on OpenRouter when
+quota allows, and fall back to a text reply that asks for a description, so the
+resident always gets an answer.
+
+No history, no session, no state. Falls back to a deterministic stub when no
+provider can answer, and every caller can say which mode answered.
 
 Rule learned the hard way: reasoning traces must NEVER reach a resident. Some
-models return an empty `content` with a populated `reasoning` field, and sending
-that to a phone reads as a machine talking to itself.
+models return an empty `content` with a populated `reasoning` field.
 """
 
 import base64
@@ -18,107 +19,118 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).with_name(".env"))
+HERE = Path(__file__).resolve().parent
+load_dotenv(HERE.parent / ".env")   # root .env, where DEEPSEEK_API_KEY lives
+load_dotenv(HERE / ".env")          # code/.env, where the OpenRouter key lives
+
+DS_BASE = (os.getenv("DEEPSEEK_BASE_URL") or "https://api.deepseek.com").rstrip("/")
+DS_MODEL = os.getenv("DEEPSEEK_MODEL") or "deepseek-flash"
 
 BASE_URL = (os.getenv("LLM_BASE_URL") or "https://openrouter.ai/api/v1").rstrip("/")
 MODEL = os.getenv("LLM_MODEL") or "nvidia/nemotron-3-super-120b-a12b:free"
-# Verified on a real inbound photo: reads the image and answers in about 12s.
-VISION_MODEL = os.getenv("LLM_VISION_MODEL") or "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
-TIMEOUT = 20
+VISION_MODEL = os.getenv("LLM_VISION_MODEL") or "nvidia/nemotron-3.5-super-vl:free"
 
+TIMEOUT = 30
 STUB_REPLY = (
     "Thanks, that is logged. A crew will take a look and you will get an update here."
 )
+PHOTO_FALLBACK = (
+    "I can't open that photo. Can you tell me in a few words what it shows and where it is?"
+)
 
 
-def _headers(key):
-    return {
-        "Authorization": f"Bearer {key}",
-        "Content-Type": "application/json",
-        # OpenRouter attribution headers, ignored by other providers.
-        "HTTP-Referer": "https://github.com/KRAA5H/sotonaiship-26",
-        "X-Title": "Kerbside",
-    }
+def _candidates(image):
+    """Provider order for this call."""
+    ds_key = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
+    or_key = (os.getenv("LLM_API_KEY") or "").strip()
+    out = []
 
-
-def chat(system, user, image=None):
-    """Return (reply_text, mode) where mode is 'model' or 'stub'.
-
-    `image` is (bytes, mime) from bb.download_attachment. When present the
-    vision model is used and the image is sent as a data URI.
-
-    Raises only on a configuration fault (401/400), which should fail loudly.
-    Rate limits, upstream failures and empty content fall back to the stub.
-    """
-    key = (os.getenv("LLM_API_KEY") or "").strip()
-    if not key:
-        return STUB_REPLY, "stub"
-
-    content = user
-    model = MODEL
     if image:
+        if or_key:
+            out.append({"base": BASE_URL, "model": VISION_MODEL, "key": or_key,
+                        "image": True, "reasoning": True})
+        return out
+
+    if ds_key:
+        out.append({"base": DS_BASE, "model": DS_MODEL, "key": ds_key,
+                    "image": False, "reasoning": False})
+        out.append({"base": DS_BASE, "model": "deepseek-v4-pro", "key": ds_key,
+                    "image": False, "reasoning": False})
+
+    if not image and or_key:
+        out.append({"base": BASE_URL, "model": MODEL, "key": or_key,
+                    "image": False, "reasoning": True})
+    return out
+
+
+def _payload(system, user, image, candidate):
+    if image and candidate["image"]:
         data, mime = image
-        model = VISION_MODEL
         content = [
             {"type": "text", "text": user},
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:{mime};base64,{base64.b64encode(data).decode()}"},
-            },
+            {"type": "image_url",
+             "image_url": {"url": f"data:{mime};base64,{base64.b64encode(data).decode()}"}},
         ]
+    else:
+        content = user
 
-    body = {
-        "model": model,
+    payload = {
+        "model": candidate["model"],
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": content},
         ],
         "max_tokens": 300,
+        "temperature": 0.7,
     }
+    if candidate["reasoning"]:
+        # Reasoning models spend the whole budget thinking otherwise.
+        payload["max_tokens"] = 800
+        payload["reasoning"] = {"effort": "low"}
+    return payload
+
+
+def chat(system, user, image=None):
+    """Return (reply_text, mode) where mode is 'model' or 'stub'."""
+    candidates = _candidates(image)
+    if not candidates:
+        return (PHOTO_FALLBACK if image else STUB_REPLY), "fallback"
+
+    for candidate in candidates:
+        for attempt in (1, 2):
+            try:
+                response = requests.post(
+                    candidate["base"] + "/chat/completions",
+                    headers={
+                        "Authorization": "Bearer " + candidate["key"],
+                        "Content-Type": "application/json",
+                    },
+                    json=_payload(system, user, image, candidate),
+                    timeout=TIMEOUT,
+                )
+            except requests.RequestException as error:
+                print(f"[llm] {candidate['model']} transport error: {error}")
+                time.sleep(1.0)
+                continue
+
+            if response.status_code in (429, 500, 502, 503) and attempt == 1:
+                time.sleep(1.2)
+                continue
+            if response.status_code != 200:
+                print(f"[llm] {candidate['model']} HTTP {response.status_code} {response.text[:100]}")
+                break
+
+            message = ((response.json().get("choices") or [{}])[0].get("message") or {})
+            text = (message.get("content") or "").strip()
+            if text:
+                return text, "model"
+            print(f"[llm] {candidate['model']} empty content")
+            break
+
     if image:
-        # Reasoning models will otherwise spend the whole budget thinking and
-        # return an empty `content`, so cap the reasoning effort and give the
-        # answer room. Verified with nemotron-3.5-super-vl on a real photo.
-        body["max_tokens"] = 800
-        body["reasoning"] = {"effort": "low"}
-
-    last_error = "no attempt made"
-    for attempt in (1, 2):
-        try:
-            response = requests.post(
-                f"{BASE_URL}/chat/completions",
-                headers=_headers(key),
-                json=body,
-                timeout=TIMEOUT,
-            )
-        except requests.RequestException as error:
-            last_error = f"transport error: {error}"
-            time.sleep(1.5)
-            continue
-
-        if response.status_code == 401:
-            raise RuntimeError("model key rejected (401). Check LLM_API_KEY.")
-        if response.status_code == 400:
-            raise RuntimeError(f"model rejected the request (400): {response.text[:300]}")
-        if response.status_code >= 400:
-            last_error = f"{response.status_code}: {response.text[:200]}"
-            time.sleep(1.5)
-            continue
-
-        data = response.json()
-        message = ((data.get("choices") or [{}])[0].get("message") or {})
-        text = (message.get("content") or "").strip()
-
-        if text:
-            return text, "model"
-
-        # Empty content happens when a model emits only reasoning. Never send
-        # the reasoning field to a resident; retry once, then use the stub.
-        last_error = "empty content (reasoning-only response)"
-        if attempt == 1:
-            time.sleep(1.0)
-
-    print(f"[llm] falling back to stub: {last_error}")
+        print("[llm] no vision provider answered, asking for a description")
+        return PHOTO_FALLBACK, "fallback"
+    print("[llm] no provider answered, using stub")
     return STUB_REPLY, "stub"
 
 
