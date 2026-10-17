@@ -1,78 +1,83 @@
 {
-  "runs": [
+  "project": "Street Report Triage",
+  "track": "SotonShip 2026 - Southampton City",
+  "last_updated": "2026-10-17",
+  "files": [
     {
-      "started_at": "2026-10-16T17:46:00+00:00",
-      "entries": [
-        {
-          "url": "https://environment.data.gov.uk/flood-monitoring/id/floods?county=Hampshire",
-          "fetched_at": "2026-10-16T17:46:00+00:00",
-          "first_transport_error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1010)>",
-          "status": 200,
-          "content_type": "application/json",
-          "transport": "curl",
-          "bytes": 771,
-          "sha256": "5bfc0c0cad281de15893e6e3199cd245c9c235b8d92e4693c1b283c5adfdf4ad",
-          "file": "environment-data-gov-uk-flood-monitoring-id-floods-county-Hampshire.json"
-        },
-        {
-          "url": "https://environment.data.gov.uk/flood-monitoring/id/floodAreas?lat=50.9025&long=-1.4044&dist=10",
-          "fetched_at": "2026-10-16T17:46:02+00:00",
-          "first_transport_error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1010)>",
-          "status": 200,
-          "content_type": "application/json",
-          "transport": "curl",
-          "bytes": 21085,
-          "sha256": "4002121182eed5da13dd22d39f0dfb9d7d95d88ac3b601cf3fa5191e3394982e",
-          "file": "environment-data-gov-uk-flood-monitoring-id-floodAreas-lat-50-9025-long-1-4044-dist-10.json"
-        },
-        {
-          "url": "https://environment.data.gov.uk/flood-monitoring/id/stations?lat=50.9025&long=-1.4044&dist=10",
-          "fetched_at": "2026-10-16T17:46:04+00:00",
-          "first_transport_error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1010)>",
-          "status": 200,
-          "content_type": "application/json",
-          "transport": "curl",
-          "bytes": 42843,
-          "sha256": "d9e67efbffa58e0aa9670642d382e0162d747ce38a24296433d91393e98819b7",
-          "file": "environment-data-gov-uk-flood-monitoring-id-stations-lat-50-9025-long-1-4044-dist-10.json"
-        },
-        {
-          "url": "https://environment.data.gov.uk/flood-monitoring/id/stations?type=TideGauge&lat=50.9025&long=-1.4044&dist=25",
-          "fetched_at": "2026-10-16T17:46:11+00:00",
-          "first_transport_error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1010)>",
-          "status": 200,
-          "content_type": "application/json",
-          "transport": "curl",
-          "bytes": 2167,
-          "sha256": "a652f5df5e1cfc66c6bd5a7fef064b1b356c450478a2e7ba611f96cf4faf11c5",
-          "file": "environment-data-gov-uk-flood-monitoring-id-stations-type-TideGauge-lat-50-9025-long-1-4044-dist-25.json"
-        },
-        {
-          "url": "https://api.postcodes.io/postcodes/SO147SJ",
-          "fetched_at": "2026-10-16T17:46:12+00:00",
-          "first_transport_error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1010)>",
-          "status": 200,
-          "content_type": "application/json; charset=utf-8",
-          "transport": "curl",
-          "bytes": 1926,
-          "sha256": "a392c2080e6185e49f164fa2d60347c790dcd6232c3603ebe7f5f03f890ab027",
-          "file": "api-postcodes-io-postcodes-SO147SJ.json"
-        },
-        {
-          "url": "https://ofsistorage.blob.core.windows.net/publishlive/2022format/ConList.csv",
-          "fetched_at": "2026-10-16T17:46:13+00:00",
-          "first_transport_error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1010)>",
-          "status": 200,
-          "content_type": "text/csv",
-          "transport": "curl",
-          "bytes": 16641139,
-          "sha256": "9585695391b51f72ca9eae1b6671e1f81fb1fa6e21a1661dad346636f2320c7f",
-          "file": "ofsistorage-blob-core-windows-net-publishlive-2022format-ConList-csv.csv"
-        }
-      ],
-      "finished_at": "2026-10-16T17:46:16+00:00",
-      "ok": 6,
-      "total": 6
+      "path": "bb.py",
+      "purpose": "BlueBubbles API client: send text, download attachments, deduplicate retries",
+      "ai_generated": "Written by the team"
+    },
+    {
+      "path": "blue_bubbles.py",
+      "purpose": "Webhook receiver; gates every resident through the mandatory location link before processing their report",
+      "ai_generated": "Drafted with Claude (Anthropic), reviewed and modified by the team"
+    },
+    {
+      "path": "location.py",
+      "purpose": "Reverse/forward geocoding via OpenStreetMap Nominatim; matches coordinates to one of Southampton's 31 named areas",
+      "ai_generated": "Drafted with Claude (Anthropic), reviewed and modified by the team"
+    },
+    {
+      "path": "conversational_ai.py",
+      "purpose": "ConversationSession + IntakeAgent: multi-turn intake conversation via Claude",
+      "ai_generated": "Drafted with Claude (Anthropic), reviewed and modified by the team"
+    },
+    {
+      "path": "database.py",
+      "purpose": "SQLite persistence: reports, duplicate detection, summary statistics (busiest date, most common category, reports by area)",
+      "ai_generated": "Drafted with Claude (Anthropic), reviewed and modified by the team"
+    },
+    {
+      "path": "website.py",
+      "purpose": "Council dashboard (/council, password-protected) and private resident tracking page (/r/<token>)",
+      "ai_generated": "Written by the team"
+    },
+    {
+      "path": "dashboard/schema.sql",
+      "purpose": "Database schema definition",
+      "ai_generated": "Written by the team, area column added with Claude"
+    },
+    {
+      "path": "dashboard/fake_reports.json",
+      "purpose": "Synthetic seed data for demo/testing - clearly labelled as synthetic, never presented as real",
+      "ai_generated": "Synthetic data generated with Claude; area values backfilled by matching each location to Southampton's real geography"
     }
+  ],
+  "ai_assistance_disclosure": "Significant portions of this codebase were drafted with the assistance of Claude (Anthropic) during the hackathon, then reviewed, tested and modified by the team. No code was used that existed before the event started.",
+  "data_sources": [
+    {
+      "name": "OpenStreetMap Nominatim",
+      "what_it_provides": "Reverse and forward geocoding: coordinates to street name, postcode and area",
+      "url": "https://nominatim.openstreetmap.org",
+      "licence": "Open Database License (ODbL)",
+      "date_accessed": "2026-10-17",
+      "notes": "Free tier, rate-limited to 1 request/second, real-time lookup, not a static dataset"
+    },
+    {
+      "name": "Southampton fly-tipping and waste statistics",
+      "what_it_provides": "Local evidence of problem scale (10,948 incidents year to March 2024; rising per-1,000-population rate)",
+      "url": "https://data.southampton.gov.uk/place/environment/waste",
+      "licence": "Open Government Licence",
+      "date_accessed": "2026-10-17"
+    },
+    {
+      "name": "FixMyStreet (Southampton reports)",
+      "what_it_provides": "Reference point for real public reporting volume (755 open fly-tipping cases, Feb 2025); not used as a live data feed",
+      "url": "https://www.fixmystreet.com",
+      "licence": "Public reports, mySociety",
+      "date_accessed": "2026-10-17"
+    },
+    {
+      "name": "Wikipedia - Category: Areas of Southampton",
+      "what_it_provides": "Base list of 30 named Southampton areas used for area-matching; Portswood added separately as a known omission",
+      "url": "https://en.wikipedia.org/wiki/Category:Areas_of_Southampton",
+      "licence": "CC BY-SA",
+      "date_accessed": "2026-10-17"
+    }
+  ],
+  "synthetic_data_statement": "All resident phone numbers, conversation transcripts, and test report content used during development and demonstration are synthetic and clearly labelled as such. No real personal data was collected, stored, or sent to any AI service at any point.",
+  "external_ai_services_used": [
+    {"name": "Anthropic Claude (claude-sonnet-4-6)", "used_for": "Conversational intake, classification, severity judgment"}
   ]
 }
