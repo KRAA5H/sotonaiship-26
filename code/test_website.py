@@ -35,6 +35,20 @@ JSON_HEADERS = {**AUTH, "X-Requested-With": "kerbside"}
 
 class SiteCase(unittest.TestCase):
     def setUp(self):
+        # save_report() geocodes the location via a real network call to
+        # Nominatim. Every test in this file that calls save_report (directly
+        # or through the client) would otherwise hit the real network,
+        # including with garbage/XSS-test strings as the query - slow,
+        # non-deterministic, and inconsistent with every other test file in
+        # this repo, which is deliberately network-free. Patched out here so
+        # the whole SiteCase hierarchy stays network-free without repeating
+        # this in every subclass.
+        self._geocode_patch = unittest.mock.patch.object(
+            tools._location_service, "forward_geocode", return_value=None
+        )
+        self._geocode_patch.start()
+        self.addCleanup(self._geocode_patch.stop)
+
         self.tmp = tempfile.TemporaryDirectory()
         self.path = Path(self.tmp.name) / "site.db"
         self.app = website.create_app(self.path, PASSWORD)
@@ -282,7 +296,9 @@ class WebhookAppTest(unittest.TestCase):
     def test_webhook_server_serves_the_site_on_the_same_port(self):
         import bb
         # Importing blue_bubbles asks BlueBubbles for its own address; skip the network.
-        with tempfile.TemporaryDirectory() as tmp,                 unittest.mock.patch.object(bb, "self_address", return_value=""),                 unittest.mock.patch.object(reports_db, "DB_PATH", Path(tmp) / "hook.db"):
+        with tempfile.TemporaryDirectory() as tmp, \
+                unittest.mock.patch.object(bb, "self_address", return_value=""), \
+                unittest.mock.patch.object(reports_db, "DB_PATH", Path(tmp) / "hook.db"):
             sys.modules.pop("blue_bubbles", None)
             import blue_bubbles
             rules = {r.rule for r in blue_bubbles.app.url_map.iter_rules()}
