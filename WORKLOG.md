@@ -24,6 +24,15 @@ Three places, no more:
 
 ## Log
 
+### 17:35, code, guards after real traffic
+- Real traffic proved inbound: 51 webhook deliveries from `192.168.0.26`, replies delivered to `anirudh.udupi@gmail.com` and the self chat.
+- Fixed a reasoning leak: some models return empty `content` and a populated `reasoning` field, and the old fallback sent the reasoning to a resident. `llm.py` now retries, then uses the stub, and never sends reasoning.
+- Fixed a self-chat loop: replying to the server's own address arrives back as an inbound message. `IGNORE_SENDERS` plus the auto-detected self address now blocks it.
+- Fixed duplicate replies: the webhook returns 200 immediately and replies from a thread, and it deduplicates on the inbound message GUID.
+- Added `STALE_SECONDS` so a restart cannot answer the replayed backlog.
+- Verified: `ignored_self`, `ignored_stale`, `duplicate`, zero sends. Deleted old webhook id 2, only id 3 (LAN) remains.
+- Launched a read-only researcher for the BlueBubbles attachment download endpoint (unblocks photos).
+
 ### 17:20, verification, no code changes
 - Re-verified after re-approval: all six files present, Flask healthy on `192.168.0.202:5005`, ping 200, one-shot model reply in 11.1s, synthetic webhook returned `mode=model sent=true`.
 - Windows firewall rule could not be created without admin (`Access is denied`), so the Mac to Windows hop is still unverified. Old webhook id 2 pointing at `localhost:5005` still needs deleting.
