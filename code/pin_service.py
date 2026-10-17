@@ -64,10 +64,12 @@ CITY_BOX = (50.84, 50.99, -1.56, -1.28)
 SOURCES = ("map", "gps", "postcode")
 TEXT_CAP = 120
 
-LIMITS = {"check": 30, "postcode": 20, "preview": 40, "confirm": 10, "bot": 120}
+LIMITS = {"check": 30, "postcode": 20, "search": 20, "preview": 40, "confirm": 10, "bot": 120}
 
 POSTCODES_IO = "https://api.postcodes.io/postcodes"
 NOMINATIM_REVERSE = "https://nominatim.openstreetmap.org/reverse"
+NOMINATIM_SEARCH = "https://nominatim.openstreetmap.org/search"
+SEARCH_MIN, SEARCH_MAX, SEARCH_RESULTS = 2, 80, 5
 
 MSG = {
     "bad_link": "This link is not valid. Reply to our text with the road name instead.",
@@ -79,6 +81,9 @@ MSG = {
     "postcode_unknown": "We could not find that postcode. Check it, or tap the map instead.",
     "postcode_down": "We could not look up that postcode just now. Tap the map instead.",
     "slow_down": "Too many tries in a short time. Please wait a minute and try again.",
+    "bad_search": "Type at least two letters of a street or place.",
+    "search_busy": "Search is busy, try again in a moment.",
+    "search_none": "We could not find that in Southampton. Try a nearby street or tap the map.",
 }
 
 ALLOWED_STATIC = {
@@ -374,6 +379,74 @@ class ReverseGeocoder:
 geocoder = ReverseGeocoder()
 
 
+class PlaceSearch:
+    """Street or place name to a few Southampton results, via Nominatim /search.
+    Shares geocoder.lock, so search and reverse lookups together stay at one
+    request per second. Typed text may be someone's address: never logged,
+    cached only in memory."""
+
+    def __init__(self, cache_size=500):
+        self._cache = OrderedDict()
+        self._cache_lock = threading.Lock()
+        self._cache_size = cache_size
+
+    def find(self, query):
+        """List of {label, lat, lng} inside the city box, or None if the lookup was busy or failed."""
+        key = query.lower()
+        with self._cache_lock:
+            if key in self._cache:
+                self._cache.move_to_end(key)
+                return self._cache[key]
+        south, north, west, east = CITY_BOX
+        if not geocoder.lock.acquire(timeout=2):
+            return None
+        try:
+            status, data = _http_get_json(
+                NOMINATIM_SEARCH,
+                params={"q": query, "format": "jsonv2", "addressdetails": 1, "countrycodes": "gb",
+                        "viewbox": f"{west},{north},{east},{south}", "bounded": 1, "limit": SEARCH_RESULTS},
+                headers={"User-Agent": _user_agent()},
+            )
+        except Exception:
+            return None
+        finally:
+            geocoder.lock.release()
+        if status != 200 or not isinstance(data, list):
+            return None
+        results = []
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            try:
+                coords = _coords({"lat": float(item.get("lat")), "lng": float(item.get("lon"))})
+            except (TypeError, ValueError):
+                continue
+            if coords is None or not _in_box(*coords):
+                continue  # bounded=1 should prevent this; never trust it
+            label = _search_label(item)
+            if label:
+                results.append({"label": label, "lat": coords[0], "lng": coords[1]})
+        with self._cache_lock:
+            self._cache[key] = results
+            while len(self._cache) > self._cache_size:
+                self._cache.popitem(last=False)
+        return results
+
+
+def _search_label(item):
+    """'Lawn Road, Portswood' rather than Nominatim's long display_name."""
+    address = item.get("address") if isinstance(item.get("address"), dict) else {}
+    name = clean(item.get("name")) or clean(address.get("road"))
+    area = clean(address.get("neighbourhood") or address.get("quarter") or address.get("suburb"))
+    parts = [p for p in (name, area if area and area != name else None) if p]
+    if not parts:
+        parts = [clean(item.get("display_name"))]
+    return clean(", ".join(p for p in parts if p))
+
+
+place_search = PlaceSearch()
+
+
 def _nearest_postcode(lat, lng):
     """(postcode, admin_district) for the nearest postcode within 1000 m, or None if unknown."""
     try:
@@ -588,6 +661,25 @@ def create_app():
             return _err(422, f"That postcode is in {district}, not Southampton. "
                              f"Please report it to {district} instead.")
         return jsonify({"ok": True, "lat": coords[0], "lng": coords[1]})
+
+    @app.post("/api/search")
+    def search():
+        body, error = guard("search")
+        if error:
+            return error
+        link, error = live_link(body)
+        if error:
+            return error
+        raw = body.get("query")
+        query = clean(raw) if isinstance(raw, str) else None
+        if not query or not SEARCH_MIN <= len(query) <= SEARCH_MAX or len(raw) > SEARCH_MAX * 2:
+            return _err(400, MSG["bad_search"])
+        results = place_search.find(query)
+        if results is None:
+            return _err(503, MSG["search_busy"])
+        if not results:
+            return _err(422, MSG["search_none"])
+        return jsonify({"ok": True, "results": results})
 
     @app.post("/api/preview")
     def preview():
