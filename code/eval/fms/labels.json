@@ -1,0 +1,458 @@
+{
+ "note": "Hand labels made by the team on 2026-10-17 by reading each FixMyStreet report against agent/categories.json. Not independently checked. 'ambiguous' means two or more categories fit; the note gives the candidates. Ids refer to https://www.fixmystreet.com/report/<id>. No report text or names are stored here.",
+ "categories": {
+  "5589744": {
+   "label": "council_service_other"
+  },
+  "9187074": {
+   "label": "pothole"
+  },
+  "9341608": {
+   "label": "council_service_other"
+  },
+  "8365370": {
+   "label": "ambiguous",
+   "note": "blocked drain causing puddles for years: flooding_severe_weather or council_service_other (drains category was dropped)"
+  },
+  "6310284": {
+   "label": "ambiguous",
+   "note": "temporary lights stuck on red: probably roadworks or utility, could be council_service_other"
+  },
+  "8011940": {
+   "label": "abandoned_vehicle",
+   "note": "FixMyStreet filed it as illegal parking, but the text is an untaxed car left on the road"
+  },
+  "8814358": {
+   "label": "pothole"
+  },
+  "5590868": {
+   "label": "pothole"
+  },
+  "5738649": {
+   "label": "pothole"
+  },
+  "6267874": {
+   "label": "ambiguous",
+   "note": "loose clanking manhole cover: council_service_other or not_council_utility, depending on who owns the cover"
+  },
+  "4795841": {
+   "label": "illegal_parking"
+  },
+  "5469414": {
+   "label": "council_service_other"
+  },
+  "8664171": {
+   "label": "pothole",
+   "note": "FixMyStreet 'Roads/highways', text is a large pothole"
+  },
+  "7801663": {
+   "label": "litter_street_cleaning"
+  },
+  "7887580": {
+   "label": "council_service_other"
+  },
+  "6652383": {
+   "label": "ambiguous",
+   "note": "broken paving slab: pothole (the council form covers pavements) or council_service_other (pavement defects were dropped)"
+  },
+  "5254588": {
+   "label": "fly_tipping"
+  },
+  "7827501": {
+   "label": "not_council_utility",
+   "note": "water leaking from under the road"
+  },
+  "5582249": {
+   "label": "pothole"
+  },
+  "9374920": {
+   "label": "pothole"
+  },
+  "9789667": {
+   "label": "ambiguous",
+   "note": "broken bottles and rubbish outside a pub, filed as private property: litter_street_cleaning or glass_spillage_hazard"
+  },
+  "5703727": {
+   "label": "council_service_other",
+   "note": "a request for new double yellow lines, not a parking offence"
+  },
+  "8855811": {
+   "label": "litter_street_cleaning"
+  },
+  "7956079": {
+   "label": "council_service_other",
+   "note": "tree branches hitting buses at a stop"
+  },
+  "6118303": {
+   "label": "ambiguous",
+   "note": "a named flat dropping rubbish from the third floor: property_concern or litter_street_cleaning"
+  },
+  "9789641": {
+   "label": "noise_nuisance"
+  },
+  "9080169": {
+   "label": "glass_spillage_hazard",
+   "note": "glass on the pavement or cycle path"
+  },
+  "7565074": {
+   "label": "pothole",
+   "note": "potholes and uneven road and pavement"
+  },
+  "4795159": {
+   "label": "council_service_other"
+  },
+  "10095327": {
+   "label": "council_service_other"
+  },
+  "7994870": {
+   "label": "fly_tipping"
+  },
+  "6061890": {
+   "label": "council_service_other",
+   "note": "complaint about a long road closure"
+  },
+  "9544705": {
+   "label": "council_service_other"
+  },
+  "9724739": {
+   "label": "ambiguous",
+   "note": "neighbours reserving road space with bins and cones: illegal_parking or council_service_other"
+  },
+  "8258704": {
+   "label": "ambiguous",
+   "note": "cars blocking a back alley to private parking: illegal_parking, but may be private land"
+  },
+  "8214660": {
+   "label": "council_service_other"
+  },
+  "5894080": {
+   "label": "abandoned_vehicle",
+   "note": "crashed untaxed car in a residential car park; filed as illegal parking"
+  },
+  "6200031": {
+   "label": "litter_street_cleaning"
+  },
+  "5252387": {
+   "label": "dead_animal"
+  },
+  "6667290": {
+   "label": "fly_tipping"
+  },
+  "5292862": {
+   "label": "flooding_severe_weather"
+  },
+  "8313921": {
+   "label": "council_service_other",
+   "note": "bus shelter glass; the text is only an email address"
+  },
+  "5062785": {
+   "label": "ambiguous",
+   "note": "overcrowded house and immigration allegations: property_concern, council_service_other or not council at all"
+  },
+  "6876119": {
+   "label": "fly_tipping"
+  },
+  "7191586": {
+   "label": "fly_tipping",
+   "note": "sofa plus bags of dog waste"
+  },
+  "10009043": {
+   "label": "ambiguous",
+   "note": "one message covering litter, fly-tipping and overgrown vegetation on a footpath"
+  },
+  "7994888": {
+   "label": "council_service_other"
+  },
+  "6941360": {
+   "label": "council_service_other"
+  },
+  "4872227": {
+   "label": "ambiguous",
+   "note": "speed camera flashing wrongly: run by the safety camera partnership, not obviously any of our categories"
+  },
+  "10139294": {
+   "label": "illegal_parking"
+  },
+  "9796398": {
+   "label": "fly_tipping"
+  },
+  "6393281": {
+   "label": "council_service_other"
+  },
+  "8823697": {
+   "label": "litter_street_cleaning",
+   "note": "shopping trolley; categories.json maps FixMyStreet 'Shopping trolleys' here"
+  },
+  "8662193": {
+   "label": "pothole"
+  },
+  "9686593": {
+   "label": "ambiguous",
+   "note": "loose manhole cover noise at night: same question as 6267874"
+  },
+  "6309226": {
+   "label": "litter_street_cleaning"
+  },
+  "6896152": {
+   "label": "council_service_other"
+  },
+  "7682082": {
+   "label": "litter_street_cleaning",
+   "note": "overfilled bins spilling onto the pavement; could be argued as missed_bin"
+  },
+  "7581532": {
+   "label": "council_service_other"
+  },
+  "7434374": {
+   "label": "noise_nuisance"
+  }
+ },
+ "same_problem": {
+  "note": "yes = the same problem reported twice; no = a different problem or a new incident at the same place; ambiguous = cannot tell from the text",
+  "repeats": [
+   [
+    "1117074",
+    "1124635",
+    "yes",
+    "same car, same KEEP CLEAR markings"
+   ],
+   [
+    "1253062",
+    "1253079",
+    "no",
+    "reporter numbers them as different potholes"
+   ],
+   [
+    "1253084",
+    "1253086",
+    "no",
+    "different numbered potholes"
+   ],
+   [
+    "1324997",
+    "1325000",
+    "yes",
+    "identical text, 10 m, same day; geocoder gives two different roads"
+   ],
+   [
+    "1386274",
+    "1386276",
+    "ambiguous",
+    "trees by lamp posts 45 and 43"
+   ],
+   [
+    "1426008",
+    "1426009",
+    "yes",
+    "identical submission"
+   ],
+   [
+    "1692301",
+    "1695453",
+    "no",
+    "separate parking incidents"
+   ],
+   [
+    "1719133",
+    "1726948",
+    "no",
+    "separate parking incidents"
+   ],
+   [
+    "1723999",
+    "1724005",
+    "ambiguous",
+    "same wording, 'no 14' may be a different property"
+   ],
+   [
+    "1759997",
+    "1775573",
+    "no",
+    "separate parking incidents"
+   ],
+   [
+    "4983458",
+    "4983460",
+    "yes",
+    "identical submission"
+   ],
+   [
+    "1322874",
+    "1334862",
+    "no",
+    "new dumping 12 days later"
+   ],
+   [
+    "1424018",
+    "1432921",
+    "ambiguous",
+    "'more posters' at the same shelter"
+   ],
+   [
+    "1699012",
+    "1710075",
+    "no",
+    "separate parking incidents"
+   ],
+   [
+    "1466650",
+    "1466653",
+    "yes",
+    "same barriers around the same tree"
+   ],
+   [
+    "1511551",
+    "1511552",
+    "yes",
+    "same pavement, same morning"
+   ],
+   [
+    "1380236",
+    "1381651",
+    "yes",
+    "same bags two days later"
+   ],
+   [
+    "1575552",
+    "1585432",
+    "no",
+    "new bags 9 days later at a regular spot"
+   ],
+   [
+    "1200842",
+    "1200847",
+    "no",
+    "reporter calls them location 2 and location 3"
+   ],
+   [
+    "1260193",
+    "1273522",
+    "ambiguous",
+    "may be the same red car 11 days later"
+   ]
+  ],
+  "pairs": [
+   [
+    "1668704",
+    "1680863",
+    "no",
+    "trade bin versus shoes on cables"
+   ],
+   [
+    "1556862",
+    "1571781",
+    "ambiguous",
+    "potholes at the crossing versus one near the kerb"
+   ],
+   [
+    "1118115",
+    "1135015",
+    "no",
+    "new fly-tip four weeks later"
+   ],
+   [
+    "1228752",
+    "1228755",
+    "ambiguous",
+    "same day, may be the same hole"
+   ],
+   [
+    "1247276",
+    "1277168",
+    "yes",
+    "same lorry, same habit"
+   ],
+   [
+    "1551497",
+    "1580215",
+    "ambiguous",
+    "different descriptions of the position"
+   ],
+   [
+    "1200847",
+    "1205857",
+    "no",
+    "new fly-tip five days later"
+   ],
+   [
+    "1480491",
+    "1482774",
+    "yes",
+    "more trolleys added to the reported ones"
+   ],
+   [
+    "1315558",
+    "1340092",
+    "no",
+    "different items 27 days later"
+   ],
+   [
+    "1543708",
+    "1543714",
+    "ambiguous",
+    "same day; 'before Darwin Road' versus 'half way up'"
+   ],
+   [
+    "1231243",
+    "1256429",
+    "no",
+    "different vehicles"
+   ],
+   [
+    "1297527",
+    "1299687",
+    "yes",
+    "same vehicle, same view blocked"
+   ],
+   [
+    "1163953",
+    "1186209",
+    "no",
+    "new fly-tip"
+   ],
+   [
+    "1753901",
+    "1772754",
+    "no",
+    "different items"
+   ],
+   [
+    "1388271",
+    "1393846",
+    "no",
+    "B says 'again'"
+   ],
+   [
+    "1507784",
+    "1527607",
+    "no",
+    "different items"
+   ],
+   [
+    "1360824",
+    "1366628",
+    "no",
+    "different items"
+   ],
+   [
+    "1696315",
+    "1696321",
+    "no",
+    "fridge versus clothes, different spots"
+   ],
+   [
+    "1129108",
+    "1143141",
+    "no",
+    "different items"
+   ],
+   [
+    "1575540",
+    "1575544",
+    "ambiguous",
+    "same spot, same day, furniture versus mattress"
+   ]
+  ],
+  "negatives": "all 20 proposed 'no' except 1178514/1209812 (fly-tipping versus litter on the same walkway, 29 days apart): ambiguous"
+ }
+}

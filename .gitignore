@@ -15,3 +15,7 @@ __pycache__/
 # SQLite WAL side files
 *.db-wal
 *.db-shm
+# Real FixMyStreet reports used only by the evaluation (code/eval/fms/).
+# Raw downloads and any file holding report text stay local: the repo may go public.
+code/eval/fms/raw/
+code/eval/fms/*.local.*
