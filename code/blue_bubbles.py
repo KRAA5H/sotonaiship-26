@@ -378,6 +378,66 @@ def status_reply(sender):
     return report, voice.say("status", facts, messages.status(report))
 
 
+BURST_SECONDS = float(os.getenv("BURST_SECONDS") or "2.5")
+
+# iMessage arrives in bursts. One thought arrives as three short messages, and
+# answering the first before the third lands is what makes a bot feel deaf.
+# Wait for a quiet window, then treat the whole burst as one turn.
+_burst = {}
+_burst_lock = threading.Lock()
+
+
+def enqueue_message(inbound):
+    """Buffer a message for its sender, resetting the quiet window."""
+    sender = inbound.get("sender") or inbound.get("chat_guid")
+    if not sender:
+        return
+    with _burst_lock:
+        entry = _burst.setdefault(sender, {
+            "texts": [], "attachments": [], "chat_guid": inbound.get("chat_guid"),
+            "inbound": dict(inbound), "timer": None,
+        })
+        text = (inbound.get("text") or "").strip()
+        if text:
+            entry["texts"].append(text)
+        entry["attachments"].extend(inbound.get("attachments") or [])
+        entry["chat_guid"] = inbound.get("chat_guid")
+        entry["inbound"] = dict(inbound)
+        if entry["timer"] is not None:
+            entry["timer"].cancel()
+        timer = threading.Timer(BURST_SECONDS, flush_burst, args=(sender,))
+        timer.daemon = True
+        entry["timer"] = timer
+        timer.start()
+
+
+def flush_burst(sender):
+    """Turn the quiet burst into one inbound message."""
+    with _burst_lock:
+        entry = _burst.pop(sender, None)
+    if not entry:
+        return
+    inbound = dict(entry["inbound"])
+    inbound["text"] = "\n".join(entry["texts"]).strip()
+    inbound["attachments"] = entry["attachments"]
+    if not inbound["text"] and not inbound["attachments"]:
+        return
+    if len(entry["texts"]) > 1:
+        print(f"[burst] {len(entry['texts'])} messages from {sender} handled as one")
+    handle_inbound(inbound)
+
+
+def take_pending(sender):
+    """Anything that arrived while we were thinking, folded into this turn."""
+    with _burst_lock:
+        entry = _burst.pop(sender, None)
+    if not entry:
+        return None
+    if entry["timer"] is not None:
+        entry["timer"].cancel()
+    return entry
+
+
 def handle_inbound(inbound):
     chat_guid = inbound["chat_guid"]
     text = inbound.get("text") or ""
@@ -447,6 +507,13 @@ def handle_inbound(inbound):
         if pending:
             print(f"[pending] joined a follow-up from {sender}")
         decision = triage.triage(text, image)
+        late = take_pending(sender)
+        if late and late["texts"]:
+            extra = "\n".join(late["texts"]).strip()
+            if extra:
+                text = f"{text}\n{extra}".strip()
+                print(f"[burst] folded a late message from {sender} into this turn")
+                decision = triage.triage(text, image)
         print(f"[triage] report={decision['is_report']} {decision['category_id']} "
               f"sev={decision['severity']} conf={decision['confidence']} "
               f"why={decision['reason']} to={chat_guid}")
@@ -515,7 +582,7 @@ def webhook():
         f"text={inbound.get('text', '')[:120]!r} "
         f"attachments={len(inbound.get('attachments') or [])}"
     )
-    threading.Thread(target=handle_inbound, args=(inbound,), daemon=True).start()
+    enqueue_message(inbound)
     return jsonify({"ok": True, "action": "accepted"}), 200
 
 

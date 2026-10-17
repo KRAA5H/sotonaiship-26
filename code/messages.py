@@ -110,10 +110,15 @@ def answered(text):
 
 
 def no_answer(decision):
+    """Never lead with what we cannot do. Offer to help, with the page as a fallback."""
     category = _category(decision.get("category_id"))
     page = (category.get("official_form_url") or category.get("answer_source")
             or COUNCIL_CONTACT)
-    return _join("I do not have a checked answer for that.", f"The council's page: {page}")
+    return _join(
+        "I can help with that.",
+        "Tell me a bit more about what you need and where, and I'll point you the right way.",
+        f"The council's page might have it too: {page}",
+    )
 
 
 def not_council(decision):
@@ -142,7 +147,7 @@ def emergency():
 
 def unclear():
     return _join(
-        "I could not read that.",
+        "I didn't catch that.",
         "Send the problem and the street, for example: pothole outside 12 Alma Road.",
     )
 

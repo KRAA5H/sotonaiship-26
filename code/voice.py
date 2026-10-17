@@ -69,7 +69,7 @@ SITUATIONS = {
     "duplicate": "The report matches one already open, and theirs is linked to it.",
     "incomplete": "The report is saved but the street is missing. Ask for it once.",
     "not_council": "This is not the council's job. Say so, and give who to contact.",
-    "no_answer": "There is no checked answer to their question. Admit that.",
+    "no_answer": "The checked facts do not settle this one. Do not stop at that: ask one short question that moves it forward, or offer to log it, so they still get help.",
     "unclear": "The message could not be read. Ask for the problem and the street.",
     "greeting": "They said hello. Offer to take a street problem.",
     "status": "They asked for an update on their own report. Give the status.",
@@ -87,6 +87,14 @@ CORPORATE = (
     "further to your enquiry",
     "thank you for your patience",
     "i understand how you feel",
+    "not sure",
+    "i am not sure",
+    "i'm not sure",
+    "don't know",
+    "do not know",
+    "no checked answer",
+    "checked answer",
+    "honestly",
 )
 INTERESTED = "interested in"
 
@@ -142,7 +150,8 @@ SYSTEM = (
     "- No markdown, no bullet points, no emoji, no em dashes.\n"
     f"- Under {MAX_CHARS} characters, {MAX_LINES} short lines at most.\n"
     "- If ask is true, ask once for a photo, folded into the same message.\n"
-    "- Say you are not sure rather than guess.\n"
+    "- If the facts do not cover it, ask one short question that moves it forward. "
+    "Never open with what you do not know, and never say you are not sure.\n"
     "\n"
     "Tone, in the owner's own examples. Change the words to fit the brief, keep the tone:\n"
     '- "nice one, that\'s logged - pothole on Weston Lane. if you can grab a photo, send '
@@ -243,7 +252,7 @@ def brief(kind, facts=None):
         banned = ["we'll fix", "we will fix", "our crew", "we'll send"]
     elif kind == "no_answer":
         must_contain = []
-        must_any = ["not sure", "don't have", "can't check", "no checked", "not certain"]
+        must_any = ["tell me", "point you", "help with that", "where", "what you need"]
         banned = ["definitely"]
     elif kind == "unclear":
         must_contain = []

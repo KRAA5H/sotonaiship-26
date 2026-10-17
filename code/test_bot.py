@@ -261,12 +261,12 @@ class ConversationTest(unittest.TestCase):
                                   "+441", "how long does a pothole take?")
         self.assertIn("Source:", reply)
 
-    def test_no_checked_answer_falls_back_to_the_official_page(self):
+    def test_an_unknown_answer_offers_help_before_the_page(self):
         with unittest.mock.patch.object(bot.rag, "answer", return_value=("", [])):
             reply = bot.reply_for(decision(reason="model_says_not_a_report",
                                            category_id="council_service_other"),
                                   "+441", "how do I get a parking permit?")
-        self.assertIn("I do not have a checked answer", reply)
+        self.assertIn("I can help with that", reply)
 
     def test_an_out_of_area_question_never_reaches_retrieval(self):
         with unittest.mock.patch.object(bot.rag, "answer") as rag_answer:
@@ -351,6 +351,59 @@ class LatePhotoTest(unittest.TestCase):
             {"transferName": "abc.pluginPayloadAttachment", "mimeType": None}))
         self.assertTrue(bot._is_image_attachment(
             {"transferName": "images.jpeg", "mimeType": "image/jpeg"}))
+
+
+class BurstTest(unittest.TestCase):
+    def setUp(self):
+        with bot._burst_lock:
+            for entry in bot._burst.values():
+                if entry.get("timer"):
+                    entry["timer"].cancel()
+            bot._burst.clear()
+
+    def tearDown(self):
+        self.setUp()
+
+    def _message(self, sender, text="", attachments=None):
+        return {"sender": sender, "chat_guid": "any;-;" + sender, "text": text,
+                "attachments": attachments or []}
+
+    def test_two_quick_messages_become_one_turn(self):
+        with unittest.mock.patch.object(bot, "handle_inbound") as handler:
+            bot.enqueue_message(self._message("+451", "there is a pothole"))
+            bot.enqueue_message(self._message("+451", "on weston lane"))
+            bot.flush_burst("+451")
+        handler.assert_called_once()
+        inbound = handler.call_args.args[0]
+        self.assertIn("pothole", inbound["text"])
+        self.assertIn("weston lane", inbound["text"])
+
+    def test_two_senders_never_merge(self):
+        with unittest.mock.patch.object(bot, "handle_inbound") as handler:
+            bot.enqueue_message(self._message("+451", "one"))
+            bot.enqueue_message(self._message("+452", "two"))
+            bot.flush_burst("+451")
+            self.assertEqual(handler.call_args.args[0]["text"], "one")
+            bot.flush_burst("+452")
+            self.assertEqual(handler.call_args.args[0]["text"], "two")
+
+    def test_attachments_are_kept_with_the_burst(self):
+        with unittest.mock.patch.object(bot, "handle_inbound") as handler:
+            bot.enqueue_message(self._message("+451", "see this",
+                                              [{"guid": "G-1", "mimeType": "image/jpeg"}]))
+            bot.flush_burst("+451")
+        self.assertEqual(handler.call_args.args[0]["attachments"][0]["guid"], "G-1")
+
+    def test_a_late_message_can_be_taken_before_the_timer(self):
+        bot.enqueue_message(self._message("+451", "first"))
+        late = bot.take_pending("+451")
+        self.assertEqual(late["texts"], ["first"])
+        self.assertIsNone(bot.take_pending("+451"))
+
+    def test_an_empty_burst_does_nothing(self):
+        with unittest.mock.patch.object(bot, "handle_inbound") as handler:
+            bot.flush_burst("nobody")
+        handler.assert_not_called()
 
 
 if __name__ == "__main__":

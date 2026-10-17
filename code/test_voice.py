@@ -51,7 +51,7 @@ GOOD = (
      "ah that one's not ours, sorry. National Highways handles motorways, so give them a "
      "ring on 0300 123 5000."),
     ("no_answer", "no_answer", NO_ANSWER,
-     "honestly i'm not sure on that one, but the council page will have it."),
+     "i can help with that - tell me a bit more and i'll point you the right way."),
     ("unclear", "unclear", {},
      "sorry, i didn't catch that. tell me what the problem is and which street."),
     ("greeting", "greeting", {},
@@ -144,10 +144,10 @@ class BriefTest(unittest.TestCase):
         self.assertIn("0300 123 5000", data["must_contain"])
         self.assertIn("0300", data["allowed_numbers"])
 
-    def test_no_answer_may_admit_it_does_not_know(self):
+    def test_no_answer_offers_to_help_rather_than_deflect(self):
         data = voice.brief("no_answer", NO_ANSWER)
         self.assertEqual(data["must_contain"], [])
-        for phrase in ("not sure", "don't have", "can't check"):
+        for phrase in ("tell me", "point you", "help with that"):
             self.assertIn(phrase, data["must_any"])
 
     def test_incomplete_has_no_photo_ask(self):
@@ -195,6 +195,17 @@ class LintRuleTest(unittest.TestCase):
             with self.subTest(address):
                 self.check("saved", SAVED,
                            f"logged pothole on Weston Lane, look at {address}", "url")
+
+
+    def test_the_deflection_phrases_are_banned(self):
+        for phrase in ("honestly i'm not sure on that one",
+                       "i don't know that one",
+                       "i have no checked answer"):
+            with self.subTest(phrase):
+                problems = voice.lint("i can help with that - " + phrase,
+                                      voice.brief("no_answer", {}))
+                self.assertTrue(any(item.startswith("corporate:") for item in problems),
+                                f"{phrase!r} -> {problems}")
 
     def test_markdown(self):
         for mark in ("*logged*", "#logged", "`logged`", "logged_pothole"):
@@ -262,7 +273,7 @@ class LintRuleTest(unittest.TestCase):
     def test_case_and_a_leading_ah_are_tolerated(self):
         self.assertEqual(voice.lint("NICE ONE, THAT'S LOGGED - POTHOLE ON WESTON LANE.",
                                     voice.brief("saved", SAVED)), [])
-        self.assertEqual(voice.lint("Ah, not sure on that one.", voice.brief("no_answer", {})),
+        self.assertEqual(voice.lint("Ah, i can help with that - tell me a bit more.", voice.brief("no_answer", {})),
                          [])
         self.assertEqual(voice.lint(
             "Ah that one's not ours, sorry. National Highways handle motorways, "

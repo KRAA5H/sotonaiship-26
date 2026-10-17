@@ -110,12 +110,12 @@ def run_voice(check):
               expect=["National Highways", "0300 123 5000"],
               forbid=["google.com", "not Southampton City Council's to fix"])
 
-    unsure = "honestly i'm not sure on that one."
+    unsure = "i can help with that - tell me a bit more and i'll point you the right way."
     with mock.patch.object(bot.voice, "generate", return_value=unsure):
         check("V6 an unknown answer admits it",
               bot.reply_for(decision(reason="model_says_not_a_report",
                                      category_id="council_service_other"), "+441"),
-              expect=["honestly", "not sure"])
+              expect=["i can help", "tell me"])
 
     unclear = ("got it, pothole logged. whereabouts is it? "
                "a street and the nearest number is plenty.")
@@ -229,7 +229,7 @@ def run():
                   bot.reply_for(decision(reason="model_says_not_a_report",
                                          category_id="council_service_other"),
                                 "+441", "how do I get a parking permit?"),
-                  expect=["I do not have a checked answer", "southampton.gov.uk"])
+                  expect=["I can help with that", "southampton.gov.uk"])
 
         report = {"id": "R-0070", "category_id": "pothole", "status": "in_review",
                   "status_text": "being looked at by the council",
