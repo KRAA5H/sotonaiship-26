@@ -1,0 +1,36 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials.json
+token.json
+
+# data dumps: the manifest is the evidence, not the bulk
+data/raw/*
+!data/raw/MANIFEST.json
+*.csv
+*.parquet
+!requirements.csv
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+
+# node, if the front end is JS
+node_modules/
+.next/
+dist/
+build/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

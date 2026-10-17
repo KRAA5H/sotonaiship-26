@@ -1,0 +1,78 @@
+{
+  "runs": [
+    {
+      "started_at": "2026-10-16T17:46:00+00:00",
+      "entries": [
+        {
+          "url": "https://environment.data.gov.uk/flood-monitoring/id/floods?county=Hampshire",
+          "fetched_at": "2026-10-16T17:46:00+00:00",
+          "first_transport_error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1010)>",
+          "status": 200,
+          "content_type": "application/json",
+          "transport": "curl",
+          "bytes": 771,
+          "sha256": "5bfc0c0cad281de15893e6e3199cd245c9c235b8d92e4693c1b283c5adfdf4ad",
+          "file": "environment-data-gov-uk-flood-monitoring-id-floods-county-Hampshire.json"
+        },
+        {
+          "url": "https://environment.data.gov.uk/flood-monitoring/id/floodAreas?lat=50.9025&long=-1.4044&dist=10",
+          "fetched_at": "2026-10-16T17:46:02+00:00",
+          "first_transport_error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1010)>",
+          "status": 200,
+          "content_type": "application/json",
+          "transport": "curl",
+          "bytes": 21085,
+          "sha256": "4002121182eed5da13dd22d39f0dfb9d7d95d88ac3b601cf3fa5191e3394982e",
+          "file": "environment-data-gov-uk-flood-monitoring-id-floodAreas-lat-50-9025-long-1-4044-dist-10.json"
+        },
+        {
+          "url": "https://environment.data.gov.uk/flood-monitoring/id/stations?lat=50.9025&long=-1.4044&dist=10",
+          "fetched_at": "2026-10-16T17:46:04+00:00",
+          "first_transport_error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1010)>",
+          "status": 200,
+          "content_type": "application/json",
+          "transport": "curl",
+          "bytes": 42843,
+          "sha256": "d9e67efbffa58e0aa9670642d382e0162d747ce38a24296433d91393e98819b7",
+          "file": "environment-data-gov-uk-flood-monitoring-id-stations-lat-50-9025-long-1-4044-dist-10.json"
+        },
+        {
+          "url": "https://environment.data.gov.uk/flood-monitoring/id/stations?type=TideGauge&lat=50.9025&long=-1.4044&dist=25",
+          "fetched_at": "2026-10-16T17:46:11+00:00",
+          "first_transport_error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain (_ssl.c:1010)>",
+          "status": 200,
+          "content_type": "application/json",
+          "transport": "curl",
+          "bytes": 2167,
+          "sha256": "a652f5df5e1cfc66c6bd5a7fef064b1b356c450478a2e7ba611f96cf4faf11c5",
+          "file": "environment-data-gov-uk-flood-monitoring-id-stations-type-TideGauge-lat-50-9025-long-1-4044-dist-25.json"
+        },
+        {
+          "url": "https://api.postcodes.io/postcodes/SO147SJ",
+          "fetched_at": "2026-10-16T17:46:12+00:00",
+          "first_transport_error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1010)>",
+          "status": 200,
+          "content_type": "application/json; charset=utf-8",
+          "transport": "curl",
+          "bytes": 1926,
+          "sha256": "a392c2080e6185e49f164fa2d60347c790dcd6232c3603ebe7f5f03f890ab027",
+          "file": "api-postcodes-io-postcodes-SO147SJ.json"
+        },
+        {
+          "url": "https://ofsistorage.blob.core.windows.net/publishlive/2022format/ConList.csv",
+          "fetched_at": "2026-10-16T17:46:13+00:00",
+          "first_transport_error": "URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1010)>",
+          "status": 200,
+          "content_type": "text/csv",
+          "transport": "curl",
+          "bytes": 16641139,
+          "sha256": "9585695391b51f72ca9eae1b6671e1f81fb1fa6e21a1661dad346636f2320c7f",
+          "file": "ofsistorage-blob-core-windows-net-publishlive-2022format-ConList-csv.csv"
+        }
+      ],
+      "finished_at": "2026-10-16T17:46:16+00:00",
+      "ok": 6,
+      "total": 6
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+Code of Conduct · SotonShip 26
+SotonShip26
+MissionPillarsManifestBackersLeaderboardLogbookFAQ▶ Conduct
+♪ OFFLog in
+[=]
+Ship's articles
+# Code of Conduct
+◀ Back to deck
+▚Ship's articles · 01
+## Soton Ship is for everyone.
+We expect every participant, mentor, judge, partner and organiser to treat each other with respect, full stop. You agree to this code when you register on Luma and again at the door.
+Last updated 12 September 2026
+### 01We run the Hackathons UK code
+Soton Ship 2026 is a Hackathons UK partner event and enforces the Hackathons UK Code of Conduct in full. It applies to every participant, mentor, judge, volunteer, partner and organiser, for the whole weekend and in every Soton Ship space: the floor at Eagle Labs, our online channels, and anywhere else the event happens.
+The ship's own articles below sit alongside it. Where our rules are stricter, ours apply too; nothing here weakens the Hackathons UK code.
+Read the Hackathons UK Code of Conduct ↗
+### 02The code
+- ▸No harassment of any kind, in person or online. This includes offensive comments, unwelcome attention, intimidation, and photographing people without their consent.
+- ▸No alcohol in the venue unless it is served at an official event moment with the venue's permission. No drugs. Anyone who appears intoxicated will be asked to leave.
+- ▸Respect the venue. Eagle Labs is a working space — leave it as you found it.
+- ▸Anyone breaking this code may be asked to leave and their team may be disqualified. The organisers decide.
+### 03Fair play
+- ▸Current university students only. You must be 18 or over on 16 October 2026 and able to show student ID at registration.
+- ▸Organisers, volunteers, mentors and judges cannot compete or win prizes.
+- ▸Teams are two to five people, all registered and physically present. No solo entries.
+- ▸No project work before hacking opens on Friday evening. Ideas are fine; code is not.
+- ▸Open-source libraries, frameworks, templates and AI code-generation tools are allowed and encouraged. Say in your README what was generated and what you wrote. A thin reskin of an existing AI tool will not be judged as your work.
+- ▸Publishing your own pre-written code as open source just so you can use it at the event is against the spirit of the rules and is not allowed.
+- ▸Do not scrape personal data, use real customer data, or upload partner data to a public repository. Do not connect an agent to your real email, calendar or bank — use the sandbox accounts provided.
+- ▸Plagiarism, misrepresenting what was built or by whom, breaking this code, or submitting the same project to another hackathon will get you disqualified.
+### 04Reporting something
+If you see or experience something that is not right, use any of the routes below. You do not have to be certain, and you do not have to have proof.
+Reports are heard in private, written down, and you are told what happens next. The code of conduct contact and the event lead decide together within the hour what to do: a conversation, a warning, removal from the event, or contacting the university or the police. Your name is not shared with the person you reported without your agreement.
+- 01Speak to any Soton Ship organiser or volunteer at the event
+- 02Speak to a member of Hackathons UK staff at the event
+- 03Call the Hackathons UK Incidents team: +44 300 131 3331
+- 04Email incidents@hackathons.org.uk
+- 05Email the Soton Ship organising team: aisoc@soton.ac.uk
+All reporters may remain anonymous. You will never be required to give your name, and you will never be made to confront the person you are reporting.
+### 05Looking after yourself
+- ▸The quiet room is open all weekend, no questions asked — for a break, a call home, prayer, or just silence.
+- ▸Nobody has to stay. If you need to leave, tell the registration desk so we know you are safe, and go.
+- ▸If you or a teammate are struggling — not just tired, struggling — tell a volunteer or the welfare volunteer in the quiet room. We would rather know.
+- ▸The University of Southampton student wellbeing service is listed in the confirmation email, and any organiser will help you find the right contact.
+### 06Before the event
+Questions about this code go to aisoc@soton.ac.uk.
+◀ Boarding Pass▲ Deck
+SotonShip26
+Soton Ship 2026 · 16–18 October 2026 · Barclays Eagle Labs (Network Eagle Lab), Portland Terrace, Southampton SO14 7SJ.
+University of Southampton AI Society
+Contact
+- aisoc@soton.ac.uk
+- Ivan.ling@soton.ac.uk
+Ship's articles
+- Eligibility & logistics
+- Code of conduct
+- Privacy notice
+- Prize terms
+Supported by
+Soton Ship 2026 is a Hackathons UK partner event. Hackathons UK is a UK hackathon charity (company no. 12530692).
+© 2026 University of Southampton AI Society.Departures · 16–18 OCT 2026
+Soton Ship 2026 runs under the Hackathons UK Code of Conduct. Read it and report an issue.
+Capt. Bytebeard:Ahoy, builder! The tide favours those who ship.

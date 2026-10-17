@@ -1,0 +1,107 @@
+Southampton City track · SotonShip Live
+Skip to content
+SotonShip
+HomeLive Q&AScheduleTracks
+Loading page
+SotonShip 2026 · University of Southampton AI Society
+HelpPrivacyCode of conduct
+← All tracks
+# Southampton City
+Download brief (PDF)
+In collaboration with Southampton City Council
+In this brief
+- The challenge
+- Who you build for and what fits the track
+- What every project must show
+- Directions we want to see
+- Data
+- Track rules
+- Deliverables and pitch
+- Judging and how to win
+- Key times
+## The challenge
+Build an AI-powered product that solves a real problem for someone who lives, works or visits in Southampton, and that you could realistically put in front of that person after the weekend. Southampton is a port city of around 250,000 people, shaped by its docks, its coastline and two rivers. Its council runs hundreds of services on a tight budget, and its residents, businesses and visitors deal with traffic, air quality, flood risk, housing and access to services every day. There is no fixed list of projects: you choose the problem, as long as you can show it matters here.
+SotonShip is about shipping, so judges will look past technical ambition and ask whether your product has a clear user, a working core and a plausible way to be paid for. A simple tool that one council team or one group of residents would start using next month will beat an impressive prototype that nobody would adopt.
+Before you start building, you should be able to describe your project in one sentence:
+We help [a specific person] to [do or decide something] in [part of Southampton] using [AI and the data behind it].
+For example: We help council street-scene officers clear fly-tipping faster across the city by classifying, merging and routing residents' photo reports.
+## Who you build for and what fits the track
+Choose one main user and design, test and pitch from their point of view. That user could be a resident (a student, a family, an older person, someone with access needs, a tenant or a small landlord), a council officer (in planning, highways, street scene, environmental health, housing or customer services), a local business or worker (in retail, hospitality, the port or logistics) or a visitor such as a cruise passenger or a new student. Working well for one neighbourhood, one service or one kind of journey is enough, and it is usually a stronger entry than a tool that tries to cover the whole city.
+Any problem connected to life in Southampton fits the track, including the port and coast, transport, environment and climate, housing and planning, streets and public spaces, and access to council services. The following do not fit, because they either have no clear user or cannot be built fairly in a weekend:
+- a general chatbot about Southampton, or a map or prediction that does not lead to a decision;
+- an existing product with an AI feature added on top;
+- anything that needs restricted council systems, real personal data, access to port facilities or physical hardware, unless an organiser has agreed it in advance.
+Each team enters one track only. If your idea could also sit in the FinTech or Responsible AI track, pick the one where your user and your business case are strongest.
+## What every project must show
+A real local problem. You can say who has the problem, how often it happens and what they do about it today, and you can back that up with local evidence such as data, a council document or a conversation with someone affected. Putting "Southampton" on a generic app does not count.
+AI that the product depends on. Ask yourself what would happen if you removed the AI. If the product would still do its main job, then AI is not at its core and the idea needs rethinking. Where your AI classifies, predicts or extracts, compare it against a simple baseline so you can show it does better.
+A product that works on real data. Someone should be able to complete the main task from start to finish, live, on genuine Southampton data with its source and date visible. Synthetic data is fine for testing, provided it is labelled as synthetic.
+A business case. Explain who would pay for the product or fund it (the council, a service provider, local businesses or residents), roughly what it would cost to run per user including AI costs, and what it would take to make it work in a second city.
+Honesty about limits. The product should show what it does not know, how old its data is, and what happens when data is missing, a source is out of date or a location is outside its coverage. Show at least one of these failure cases in your demo, because judges trust teams that know where their product breaks.
+## Directions we want to see
+These examples show the kind of project we are hoping for: a specific user, AI doing the hard part, real Southampton data and someone who would pay. You can build one of them, change it, combine them or ignore them completely. Original ideas are judged on exactly the same terms, and following an example earns no extra credit.
+Triage for street reports. Residents report fly-tipping, potholes and broken street lights as photos and free text, often several times for the same problem. A tool that classifies each report, merges duplicates, estimates urgency and sends it to the right team would save officers hours every week. The council is the customer, and because every UK council handles the same kind of reports, a product that works in Southampton has an obvious path to other cities. A good starting point is public FixMyStreet reports for Southampton.
+A pre-check for planning applications. Many householder planning applications are returned as invalid because a document or detail is missing, which delays the applicant and costs the council staff time. A tool that reads a draft application and checks it against the council's validation checklist and Local Plan policies before it is submitted could be sold per check to homeowners and small architects, or licensed by the council to reduce invalid submissions. The council's public planning register and published policies are enough to build and test it.
+Licensing support for HMO landlords. Southampton runs a licensing scheme for houses in multiple occupation, which matters in a city with a large student population. A tool that reads a landlord's property details and documents, checks them against the published licence conditions and lists what is missing before an inspection would help letting agents and small landlords, and would reduce failed inspections for the council. Many other UK councils run similar schemes, so the product could grow beyond Southampton.
+Cruise-day planning for local businesses. Cruise calls bring large numbers of visitors into the city on specific days, but cafés, shops and taxi firms often staff by guesswork. A tool that forecasts demand for a particular business from the cruise schedule, the weather and local events, and turns it into staffing and stock advice, could be sold as a subscription to businesses or to the city-centre business improvement district on their behalf, and later to other cruise ports. Compare your forecast with a simple baseline, such as assuming the same demand as the last comparable cruise day.
+## Data
+There is no compulsory dataset for this track: choose the sources that fit your problem, and check early that they cover Southampton and that you are allowed to use them. The sources below are good starting points, but you may use any other data you have permission to use, as long as you credit it.
+| Source
+| What it offers
+| Access and limits
+| Environment Agency flood monitoring (opens in a new tab)
+| Flood warnings, warning areas, river and tide gauge readings
+| Open API with no registration; check coverage and timestamps
+| UKHO Admiralty Tidal API (opens in a new tab)
+| Predicted high and low tides
+| Free registration and key; check the tier, forecast horizon and quota
+| Bus Open Data Service (opens in a new tab)
+| Bus timetables, vehicle locations and fares
+| Free registration and key; check which local operators and fields are available
+| Defra UK-AIR (opens in a new tab)
+| Air-quality measurements from Southampton monitoring sites
+| Public downloads; check which pollutants are covered and whether data is provisional or ratified
+| DfT road traffic statistics (opens in a new tab)
+| Traffic counts and annual average flows at Southampton count points
+| Public downloads; these are historical averages, not live traffic
+| Met Office Weather DataHub (opens in a new tab)
+| Site forecasts, including wind
+| Free account and key; check current products and allowances
+| Southampton VTS (opens in a new tab)
+| Cruise schedules and vessel movements
+| Public web pages; do not assume an API or permission to redistribute
+| Southampton Data Observatory (opens in a new tab)
+| Council statistics and reports on the city's population, economy and services
+| Public; check dates and the level of geographic detail
+Some sources need a free account and key. Keep API keys and passwords out of your repository.
+## Track rules
+The event-wide rules apply: teams of four (teams of two or three are fine too, and a solo entry needs an organiser's approval), hacking runs non-stop from Friday 20:00 to Sunday 13:00 (including overnight at Eagle Labs), and you own what you build. In addition, for this track:
+- Build your entry during the event and create its repository after hacking opens. Open-source libraries, templates and pre-trained models are fine, but your own earlier projects are not.
+- State in your README which parts were AI-generated, what existed before the event and who helped you.
+- Show where each number comes from and when it was collected. Never present cached data as live or synthetic data as real.
+- Do not collect personal data you do not need, and do not send non-public council information to an external AI service.
+- If your product deals with safety, health or emergencies, link to official guidance rather than writing your own instructions.
+## Deliverables and pitch
+Each team submits three things on its team page on the SotonShip Live website, before submissions lock at 13:00 on Sunday:
+- A demo video of 1 to 3 minutes showing your product in use. Every team must upload its video to YouTube and submit the link.
+- A short summary of about 150 words that explains who your user is, what problem they have and why it matters, what your solution does and how it could scale.
+- A link to your GitHub repository.
+On Sunday afternoon you then pitch in VC for a Day. The Judging & how to win page covers the submission requirements and the suggested pitch structure in full.
+## Judging and how to win
+Every track is judged on the same five criteria: problem and user (20%), AI at the core (20%), working product (25%), business and scale (20%), and responsibility and trust (15%). On Sunday afternoon every team pitches in VC for a Day, where the audience and the judges invest virtual money in the teams they believe in, and the top three teams in each track go on to a final panel that decides the places. The Judging & how to win page on the SotonShip Live website explains the whole process, including what to submit, the suggested pitch structure and the extra questions judges ask in this track, so read it before you start building.
+For this track in particular, make sure your pitch answers three questions clearly: what local evidence shows the problem is real in Southampton, who would own and pay for the product, and what it would take to run it in a second city. Your submission locks at 13:00 on Sunday, and your README should list every data source you used with its date and licence.
+## Key times
+| When
+| What happens
+| Friday 16 October, afternoon and evening
+| Doors open, followed by talks, the track introductions and a visit and Q&A with the Lord Mayor of Southampton; hacking opens at 20:00
+| Saturday 17 October
+| Hacking all day and through the night: Eagle Labs stays open on Friday and Saturday nights, so you can keep working overnight
+| Sunday 18 October, 13:00
+| Hacking stops and submissions lock. Aim to submit by 13:00: the organisers only extend the deadline for a team in special circumstances
+| Sunday afternoon
+| VC for a Day pitches, the final panel and awards
+The full timetable is on the Schedule page.
+| Southampton City Council (opens in a new tab)
+| Planning register, Local Plan, HMO licensing conditions and service information
+| Public pages and documents; check terms before reusing content

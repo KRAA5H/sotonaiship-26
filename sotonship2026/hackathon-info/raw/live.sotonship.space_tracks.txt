@@ -1,0 +1,20 @@
+Tracks · SotonShip Live
+Skip to content
+SotonShip
+HomeLive Q&AScheduleTracks
+Loading page
+SotonShip 2026 · University of Southampton AI Society
+HelpPrivacyCode of conduct
+Three tracks, one set of criteria
+# Tracks
+Each team enters one track. Every track is judged on the same five criteria, with a few extra questions per track. Open a track to read its full brief.
+## Southampton City
+Build an AI-powered product for a real person in Southampton, whether that is a resident, a council officer, a local business or a visitor, that solves a problem connected to the city's port and coast, transport, environment, housing, streets or council services. There is no fixed list of projects: you choose the problem, find the evidence that it matters here and ship something that person could start using. There is no compulsory dataset, and there is plenty of public data on flooding, tides, buses, air quality, traffic, cruise schedules and council services. Set in collaboration with Southampton City Council.
+Read the full track brief · Download the brief (PDF)
+## FinTech
+Build an AI-powered product for someone who saves, spends, sends or manages money, whether that is a customer, a fraud or compliance team at a bank, a small business or a wallet agent, that tackles a real problem such as scams and fraud, money laundering, cross-border payments, business verification or compliance. There is no fixed list of projects: you choose the problem, find the evidence that it matters and ship something that user could start using. There is no compulsory dataset, and there is plenty of public data on companies, sanctions, remittance costs, exchange rates and labelled fraud and money-laundering transactions. Set in collaboration with JPMorganChase, Deutsche Bank and TrueMoney.
+Read the full track brief · Download the brief (PDF)
+## Responsible AI
+Build a product that makes AI useful and trustworthy for a specific person, and pitch it as a business. You can create a tool that helps others develop, test or govern AI, or an AI-powered product in any sector where responsible design is central to the value it delivers. There is no fixed problem, sector or technology: you choose what to build and show why it matters, with evidence of benefit, a clear buyer and a credible way to grow.
+Read the full track brief · Download the brief (PDF)
+How the judging works: Judging and how to win.

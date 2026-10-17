@@ -1,0 +1,117 @@
+Judging and how to win · SotonShip Live
+Skip to content
+SotonShip
+HomeLive Q&AScheduleTracks
+Loading page
+SotonShip 2026 · University of Southampton AI Society
+HelpPrivacyCode of conduct
+The rules, in plain English
+# Judging and how to win
+The Ship testCriteriaTrack lensesWhat to submitPitch structureHow to winVC for a DayStage 2
+## The Ship test
+The winning project is the one a real customer would start using next month, and that could still be growing in a year. Everyone asks five plain questions of every team:
+- Would someone actually use this? A named user with a painful problem, not “everyone”.
+- Is AI the reason it works? Remove the AI and the product should stop doing its core job.
+- Does it really work? A live, end-to-end demo on real data, including what happens when it fails.
+- Could it become a business? Someone pays, or benefits enough to fund it, and it can grow beyond the first customer.
+- Can people trust it? It uses data it has the right to use, protects privacy, and is honest about its limits.
+We don't reward slides without a product, the number of features, or how advanced the model is. A simple tool that works and has a clear customer beats an impressive prototype nobody would buy.
+## The five criteria
+Same for every track. Each is scored 1–10 and weighted:
+C1Problem and user20%
+Who exactly has this problem? How painful and how frequent is it? What evidence shows it is real (data, a regulation, a conversation with a real user)? What do they do today instead?
+C2AI at the core20%
+Could this be done without AI? Is AI the right tool, or would a rule, a form or a spreadsheet do? Is the AI used well: sensible model choice, grounded outputs, a comparison against a simple baseline?
+C3Working product25%
+Does the core task run end to end, live? Real data, not mock-ups? What happens with a bad input or missing data? Is there evidence it works (test cases, accuracy vs baseline, known failures)?
+C4Business and scale20%
+Who pays, and why? What would it cost to run per user (including AI inference)? Who are the first three customers? What stops a big player copying it? What changes at 10x or 100x users? Can it work beyond its first market?
+C5Responsibility and trust15%
+Does it have the right to use its data? Is personal data minimised and protected? What harm happens when it is wrong, and who catches it? Are limits and uncertainty shown to the user? Any obvious legal or regulatory blocker?
+Weighted score = 0.20×C1 + 0.20×C2 + 0.25×C3 + 0.20×C4 + 0.15×C5
+### What the scores mean
+- 1–2Missing or not shown
+- 3–4Claimed, but weak evidence
+- 5–6Solid for a hackathon
+- 7–8Convincing, with few gaps
+- 9–10Would hold up in front of a real customer or investor
+## Track lenses
+Each track adds extra questions under the same criteria. Answer them in your pitch.
+Southampton City (Council)
+Problem and user
+What is the impact on Southampton, and on whom (residents, council officers, businesses, visitors)? What local evidence shows the problem exists here?
+AI at the core
+What does AI do that a council webpage or form cannot?
+Working product
+Does it run on genuine Southampton data, dated and sourced? What happens outside the area it covers?
+Business and scale
+Who would own and fund it: the council, a service provider, residents, local businesses? Is it niche to Southampton, or could it work in other UK cities and councils? What would it need to move to a second city? What outcome would a council measure (time saved, reports resolved, emissions cut)?
+Responsibility and trust
+Does it work for people who are less digital, older or have access needs? Does it avoid sending non-public council information to external AI services? If it gives safety information, does it point to official sources?
+FinTech
+Problem and user
+Which user in a bank, fintech, business or household has this problem? What does it cost them today in money, time or risk?
+AI at the core
+Why does this need AI rather than fixed rules? How does it cope when fraudsters or markets adapt?
+Working product
+How often is it wrong, and what does each error cost (false alarms vs missed cases)? Was it tested against a simple baseline?
+Business and scale
+Who pays: a bank, a merchant, a consumer? How would it plug into existing systems (APIs, payment standards)? Could one of our partner banks (Deutsche Bank, JPMorganChase, TrueMoney) realistically adopt it?
+Responsibility and trust
+## What to submit
+Everything goes on your team page. Submissions lock at Sun 18 Oct, 13:00. Aim to submit by then: the organisers only extend the deadline for a team in special circumstances. A team whose submission is incomplete at the lock isn't shown in Stage 1, and every team must have exactly 2 members.
+- Pitch video (YouTube link): public or unlisted, between 1:00 and 3:00. It must show the real product working (a screen recording of the live product). Mock-ups or slides alone don't count as a demo.
+- Pitch format: either a video that uses the whole slot, or a shorter video with the rest of the slot as a live talking pitch. Tell us which, and the video length.
+- Project summary: up to 150 words: the user and problem, why it matters, the solution, how it could scale.
+- GitHub repository: public. The README covers setup, data sources (with dates and licences), what the AI does, what was AI-generated or pre-existing, test results and known limits.
+- Live link or run instructions (optional but encouraged).
+## Suggested 3-minute pitch
+| 0:00–0:20
+| The user and their problem, with one piece of evidence
+| 0:20–1:40
+| Demo of the core task, start to finish (this part must be in the video)
+| 1:40–2:10
+| Why AI: what it does, and proof it beats a simple approach
+| 2:10–2:45
+| The business: who pays, what it costs, how it grows
+| 2:45–3:00
+| Limits and trust, then what you would build next
+## How to win
+- Pick one user and one task. Depth beats breadth.
+- The impact of your idea matters.
+- Try to talk to a real potential user during the weekend (mentors, partners, other participants) and quote them.
+- Get the core task working end to end by Saturday evening, then polish.
+- Measure it: a few test cases, a baseline, the failures you found.
+- Put a number on the business: what someone would pay and what it costs you to run.
+- Record the video before the deadline. Don't spend the last hour building features nobody will see.
+- Show a failure honestly. Judges trust teams that know their limits.
+## Stage 1: VC for a Day
+On Sunday afternoon every team pitches, track by track, in a random order. Everyone invests virtual money: the public counts for 70% and the judges for 30%. The top 3 teams per track go to the panel.
+### Each slot
+Up to 3:00 of pitch (your video plus any live pitch), then 1:00 of Q&A. While a team pitches, anyone can post and upvote questions on its team page; the moderator reads the top ones, judges' first.
+### Investment rules
+- £10,000 per person per track. It can only be spent in that track; unspent money is lost.
+- You can't invest in your own team. You can invest in other teams in your track.
+- Back at least 3 teams, and put no more than £4,000 in any one team.
+- Change your allocation as often as you like while the track is open. The last save counts. Investing closes a few minutes after the last pitch.
+- Judges invest only in their assigned track, with the same rules; their money is counted separately.
+### How the score works
+There are far more participants than judges, so each side becomes a share of its own pot first, within the track:
+public_share = public £ in the team / all public £ in the track judge_share = judge £ in the team / all judge £ in the track stage1_score = 0.7 × public_share + 0.3 × judge_share
+Ties go to the higher judge share, then the higher average judge score. Results stay hidden until all three tracks are done.
+### People's Choice
+A symbolic prize for the team that raised the most money from the public across the whole event, whether or not it reached the final.
+## Stage 2: the panel
+Judges see the finalists and score only teams in their assigned track. Each gets about 10 minutes: a 2:00 live demo (the panel gives it one input of its own choosing) and 5 minutes of panel Q&A. Every finalist starts level: the Stage 1 ranking carries no weight. The panel decides 1st, 2nd and 3rd in each track, then picks the overall winner from the three track winners.
+Can it explain a decision to a customer or a regulator? Which rules apply (for example FCA Consumer Duty, anti-money-laundering, data protection)? Is customer data handled lawfully?
+Responsible AI
+Problem and user
+A specific need, credible evidence and an understanding of affected people.
+AI at the core
+A demonstrated AI capability or assurance function, tested against a sensible baseline.
+Working product
+An end-to-end task, reproducible tests and a demonstrated failure or handoff.
+Business and scale
+A buyer, value proposition, realistic costs, differentiation and a second-customer plan.
+Responsibility and trust
+Measured risk reduction, honest trade-offs, provenance and meaningful human control.

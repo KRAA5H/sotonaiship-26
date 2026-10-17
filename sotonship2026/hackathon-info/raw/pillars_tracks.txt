@@ -1,0 +1,58 @@
+The Tracks · SotonShip 26
+SotonShip26
+MissionPillarsManifestBackersLeaderboardLogbookFAQConduct
+♪ OFFLog in
+[=]
+Level 01/04
+# The Tracks
+◀ Back to deck
+▚Pillar 01 — the main hack
+## The tracks
+Every team picks one track and one challenge statement inside it. Tracks are set with our partners, and the themes below are the working plan.
+▮Three tracks be charted so far. The final tally and the full challenge statements be still under the cap'n's quill, and go up on this page on 9 October. In plain speak: expect three, but the list is not final yet.
+01Track 01
+### Southampton Coastal City
+Problems that matter to the city itself: the port, the coast, transport, climate and infrastructure. Build tools a resident, a council officer or a port operator could actually use, on real public data about Southampton.
+Suits · Messy data, maps, sensors and public services — and building for a person rather than a leaderboard.
+02Track 02
+### FinTech
+Real problems in money: scams, fraud networks, small-business cash flow, and the people the financial system underserves. Everything runs on synthetic data — nobody touches a real customer record.
+Suits · Data science and graph skills, and products a bank or a wallet app could actually ship.
+03Track 03
+### Responsible AI
+Ship it safe, as the AI Cyber Arena with Holistic AI. Build a defence for a simulated AI agent and one attack against it, then upload them as a Submission zip on live.sotonship.space by 13:00 on Sunday. A hidden benchmark scores every defence the same way, the leaderboard shows places and team names only, and the top three present to the final panel on Sunday afternoon.
+Suits · Evaluation, testing and security. Docker images up to 1 GB, no online AI services: pack any model inside your image.
+Heads-down build time
+▮How the weekend plays out be not yet settled. The rules and judgin' below be the working plan, and the prize list with 'em. Nothin' here be final 'til the ship's articles say so, and the full word goes up before the day.
+How it plays
+- →Teams of two to five. No solo entries — come alone and we'll help you find a crew on Friday night.
+- →Hacking opens Friday at 20:00. Ideas before then are fine; code is not.
+- →Submissions close at 13:00 on Sunday. No extensions.
+- →AI code-generation tools are allowed and encouraged — say what was generated in your README.
+- →Your team owns everything you build. Partners get a demo, nothing more.
+- →Your pitch is a live demo of the working thing, not a slide deck.
+Five criteria per track
+Each scored out of ten and tailored to the track. Every track includes Working demo — if it doesn't run, it doesn't count.
+Round one · demo fair
+Sunday 13:00. Every submitted team is seen at its table by the track's judges. Demo the working thing, then answer questions.
+Round two · stage pitches
+The top two teams per track pitch on the main stage. Three minutes to demo, two for questions. Responsible AI sends its top three from the leaderboard to the final panel instead.
+The prizes
+One winner per track, one overall winner, partner prizes, and People's Choice, decided by VC for a Day. The full list and the amounts be still bein' counted out, and go up before the day.
+◀ Level select▲ DeckWorkshops ▶
+SotonShip26
+Soton Ship 2026 · 16–18 October 2026 · Barclays Eagle Labs (Network Eagle Lab), Portland Terrace, Southampton SO14 7SJ.
+University of Southampton AI Society
+Contact
+- aisoc@soton.ac.uk
+- Ivan.ling@soton.ac.uk
+Ship's articles
+- Eligibility & logistics
+- Code of conduct
+- Privacy notice
+- Prize terms
+Supported by
+Soton Ship 2026 is a Hackathons UK partner event. Hackathons UK is a UK hackathon charity (company no. 12530692).
+© 2026 University of Southampton AI Society.Departures · 16–18 OCT 2026
+Soton Ship 2026 runs under the Hackathons UK Code of Conduct. Read it and report an issue.
+Capt. Bytebeard:Three courses charted so far. Pick the waters ye know, or don't.

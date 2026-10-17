@@ -1,0 +1,234 @@
+SOTONSHIP 2026 · TRACK BRIEF
+
+FinTech
+
+Friday 16 ­ Sunday 18 October 2026 · Barclays Eagle Labs Southampton
+In collaboration with JPMorganChase, Deutsche Bank and TrueMoney
+
+The challenge
+
+Build an AI-powered product that solves a real problem for someone who saves, spends, sends or manages
+money, and that you could realistically put in front of that person after the weekend. Money now moves in
+seconds and across borders, and so do the people trying to steal it. Banks, fintechs and wallet providers
+spend heavily on fraud, compliance and payments operations, while small businesses, migrant workers and
+vulnerable customers are still poorly served by the financial system. There is no fixed list of projects: you
+choose the problem, as long as you can show it matters in finance.
+
+SotonShip is about shipping, so judges will look past technical ambition and ask whether your product has a
+clear user, a working core and a plausible way to be paid for. A simple tool that one fraud team or one group
+of customers would start using next month will beat an impressive prototype that nobody would adopt.
+
+Before you start building, you should be able to describe your project in one sentence:
+
+   We help [a specific person] to [do or decide something] in [part of finance] using [AI and the
+   data behind it].
+
+For example: We help remittance users stop scam payments before they leave by spotting the warning signs
+in the messages that prompted them.
+
+Who you build for and what fits the track
+
+Choose one main user and design, test and pitch from their point of view. That user could be a customer (a
+migrant worker sending money home, a student, an older person, someone recovering from a scam), a bank
+or fintech employee (in fraud, payments operations, compliance and KYC, trade finance or customer
+services), a small business or sole trader, or a wallet agent or kiosk operator. Working well for one kind of
+customer, one team or one kind of payment is enough, and it is usually a stronger entry than a tool that tries
+to cover the whole of finance.
+
+Any real problem in money fits the track, including scams and fraud, money laundering, cross-border
+payments and remittance, payment data, trade and business verification, small-business cash flow,
+regulation and compliance, and digital money. The following do not fit, because they either have no clear
+user or cannot be built fairly in a weekend:
+
+   a general finance chatbot, or a trading bot or price prediction that does not lead to a decision;
+   an existing product with an AI feature added on top;
+
+SotonShip 2026 · FinTech                                              1/5
+   anything that needs real customer data, live bank credentials or moving real money, unless an organiser
+   has agreed it in advance.
+
+Each team enters one track only. If your idea could also sit in the Southampton City or Responsible AI track,
+pick the one where your user and your business case are strongest.
+
+What every project must show
+
+A real financial problem. You can say who has the problem, how often it happens and what they do about it
+today, and you can back that up with evidence such as published data, a regulation or a conversation with
+someone affected. Putting "finance" on a generic app does not count.
+
+AI that the product depends on. Ask yourself what would happen if you removed the AI. If the product
+would still do its main job, then AI is not at its core and the idea needs rethinking. Where your AI classifies,
+predicts or extracts, compare it against a simple baseline so you can show it does better.
+
+A product that works on real data. Someone should be able to complete the main task from start to finish,
+live, on public or openly licensed data with its source and date visible. Real customer data is off limits, so
+synthetic data is fine for testing and for anything personal, provided it is labelled as synthetic.
+
+A business case. Explain who would pay for the product or fund it (a bank, a fintech, a wallet provider,
+businesses or customers), roughly what it would cost to run per user including AI costs, and what it would
+take to make it work for a second bank or in a second market.
+
+Honesty about limits. The product should show what it does not know, how old its data is, and what
+happens when data is missing, a source is out of date or an input is outside what it was built for. Show at
+least one of these failure cases in your demo, because judges trust teams that know where their product
+breaks.
+
+Directions we want to see
+
+These examples show the kind of project we are hoping for: a specific user, AI doing the hard part, real
+public data and someone who would pay. You can build one of them, change it, combine them or ignore
+them completely. Original ideas are judged on exactly the same terms, and following an example earns no
+extra credit.
+
+   A scam check for people sending money home.
+
+   Migrant workers sending money abroad are prime targets for scams, including deepfake calls from a
+   "relative in distress", and UK reimbursement rules do not cover international payments. A tool that
+   reads the message or call behind a transfer, spots the warning signs and warns the sender before the
+   money leaves would protect people the system underserves. A wallet or remittance provider is the
+   customer, because every prevented scam saves a refund, a complaint and a lost user. Compare it with
+   a simple baseline, such as a keyword list. Published scam scripts and public scam reports are a good
+   starting point.
+
+SotonShip 2026 · FinTech  2/5
+A shell-company check for business onboarding.
+
+Fraudsters open business accounts through shell companies with fake directors and mass-registration
+addresses. A tool that takes a new business customer's details, pulls their Companies House record
+and director network, and explains which risk signals it found would save onboarding teams hours on
+every case. Banks and fintechs that open business accounts are the customer, and because every UK
+lender runs the same checks, the product has an obvious path to many buyers. Companies House's
+free API and bulk data are enough to build and test it.
+
+A payment address fixer.
+
+Swift is moving cross-border payments to structured addresses, split into fields such as street, town
+and country, and will stop accepting addresses written as free text once it agrees the timing with the
+industry. Many banks still hold their customers' addresses as messy free text, and every one of them
+will have to fix it. A tool that cleans and structures these addresses, flags the ones it is unsure about
+and explains why would save payments teams from rejected payments and manual repairs.
+Transaction banks are the customer, and the same rule applies to every bank on Swift worldwide.
+Compare your accuracy with simple pattern-matching rules, using open address data such as
+OpenStreetMap.
+
+A trade document checker.
+
+Before a bank pays out under a letter of credit, staff check by hand that the invoice, bill of lading and
+other documents match each other and the credit's terms. A tool that reads the documents, extracts
+the key fields and lists every discrepancy would speed up trade finance teams and catch forged or
+reused documents. Banks with trade finance businesses are the customer, and could license it per
+document checked. Public sample trade documents and generated sets with planted errors are enough
+to build and test it.
+
+Data
+
+There is no compulsory dataset for this track: choose the sources that fit your problem, and check early that
+they cover the market you chose and that you are allowed to use them. The sources below are good starting
+points, but you may use any other data you have permission to use, as long as you credit it.
+
+Source                             What it offers                        Access and limits
+
+Companies House API and bulk data  UK company records, officers,         Free; the API needs a key. Bulk files
+                                   registered addresses, filing history  are large, so take a slice
+                                   and persons with significant control
+                                                                         Free public download; good for
+UK sanctions list (OFSI / FCDO)    Names, aliases and identifiers of     name-matching and screening
+                                   sanctioned people and entities
+                                                                         Free download; quarterly, not live
+World Bank Remittance Prices       Cost of sending money between         prices
+Worldwide                          country pairs, by provider type
+                                                                         Free; historical reference rates, not
+Bank of England and ECB exchange Daily reference FX rates                live trading rates
+rates
+
+SotonShip 2026 · FinTech                                                 3/5
+Source                          What it offers                        Access and limits
+FCA Register and FCA / Bank of
+England publications            Authorised firms, warnings about      Public pages and downloads; check
+
+PaySim (Kaggle)                 unauthorised firms, policy statements terms before bulk collection
+
+IBM AMLworld (Kaggle)           and consultations
+
+Elliptic dataset (Kaggle)       Synthetic mobile-money transactions Openly available; widely used, so
+
+Public blockchain explorers     with fraud labels                     originality must come from your
+(e.g. Etherscan, Basescan)
+OpenStreetMap                                                         product
+
+                                Synthetic transactions with money-    Openly available; large, so sample it
+                                laundering patterns labelled
+
+                                Bitcoin transaction graph with licit  Openly available; check the licence
+                                and illicit labels
+
+                                On-chain token transfers, including   Free tiers need a key and have rate
+                                stablecoins and deposit tokens        limits
+
+                                Structured address data               Open (ODbL); credit OpenStreetMap
+                                                                      contributors
+
+Some sources need a free account and key. Keep API keys and passwords out of your repository.
+
+Track rules
+
+The event-wide rules apply: teams of four, hacking runs from Friday 20:00 to Sunday 13:00, and you own
+what you build. In addition, for this track:
+
+   Build your entry during the event and create its repository after hacking opens. Open-source libraries,
+   templates and pre-trained models are fine, but your own earlier projects are not.
+   State in your README which parts were AI-generated, what existed before the event and who helped
+   you.
+   Show where each number comes from and when it was collected. Never present cached data as live or
+   synthetic data as real.
+   Do not use real customer data or connect to a real bank account, card or wallet, and never move real
+   money. Build tools that detect scams and fraud, not tools that create deepfakes, scam scripts or fake
+   documents.
+   If your product deals with investment, credit or borrowing, link to official guidance such as the FCA or
+   MoneyHelper rather than giving your own advice.
+
+Deliverables and pitch
+
+Each team submits three things on its team page on the SotonShip Live website, before submissions lock at
+13:00 on Sunday:
+
+   A demo video of 1 to 3 minutes showing your product in use. Every team must upload its video to
+   YouTube and submit the link.
+   A short summary of about 150 words that explains who your user is, what problem they have and why
+   it matters, what your solution does and how it could scale.
+   A link to your GitHub repository.
+
+SotonShip 2026 · FinTech                                                                                   4/5
+On Sunday afternoon you then pitch in VC for a Day. The Judging & how to win page covers the submission
+requirements and the suggested pitch structure in full.
+
+Judging and how to win
+
+Every track is judged on the same five criteria: problem and user (20%), AI at the core (20%), working
+product (25%), business and scale (20%), and responsibility and trust (15%). On Sunday afternoon every team
+pitches in VC for a Day, where the audience and the judges invest virtual money in the teams they believe in,
+and the top three teams in each track go on to a final panel that decides the places. The Judging & how to
+win page on the SotonShip Live website explains the whole process, including what to submit, the
+suggested pitch structure and the extra questions judges ask in this track, so read it before you start
+building.
+
+For this track in particular, make sure your pitch answers three questions clearly: what evidence shows the
+problem is real and costly, who would deploy and pay for the product, and what it would take to roll it out to
+a second bank or market. Your submission locks at 13:00 on Sunday, and your README should list every
+data source you used with its date and licence.
+
+Key times                                    What happens
+
+ When                                        Doors open, followed by talks, the track introductions and
+ Friday 16 October, afternoon and evening    a visit and Q&A with the Lord Mayor of Southampton;
+                                             hacking opens at 20:00
+ Saturday 17 October
+ Sunday 18 October, 13:00                    Hacking all day; the venue stays open on Friday and
+ Sunday afternoon                            Saturday nights, so you can work and stay overnight
+
+The full timetable is on the Schedule page.  Hacking stops and submissions lock, with no extensions
+
+                                             VC for a Day pitches, the final panel and awards
+
+SotonShip 2026 · FinTech                     5/5
+
