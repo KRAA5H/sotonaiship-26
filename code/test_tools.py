@@ -121,7 +121,7 @@ class FindCategoryFactsTest(unittest.TestCase):
             self.assertNotIn("8083 3344", text, name)
         note = tools.find_category_facts("not_council_trunk_road")["category"]["note"]
         self.assertIn("do not save a report", note)
-        self.assertFalse(any("A33" in f["fact"] or "A36" in f["fact"]
+        self.assertFalse(any("A33" in f["confirmed_fact"] or "A36" in f["confirmed_fact"]
                              for facts in tools._rulebook()[1].values() for f in facts))
 
     def test_utf8_survives(self):
