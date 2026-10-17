@@ -3,10 +3,10 @@ Rows whose category_id holds several ids separated by ';' apply to each id.
 Never load scope_checks.csv, confirmed_categories.csv, partly_confirmed_categories.csv, council_forms.csv into the agent."""
 import csv, json
 def load(folder="."):
-    cats = {c["id"]: c for c in json.load(open(f"{folder}/categories.json"))["categories"]}
+    cats = {c["id"]: c for c in json.load(open(f"{folder}/categories.json", encoding="utf-8"))["categories"]}
     facts = {k: [] for k in cats}
     facts["general"] = []
-    for r in csv.DictReader(open(f"{folder}/confirmed_with_websites.csv")):
+    for r in csv.DictReader(open(f"{folder}/confirmed_with_websites.csv", encoding="utf-8", newline="")):
         for cid in [x.strip() for x in r["category_id"].split(";")]:
             facts.setdefault(cid, []).append(r)
     return cats, facts

@@ -50,6 +50,7 @@ The short record of what we decided and what we rejected, so nobody re-opens a s
 | D23 | Model access is **OpenAI-compatible over HTTP**, not the Anthropic SDK. `LLM_BASE_URL=https://openrouter.ai/api/v1`, `LLM_MODEL=nvidia/nemotron-3-super-120b-a12b:free` | Keys are unsettled. The `openrouter/free` router returned "User Safety: safe" instead of an answer, so a specific free model is pinned. It answered correctly in 3.8 to 8.0 seconds. Swapping provider is two env vars |
 | D24 | BlueBubbles sends with `method=apple-script` | `private_api` is false on server 1.9.9, so `private-api` would fail every send |
 | D25 | Plans stay short and the todo list carries **only live development work** | A plan nobody reads is worse than no plan |
+| D26 | **Reports follow `CLAUDE.md` and `dashboard/schema.sql`, replacing `PLAN.md` section 4.** One 11-column `reports` table, `R-0001` ids, statuses `new` / `in_review` / `resolved`, no coordinates, no channel, residents see only `/r/<link_token>`. Duplicates: same category, same location text, open (not resolved), within 30 days, as in `agent/categories.json`. The KB-xxxx report object, its statuses and the 80 m / 14 day rule are retired | The newer design is what the dashboard, the fake data and the agent tools are built on; two report shapes would split the team. Signed: Aadil |
 
 ## How to change something
 

@@ -1,11 +1,15 @@
 """Generates SYNTHETIC reports in the schema.sql shape. Not real residents or incidents.
-Run: python3 make_fake_reports.py categories.json"""
-import json, random, sys, csv, secrets
+Also refreshes the copy embedded in prototype/index.html so the two never drift.
+Run: python3 make_fake_reports.py ../agent/categories.json"""
+import json, random, re, sys, csv, secrets
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 random.seed(7)
-cats = [c for c in json.load(open(sys.argv[1]))["categories"] if c["outcome"] == "council_report"]
+here = Path(__file__).resolve().parent
+cats = [c for c in json.load(open(sys.argv[1], encoding="utf-8"))["categories"] if c["outcome"] == "council_report"]
 streets = ["Portswood Road","Highfield Road","Bevois Valley","Shirley High Street","Winchester Road","Hill Lane","Burgess Road","Bitterne Road","Old Northam Road","Cumberland Place"]
 now = datetime(2026, 10, 17, 12, 0, tzinfo=timezone.utc)
+dup_gap = timedelta(days=2)
 rows = []
 def mk(i, c, created, status, loc, dup=""):
     return {"id": f"R-{i:04d}", "created_at": created.isoformat(), "category_id": c["id"], "status": status,
@@ -18,10 +22,21 @@ for i in range(1, 61):
                    random.choice(["new","new","new","in_review","resolved"]),
                    f"{random.randint(1,120)} {random.choice(streets)}"))
 by_id = {c["id"]: c for c in cats}
-for r in random.sample(rows[:40], 8):
-    d = mk(len(rows)+1, by_id[r["category_id"]], datetime.fromisoformat(r["created_at"]) + timedelta(days=2), "new", r["location"], r["id"])
+newest = max(datetime.fromisoformat(r["created_at"]) for r in rows)
+# A repeat is only flagged against an open report (resolved ones are not
+# duplicates), and must not be dated after the newest original.
+candidates = [r for r in rows[:40] if r["status"] in ("new", "in_review")
+              and datetime.fromisoformat(r["created_at"]) + dup_gap <= newest]
+for r in random.sample(candidates, 8):
+    d = mk(len(rows)+1, by_id[r["category_id"]], datetime.fromisoformat(r["created_at"]) + dup_gap, "new", r["location"], r["id"])
     rows.append(d)
-json.dump(rows, open("fake_reports.json","w"), indent=2)
-with open("fake_reports.csv","w",newline="") as f:
+assert max(r["created_at"] for r in rows) == newest.isoformat()
+json.dump(rows, open(here / "fake_reports.json", "w", newline="\n"), indent=2)
+with open(here / "fake_reports.csv", "w", newline="") as f:
     w = csv.DictWriter(f, rows[0].keys()); w.writeheader(); w.writerows(rows)
+proto = here / "prototype" / "index.html"
+html = open(proto, encoding="utf-8", newline="").read()
+html, n = re.subn(r"^const DATA=\[.*?\];$", lambda _: f"const DATA={json.dumps(rows)};", html, count=1, flags=re.M)
+assert n == 1, "const DATA line not found in prototype/index.html"
+proto.write_text(html, encoding="utf-8", newline="")
 print(len(rows), "synthetic reports")
