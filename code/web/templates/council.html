@@ -6,6 +6,7 @@
 {% endblock %}
 {% block after_main %}
 <dialog class="drawer" id="detail" aria-labelledby="d-title"></dialog>
+<dialog class="lightbox" id="lightbox" aria-label="Photo"><button class="iconbtn lb-close" data-lb-close aria-label="Close photo"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button><img id="lb-img" alt=""><p class="lb-cap" id="lb-cap"></p></dialog>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 {% endblock %}
 {% block scripts %}
@@ -23,6 +24,7 @@ const CATS=JSON.parse(document.getElementById("labels").textContent);
 // Figures computed by the server from kerbside.db; refreshed with the list.
 let STATS=JSON.parse(document.getElementById("stats").textContent);
 const STATS_CSV={{ url_for('website.council_stats_csv') | tojson }};
+const PHOTO_URL={{ url_for('website.council_photo', report_id='__ID__') | tojson }};
 const STATUS_URL={{ url_for('website.set_status', report_id='__ID__') | tojson }};
 const RESIDENT_URL={{ url_for('website.resident', token='__TOKEN__') | tojson }};
 const STATUS={new:"New",in_review:"In review",resolved:"Resolved"};
@@ -98,6 +100,24 @@ function prioDetail(r){
       <div><dt>Age</dt><dd>${f.age_days.value} day${f.age_days.value===1?"":"s"}${f.age_days.capped?" (counted as 14)":""}<span>× ${f.age_days.factor}</span></dd></div>
     </dl></div>`;
 }
+// Photos: served only by the password-protected route, never a public folder.
+const photoSrc=r=>PHOTO_URL.replace("__ID__",encodeURIComponent(r.id));
+function photoCell(r){
+  if(r.photo_stored)return `<button class="thumb" data-photo="${esc(r.id)}" data-key="p:${esc(r.id)}" aria-label="Enlarge the photo for ${esc(r.id)}"><img src="${esc(photoSrc(r))}" alt="" loading="lazy" width="64" height="48"></button>`;
+  return r.has_photo?`<span class="muted">Photo sent, not stored</span>`:`<span class="muted">No photo</span>`;
+}
+// A model-written description is labelled as such and kept apart from the
+// resident's own words. It is never shown as an officer's note.
+function aiFeatures(r){
+  let f=r.photo_features;if(!f)return null;
+  if(typeof f==="string"){try{f=JSON.parse(f)}catch(e){return null}}
+  return f&&f.what_is_visible?f:null;
+}
+function aiBlock(r){
+  const f=aiFeatures(r);if(!f)return "";
+  return `<div class="wide ai"><dt>${ic("info")}AI-generated description</dt><dd><p>${esc(f.what_is_visible)}</p>
+    <p class="ai-note">Written by a model from the photo. Not checked by an officer, and not an officer's note.</p></dd></div>`;
+}
 function repeatsOf(id){return DATA.filter(r=>r.duplicate_of===id).map(r=>r.id)}
 const activeCount=()=>Object.keys(blank).filter(k=>state[k]!==blank[k]).length;
 function statusSelect(r){
@@ -123,7 +143,7 @@ function council(){
       <td class="c-prio">${prio(r)}</td>
       <td class="c-sev">${sev(r.severity)}</td>
       <td class="c-status">${statusSelect(r)}</td>
-      <td class="c-photo">${r.has_photo?`${ic("camera")}Photo`:`<span class="muted">No photo</span>`}</td>
+      <td class="c-photo">${photoCell(r)}</td>
       <td class="c-go">${ic("chevron")}</td></tr>`});
   const empty=DATA.length
     ?`<div class="empty"><span class="e-ic">${ic("search")}</span><h3>No reports match these filters</h3><p>Try a different search, or clear the filters to see all ${DATA.length} reports.</p><button class="btn" id="f-reset2" data-key="reset2">Clear all filters</button></div>`
@@ -173,10 +193,11 @@ function detail(r){
         <div class="wide"><dt>${ic("pin")}Location</dt><dd>${esc(r.location||"Not given")}</dd></div>
         <div><dt>${ic("calendar")}Reported</dt><dd>${fmt(r.created_at)}, ${hm(r.created_at)}<br><span class="muted small">${ago(r.created_at)}</span></dd></div>
         <div><dt>${ic("gauge")}Severity</dt><dd>${sev(r.severity)}</dd></div>
-        <div><dt>${ic("camera")}Photo</dt><dd>${r.has_photo?"Yes, the resident sent a photo":"No photo"}</dd></div>
+        <div class="wide"><dt>${ic("camera")}Photo</dt><dd>${r.photo_stored?`<button class="d-photo" data-photo="${esc(r.id)}" data-key="dp:${esc(r.id)}" aria-label="Enlarge the photo"><img src="${esc(photoSrc(r))}" alt="Photo the resident sent with ${esc(r.id)}"></button>`:r.has_photo?"The resident sent a photo, but it was not stored":"No photo"}</dd></div>
         <div><dt>${ic("copy")}Duplicate of</dt><dd>${r.duplicate_of?`<button class="linkbtn" data-goto="${esc(r.duplicate_of)}" data-key="g:${esc(r.duplicate_of)}">${esc(r.duplicate_of)}</button>`:`<span class="muted">Not a repeat</span>`}</dd></div>
         ${reps.length?`<div class="wide"><dt>${ic("copy")}Repeats joined to this report</dt><dd class="replist">${reps.map(id=>`<button class="linkbtn" data-goto="${esc(id)}" data-key="g:${esc(id)}">${esc(id)}</button>`).join("")}</dd></div>`:""}
-        <div class="wide"><dt>${ic("text")}Description</dt><dd class="quote">${esc(r.description||"No description given")}</dd></div>
+        <div class="wide"><dt>${ic("text")}Resident's words</dt><dd class="quote">${esc(r.description||"No description given")}</dd></div>
+        ${aiBlock(r)}
       </dl>
       <div class="d-foot"><a class="btn" href="${esc(RESIDENT_URL.replace("__TOKEN__",encodeURIComponent(r.link_token)))}" target="_blank" rel="noopener noreferrer">${ic("external")}Open resident view</a>
         <p class="muted small">The resident sees only this report at their private link. It never shows the report ID.</p></div>
@@ -273,9 +294,19 @@ function render(){
   ["#f-reset","#f-reset2"].forEach(s=>{const b=$(s);if(b)b.onclick=()=>{Object.assign(state,blank);render()}});
   document.querySelectorAll("select[data-id]").forEach(s=>s.onchange=()=>saveStatus(s.dataset.id,s.value));
 }
+// Photo lightbox: a plain <dialog>, no library.
+const lb=$("#lightbox");
+function openPhoto(id){
+  const r=DATA.find(x=>x.id===id);if(!r||!r.photo_stored)return;
+  $("#lb-img").src=photoSrc(r);$("#lb-img").alt=`Photo the resident sent with ${r.id}`;
+  $("#lb-cap").textContent=`${r.id} · ${label(r.category_id)}${r.location?` · ${r.location}`:""}${r.synthetic?" · synthetic placeholder image":""}`;
+  lb.showModal();
+}
+lb.addEventListener("click",e=>{if(e.target===lb||e.target.closest("[data-lb-close]"))lb.close()});
+document.addEventListener("click",e=>{const t=e.target.closest("[data-photo]");if(t){e.stopPropagation();openPhoto(t.dataset.photo)}},true);
 // Rows open the detail drawer; the status select inside a row does not.
 $("#view").addEventListener("click",e=>{
-  if(e.target.closest("select,a,input,label"))return;
+  if(e.target.closest("select,a,input,label,[data-photo]"))return;
   const row=e.target.closest("[data-open]");if(row)openDetail(row.dataset.open);
 });
 render();

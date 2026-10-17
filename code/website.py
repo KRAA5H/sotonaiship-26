@@ -27,7 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from dotenv import load_dotenv
-from flask import Blueprint, Flask, Response, current_app, jsonify, render_template, request
+from flask import Blueprint, Flask, Response, current_app, jsonify, render_template, request, send_file
 
 load_dotenv(Path(__file__).with_name(".env"))
 
@@ -38,6 +38,10 @@ import tools
 import loader  # noqa: E402  (agent/loader.py, on the path via tools)
 
 WEB_DIR = Path(__file__).with_name("web")
+# Report photos. Never under WEB_DIR/static: only /council/photos/<id> serves them.
+PHOTO_DIR = Path(__file__).with_name("photos")
+PHOTO_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
+               ".gif": "image/gif"}
 STEPS = (
     ("new", "Received", "We have your report."),
     ("in_review", "In review", "A council officer is looking at it."),
@@ -168,6 +172,25 @@ def council_stats_csv():
                     headers={"Content-Disposition": 'attachment; filename="council-stats.csv"'})
 
 
+@site.get("/council/photos/<report_id>")
+def council_photo(report_id):
+    """A report's photo, for council staff only."""
+    denied = _council_denied()
+    if denied:
+        return denied
+    with _connect() as conn:
+        relative = reports_db.photo_path(conn, report_id)
+    root = Path(current_app.config.get("PHOTO_DIR") or PHOTO_DIR).resolve()
+    path = (root / relative).resolve() if relative else None
+    # Only image files inside the photo folder, whatever the database says.
+    if (not path or root not in path.parents or not path.is_file()
+            or path.suffix.lower() not in PHOTO_TYPES):
+        return Response("No photo for this report.", 404, mimetype="text/plain")
+    response = send_file(path, mimetype=PHOTO_TYPES[path.suffix.lower()])
+    response.headers["Content-Security-Policy"] = "default-src 'none'"
+    return response
+
+
 @site.post("/council/reports/<report_id>/status")
 def set_status(report_id):
     denied = _council_denied()
@@ -207,10 +230,11 @@ def resident(token):
                            status_label=dict((k, t) for k, t, _ in STEPS).get(report["status"], report["status"]))
 
 
-def create_app(db_path=None, council_password=None):
+def create_app(db_path=None, council_password=None, photo_dir=None):
     app = Flask(__name__, static_folder=None)
     app.config["KERBSIDE_DB"] = db_path
     app.config["COUNCIL_PASSWORD"] = council_password
+    app.config["PHOTO_DIR"] = photo_dir
     app.register_blueprint(site)
     return app
 

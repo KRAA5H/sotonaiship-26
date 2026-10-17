@@ -31,9 +31,12 @@ DB_PATH = Path(os.getenv("DB_PATH") or Path(__file__).with_name("kerbside.db"))
 COLUMNS = (
     "id", "created_at", "category_id", "status", "severity", "location", "area",
     "description", "has_photo", "duplicate_of", "reporter_ref", "link_token", "status_changed_at",
+    "photo_path",
 )
 # What the council dashboard may see. reporter_ref never leaves the database.
-COUNCIL_COLUMNS = tuple(c for c in COLUMNS if c != "reporter_ref")
+# photo_path is a server path: the page gets photo_stored instead and asks the
+# password-protected /council/photos/<id> route for the image.
+COUNCIL_COLUMNS = tuple(c for c in COLUMNS if c not in ("reporter_ref", "photo_path"))
 STATUSES = ("new", "in_review", "resolved")
 # The webhook threads and the website share one file, so a writer waits for
 # the lock instead of failing with "database is locked".
@@ -60,7 +63,8 @@ def council_reports(conn):
     """
     rows = conn.execute(
         f"SELECT {', '.join(COUNCIL_COLUMNS)}, "
-        "COALESCE(reporter_ref LIKE 'synthetic-%', 0) AS synthetic "
+        "COALESCE(reporter_ref LIKE 'synthetic-%', 0) AS synthetic, "
+        "(COALESCE(photo_path, '') != '') AS photo_stored "
         "FROM reports ORDER BY created_at DESC"
     ).fetchall()
     return [dict(row) for row in rows]
@@ -150,11 +154,17 @@ def latest_report_for(conn, reporter_ref):
     return dict(row) if row else None
 
 
-def _ensure_status_changed_column(conn):
-    """Adds status_changed_at to a database that predates it. Safe on every start."""
+def _ensure_column(conn, name):
+    """Adds a nullable TEXT column to a database that predates it. Safe on every start."""
     existing_columns = {row["name"] for row in conn.execute("PRAGMA table_info(reports)").fetchall()}
-    if "status_changed_at" not in existing_columns:
-        conn.execute("ALTER TABLE reports ADD COLUMN status_changed_at TEXT")
+    if name not in existing_columns:
+        conn.execute(f"ALTER TABLE reports ADD COLUMN {name} TEXT")
+
+
+def photo_path(conn, report_id):
+    """The stored photo's path, relative to code/photos/, or None."""
+    row = conn.execute("SELECT photo_path FROM reports WHERE id = ?", (report_id,)).fetchone()
+    return (row["photo_path"] or None) if row else None
 
 
 def _ensure_area_column(conn):
@@ -183,7 +193,8 @@ def init_db(path=None, seed=True):
             conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
 
         _ensure_area_column(conn)
-        _ensure_status_changed_column(conn)
+        for column in ("status_changed_at", "photo_path"):
+            _ensure_column(conn, column)
 
         count = conn.execute("SELECT COUNT(*) FROM reports").fetchone()[0]
         if seed and count == 0:
@@ -200,6 +211,8 @@ def load_reports(conn, reports):
         row = {column: report.get(column) for column in COLUMNS}
         # The JSON uses "" for "not a duplicate"; store NULL instead.
         row["duplicate_of"] = row["duplicate_of"] or None
+        row["status_changed_at"] = row["status_changed_at"] or None
+        row["photo_path"] = row["photo_path"] or None
         row["has_photo"] = int(bool(row["has_photo"]))
         rows.append(row)
 

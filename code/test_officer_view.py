@@ -198,5 +198,71 @@ class StatsCsvTest(Case):
         self.assertNotIn("synthetic-", body)
 
 
+class PhotoTest(Case):
+    def photo_id(self):
+        return next(r["id"] for r in FAKE if r["photo_path"])
+
+    def no_photo_id(self):
+        return next(r["id"] for r in FAKE if not r["has_photo"])
+
+    def test_needs_the_password(self):
+        self.assertEqual(self.client.get(f"/council/photos/{self.photo_id()}").status_code, 401)
+
+    def test_serves_the_photo_privately(self):
+        response = self.client.get(f"/council/photos/{self.photo_id()}", headers=AUTH)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "image/png")
+        self.assertTrue(response.get_data().startswith(b"\x89PNG"))
+        self.assertEqual(response.headers["Cache-Control"], "no-store")
+        self.assertEqual(response.headers["Content-Security-Policy"], "default-src 'none'")
+        response.close()
+
+    def test_no_photo_is_a_404(self):
+        for rid in (self.no_photo_id(), "R-9999"):
+            self.assertEqual(self.client.get(f"/council/photos/{rid}", headers=AUTH).status_code, 404, rid)
+
+    def test_never_serves_anything_outside_the_photo_folder(self):
+        photos = Path(self.tmp.name) / "photos"
+        photos.mkdir()
+        (photos / "notes.txt").write_text("not an image", encoding="utf-8")
+        app = website.create_app(self.path, PASSWORD, photo_dir=photos)
+        client = app.test_client()
+        rid = self.photo_id()
+        for bad in ("../officer.db", "../../website.py", str(Path(website.__file__).resolve()), "notes.txt",
+                    "missing.png"):
+            self.conn.execute("UPDATE reports SET photo_path = ? WHERE id = ?", (bad, rid))
+            self.assertEqual(client.get(f"/council/photos/{rid}", headers=AUTH).status_code, 404, bad)
+
+    def test_photos_are_not_in_the_public_static_folder(self):
+        for path in ("/assets/photos/synthetic/pothole.png", "/assets/../photos/synthetic/pothole.png",
+                     "/photos/synthetic/pothole.png"):
+            self.assertEqual(self.client.get(path).status_code, 404, path)
+        self.assertFalse((website.WEB_DIR / "static" / "photos").exists())
+
+    def test_page_gets_a_flag_not_the_path(self):
+        reports = self.client.get("/council/reports.json", headers=AUTH).get_json()["reports"]
+        self.assertTrue(all("photo_path" not in r for r in reports))
+        flags = {r["id"]: r["photo_stored"] for r in reports}
+        for fake in FAKE:
+            self.assertEqual(bool(flags[fake["id"]]), bool(fake["photo_path"]), fake["id"])
+        self.assertNotIn("synthetic/", self.client.get("/council", headers=AUTH).get_data(as_text=True))
+
+    def test_every_synthetic_photo_exists_and_is_stamped_synthetic(self):
+        for fake in FAKE:
+            if fake["photo_path"]:
+                path = website.PHOTO_DIR / fake["photo_path"]
+                self.assertTrue(path.is_file(), fake["photo_path"])
+                self.assertTrue(fake["photo_path"].startswith("synthetic/"))
+        self.assertIn("SYNTHETIC DEMO IMAGE", (website.PHOTO_DIR.parent.parent / "dashboard" /
+                                               "make_fake_photos.py").read_text(encoding="utf-8"))
+
+    def test_page_labels_words_and_model_text_apart(self):
+        html = self.client.get("/council", headers=AUTH).get_data(as_text=True)
+        self.assertIn("Resident's words", html)
+        self.assertIn("AI-generated description", html)
+        self.assertIn("not an officer's note", html)
+        self.assertIn("No photo", html)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

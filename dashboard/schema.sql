@@ -12,5 +12,6 @@ CREATE TABLE reports (
   reporter_ref  TEXT,                            -- anonymous reference, never a real number
   link_token    TEXT UNIQUE NOT NULL,            -- long random string for the resident's page /r/<token>
   area          TEXT,                            -- named Southampton area, from LocationService (may be empty)
-  status_changed_at TEXT                         -- when the status FIRST changed, for time to first action
+  status_changed_at TEXT,                        -- when the status FIRST changed, for time to first action
+  photo_path    TEXT                             -- photo file under code/photos/, served only behind the council password
 );

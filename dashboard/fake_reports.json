@@ -10,7 +10,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-2542",
-    "link_token": "Q_2Fx3nynvcdGg5z",
+    "link_token": "zyy2VGAlEVZ6rjDc",
+    "photo_path": "",
     "status_changed_at": "2026-10-11T13:00:00+00:00"
   },
   {
@@ -24,7 +25,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-8104",
-    "link_token": "Gi522181tbwliXQE",
+    "link_token": "tskaF61xkQXX9Fxa",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": ""
   },
   {
@@ -38,7 +40,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-3028",
-    "link_token": "-JidRJ6e0hHNwGzH",
+    "link_token": "xBxmhZ10O-p6F0bA",
+    "photo_path": "synthetic/bin.png",
     "status_changed_at": ""
   },
   {
@@ -52,7 +55,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-4622",
-    "link_token": "Pzzcl3MtZb7NBnnx",
+    "link_token": "DJoFI0Fv97xv9Faa",
+    "photo_path": "synthetic/vehicle.png",
     "status_changed_at": "2026-09-24T07:00:00+00:00"
   },
   {
@@ -66,7 +70,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-6054",
-    "link_token": "ZIiXvOEy1PqBShGr",
+    "link_token": "EeJ-4pkfFMtqtsrP",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -80,7 +85,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-2028",
-    "link_token": "RjhKu7CwgcNJfDu6",
+    "link_token": "GWbM7DCVOAZrmiOF",
+    "photo_path": "synthetic/glass.png",
     "status_changed_at": "2026-10-15T11:00:00+00:00"
   },
   {
@@ -94,7 +100,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-8628",
-    "link_token": "fIVrTnFdGMabviE_",
+    "link_token": "dPs4sLIUPeRcF1wr",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -108,7 +115,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-5919",
-    "link_token": "dVBcpJ3vMZk9Pc4q",
+    "link_token": "oh-XT_QyMZPhzKIN",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": ""
   },
   {
@@ -122,7 +130,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-7850",
-    "link_token": "Gy-0_7bx4Evrfa3R",
+    "link_token": "2DDmGIia51Le5hhB",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": "2026-10-06T00:00:00+00:00"
   },
   {
@@ -136,7 +145,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-2271",
-    "link_token": "NSEPPg_-xFb74nkT",
+    "link_token": "AiC2EOklFrlM6SU8",
+    "photo_path": "synthetic/glass.png",
     "status_changed_at": ""
   },
   {
@@ -150,7 +160,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-2533",
-    "link_token": "372KH_xkEmqH7ZMK",
+    "link_token": "p8zDkWJhixMvtpyg",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": ""
   },
   {
@@ -164,7 +175,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-7320",
-    "link_token": "rhddHvCz7OKFcfob",
+    "link_token": "RS7g-wEE2FeOTv0l",
+    "photo_path": "synthetic/vehicle.png",
     "status_changed_at": ""
   },
   {
@@ -178,7 +190,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-4575",
-    "link_token": "R3V62fjX7Cq-DnYz",
+    "link_token": "AMPV2JDkyNkAXXaf",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": "2026-10-17T12:00:00+00:00"
   },
   {
@@ -192,7 +205,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-8359",
-    "link_token": "12zBn2E5_xzOh_ha",
+    "link_token": "YYBKCLxtlQNCGzid",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": ""
   },
   {
@@ -206,7 +220,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-5561",
-    "link_token": "Gv2EsBeWxnW2ZiLS",
+    "link_token": "Hd0Bwz8nC9JtUs1U",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -220,7 +235,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-4800",
-    "link_token": "zxlApZldL5PV-tG1",
+    "link_token": "FuLHQ1jZRDXpQC-u",
+    "photo_path": "synthetic/bin.png",
     "status_changed_at": "2026-10-03T19:00:00+00:00"
   },
   {
@@ -234,7 +250,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-1067",
-    "link_token": "-W9Z2DPdpvXChsL4",
+    "link_token": "-jUqZYnwoj5jXCqE",
+    "photo_path": "synthetic/vehicle.png",
     "status_changed_at": "2026-10-17T12:00:00+00:00"
   },
   {
@@ -248,7 +265,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-9445",
-    "link_token": "UtFqqi2GTMVb4MAv",
+    "link_token": "gjTFIqPixbddS2SP",
+    "photo_path": "",
     "status_changed_at": "2026-09-30T09:00:00+00:00"
   },
   {
@@ -262,7 +280,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-8889",
-    "link_token": "hYE5wtvKe5pKlW0Z",
+    "link_token": "Bh04xnOzQaxpIwwO",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": "2026-09-28T10:00:00+00:00"
   },
   {
@@ -276,7 +295,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-6571",
-    "link_token": "wpcITV_YdND-whXW",
+    "link_token": "pkAKFfYIbcmPFq8x",
+    "photo_path": "synthetic/bin.png",
     "status_changed_at": ""
   },
   {
@@ -290,7 +310,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-1417",
-    "link_token": "sSNZRMMl8P_hKhGB",
+    "link_token": "ctl9mCHuNZx4-tia",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -304,7 +325,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-6966",
-    "link_token": "UD8htBab1gLcG1Pc",
+    "link_token": "JFr3reMv3mzq1cH_",
+    "photo_path": "",
     "status_changed_at": "2026-10-12T02:00:00+00:00"
   },
   {
@@ -318,7 +340,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-6109",
-    "link_token": "kVho6x42Y0QlOM-Y",
+    "link_token": "hd8mXacI01T8Ymcx",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": ""
   },
   {
@@ -332,7 +355,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-3645",
-    "link_token": "0-_lywtPGQ2yZG5Q",
+    "link_token": "Bc3XvM0q_dHiQlWZ",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": ""
   },
   {
@@ -346,7 +370,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-5883",
-    "link_token": "xO_g_AOAasW3QQFE",
+    "link_token": "N_W8FohbLSdIGXly",
+    "photo_path": "",
     "status_changed_at": "2026-10-08T21:00:00+00:00"
   },
   {
@@ -360,7 +385,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-4650",
-    "link_token": "cztFo9Q5l90FDo-g",
+    "link_token": "6jSldjD4w-iNgFzq",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": ""
   },
   {
@@ -374,7 +400,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-4714",
-    "link_token": "8kqNTTDYwJV8UFBS",
+    "link_token": "xbnHQYHUEHQIMm-5",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -388,7 +415,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-8737",
-    "link_token": "sISOPSy43uv9q6r4",
+    "link_token": "KC1265d8AIZ2rEW7",
+    "photo_path": "",
     "status_changed_at": "2026-09-26T07:00:00+00:00"
   },
   {
@@ -402,7 +430,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-6974",
-    "link_token": "jA8iW25Y40ZsgR71",
+    "link_token": "3J1AoAa3WjDup0Eq",
+    "photo_path": "",
     "status_changed_at": "2026-10-12T06:00:00+00:00"
   },
   {
@@ -416,7 +445,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-8907",
-    "link_token": "TCPMv-AqHICdphi4",
+    "link_token": "HjYEbQuacBT3Z918",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": ""
   },
   {
@@ -430,7 +460,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-4265",
-    "link_token": "OZeQ9vpW3e3_CiIr",
+    "link_token": "pIi05N2dLkqvd-2Z",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -444,7 +475,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-7485",
-    "link_token": "JT6Wo-jRK8OxGIEU",
+    "link_token": "LbATW1WsWu5CdSRz",
+    "photo_path": "",
     "status_changed_at": "2026-10-12T13:00:00+00:00"
   },
   {
@@ -458,7 +490,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-1451",
-    "link_token": "141US6miLwqMJxk4",
+    "link_token": "XUG7PYUlvJhV_i3W",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -472,7 +505,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-6741",
-    "link_token": "v2B0ey9o9Gq1OGTb",
+    "link_token": "8YkQFhkiv0PjpDf6",
+    "photo_path": "",
     "status_changed_at": "2026-09-24T13:00:00+00:00"
   },
   {
@@ -486,7 +520,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-2683",
-    "link_token": "QKPDCZTu3N-WgLXp",
+    "link_token": "8QuG1qT2w6ZqgkRN",
+    "photo_path": "",
     "status_changed_at": "2026-09-25T17:00:00+00:00"
   },
   {
@@ -500,7 +535,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-5799",
-    "link_token": "CjdvUtMfxjdaTQ0t",
+    "link_token": "fUvPh1ni5wGlchKK",
+    "photo_path": "synthetic/graffiti.png",
     "status_changed_at": ""
   },
   {
@@ -514,7 +550,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-1997",
-    "link_token": "r8Yp8WwFohah2mEy",
+    "link_token": "XHub_54X-ypYZTw3",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -528,7 +565,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-9219",
-    "link_token": "CYFi9ulAjoisr3rp",
+    "link_token": "X1HWWHb2qh8THmUo",
+    "photo_path": "",
     "status_changed_at": "2026-09-28T14:00:00+00:00"
   },
   {
@@ -542,7 +580,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-4000",
-    "link_token": "b__en29zqIHgA2GA",
+    "link_token": "F6baUBEGYSWN1Kv_",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -556,7 +595,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-6340",
-    "link_token": "AOhlLFzGZXe4_xC_",
+    "link_token": "6Yvvr9Z7dbFRmfZI",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -570,7 +610,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-2601",
-    "link_token": "5AYw3YBb1dGf1ile",
+    "link_token": "rBzMLnxjKLjTN-Am",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": "2026-10-13T11:00:00+00:00"
   },
   {
@@ -584,7 +625,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-9282",
-    "link_token": "W-_CfV9RU6o1CJb5",
+    "link_token": "yB-inM2Btil55jDW",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": ""
   },
   {
@@ -598,7 +640,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-5057",
-    "link_token": "HnLQnVt_7j9eCgwk",
+    "link_token": "6qYgcwoqAuMZTD22",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -612,7 +655,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-7428",
-    "link_token": "jRto6kBTAfyutLyb",
+    "link_token": "AcX3onPua55e4J0n",
+    "photo_path": "synthetic/vehicle.png",
     "status_changed_at": ""
   },
   {
@@ -626,7 +670,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-5960",
-    "link_token": "LvIbHffe4--AGZRU",
+    "link_token": "SYGyhd268ayknHIg",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": ""
   },
   {
@@ -640,7 +685,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-4597",
-    "link_token": "7XWQnW79PVk95vv3",
+    "link_token": "uR8hLWK2zYdh0fXb",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -654,7 +700,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-9447",
-    "link_token": "udyj1QSoq3AzfZff",
+    "link_token": "q0b3dXS381oiIxK7",
+    "photo_path": "",
     "status_changed_at": "2026-10-03T02:00:00+00:00"
   },
   {
@@ -668,7 +715,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-6995",
-    "link_token": "U4XcVzGTQj7mQ8nZ",
+    "link_token": "onb2Gtmcp-w-N54k",
+    "photo_path": "synthetic/bin.png",
     "status_changed_at": "2026-10-05T14:00:00+00:00"
   },
   {
@@ -682,7 +730,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-9477",
-    "link_token": "NV0cbif5XSVmXC6a",
+    "link_token": "TOznM-hnxBvIESNa",
+    "photo_path": "synthetic/fly_tipping.png",
     "status_changed_at": "2026-10-03T14:00:00+00:00"
   },
   {
@@ -696,7 +745,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-5455",
-    "link_token": "v4kWZg0XR7tO1TN8",
+    "link_token": "fdx_44bKJ2MiBWtZ",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": ""
   },
   {
@@ -710,7 +760,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-5237",
-    "link_token": "XxuJgj2ooho8Ue-N",
+    "link_token": "fhNV0qx0htByKTdQ",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -724,7 +775,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-2465",
-    "link_token": "J55cigEqCGIMmZ6N",
+    "link_token": "wgVC6jvUj5GNGx98",
+    "photo_path": "",
     "status_changed_at": "2026-10-11T08:00:00+00:00"
   },
   {
@@ -738,7 +790,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-2451",
-    "link_token": "TeQsaHkA1OfbKnHD",
+    "link_token": "LdWmbx0dFqw9iMdg",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -752,7 +805,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-2993",
-    "link_token": "2ifByuTkmXzJf4_h",
+    "link_token": "Uhwvwg76EWpm3ZQq",
+    "photo_path": "synthetic/vehicle.png",
     "status_changed_at": "2026-10-15T20:00:00+00:00"
   },
   {
@@ -766,7 +820,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-1707",
-    "link_token": "EsFqmSZez2dJ7yfu",
+    "link_token": "DiBpGp2iGH-DtUUd",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -780,7 +835,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-6111",
-    "link_token": "U9IH-mYBgWIfY8h_",
+    "link_token": "eLk18133Gf1FZbOB",
+    "photo_path": "synthetic/vehicle.png",
     "status_changed_at": ""
   },
   {
@@ -794,7 +850,8 @@
     "has_photo": 1,
     "duplicate_of": "",
     "reporter_ref": "synthetic-1297",
-    "link_token": "8d-1cf1vDf1SQMEy",
+    "link_token": "jTgSOg6UxyzH1ZbW",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": ""
   },
   {
@@ -808,7 +865,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-5025",
-    "link_token": "1Vqw83n5c4GmjZsi",
+    "link_token": "dRV2AjjGuTd0dq4z",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -822,7 +880,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-6042",
-    "link_token": "NxW2sI_4X3LddaAj",
+    "link_token": "h_TgE1POauoCbbqz",
+    "photo_path": "",
     "status_changed_at": "2026-10-15T20:00:00+00:00"
   },
   {
@@ -836,7 +895,8 @@
     "has_photo": 0,
     "duplicate_of": "",
     "reporter_ref": "synthetic-1891",
-    "link_token": "wvvXwik8Mj7BGHaU",
+    "link_token": "gLLyYLyIPBGjt6yu",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -850,7 +910,8 @@
     "has_photo": 1,
     "duplicate_of": "R-0037",
     "reporter_ref": "synthetic-7240",
-    "link_token": "Ln9gWTv3M0KjUUia",
+    "link_token": "XOoe_wgkXbMQUIKc",
+    "photo_path": "synthetic/vehicle.png",
     "status_changed_at": ""
   },
   {
@@ -864,7 +925,8 @@
     "has_photo": 0,
     "duplicate_of": "R-0007",
     "reporter_ref": "synthetic-5801",
-    "link_token": "8_42tcsAN9QPilbY",
+    "link_token": "iWrRwCtoPF96Mk1k",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -878,7 +940,8 @@
     "has_photo": 1,
     "duplicate_of": "R-0001",
     "reporter_ref": "synthetic-3581",
-    "link_token": "qyG32Lzz9Qr0w1NV",
+    "link_token": "FQYJnsOtGNyIo7VC",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": ""
   },
   {
@@ -892,7 +955,8 @@
     "has_photo": 1,
     "duplicate_of": "R-0003",
     "reporter_ref": "synthetic-5312",
-    "link_token": "sAEhRaLf_GSj3d-C",
+    "link_token": "cFkOaMDsMySue7OT",
+    "photo_path": "synthetic/bin.png",
     "status_changed_at": ""
   },
   {
@@ -906,7 +970,8 @@
     "has_photo": 0,
     "duplicate_of": "R-0030",
     "reporter_ref": "synthetic-9963",
-    "link_token": "UaCU5qYhTfxQwI5M",
+    "link_token": "zWCg9l4OCSHpf8om",
+    "photo_path": "",
     "status_changed_at": ""
   },
   {
@@ -920,7 +985,8 @@
     "has_photo": 1,
     "duplicate_of": "R-0033",
     "reporter_ref": "synthetic-6071",
-    "link_token": "qR3pFnO3Q6oF_u4F",
+    "link_token": "nLetUXk6D6nGvtdQ",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": ""
   },
   {
@@ -934,7 +1000,8 @@
     "has_photo": 1,
     "duplicate_of": "R-0011",
     "reporter_ref": "synthetic-1017",
-    "link_token": "Pyxat6t2vBqciLj1",
+    "link_token": "1qaajzdPIuTWd9xO",
+    "photo_path": "synthetic/generic.png",
     "status_changed_at": ""
   },
   {
@@ -948,7 +1015,8 @@
     "has_photo": 1,
     "duplicate_of": "R-0020",
     "reporter_ref": "synthetic-8776",
-    "link_token": "pMaFs6gpNZOyBR58",
+    "link_token": "6D-v0hJJT3OZtvwQ",
+    "photo_path": "synthetic/bin.png",
     "status_changed_at": ""
   }
 ]

@@ -19,3 +19,7 @@ __pycache__/
 # Raw downloads and any file holding report text stay local: the repo may go public.
 code/eval/fms/raw/
 code/eval/fms/*.local.*
+# Report photos are served only behind the council password. Real ones stay
+# local; only the synthetic placeholders are committed.
+code/photos/*
+!code/photos/synthetic/

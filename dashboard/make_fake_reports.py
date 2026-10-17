@@ -31,6 +31,11 @@ for r in random.sample(candidates, 8):
     d = mk(len(rows)+1, by_id[r["category_id"]], datetime.fromisoformat(r["created_at"]) + dup_gap, "new", r["location"], r["id"])
     rows.append(d)
 assert max(r["created_at"] for r in rows) == newest.isoformat()
+# Synthetic placeholder photo for every report that "has" one (make_fake_photos.py).
+sys.path.insert(0, str(here))
+from make_fake_photos import photo_for  # noqa: E402
+for r in rows:
+    r["photo_path"] = photo_for(r["category_id"]) if r["has_photo"] else ""
 # When an officer first changed the status, for "time to first action". Its own
 # seeded generator per report, so adding it does not shift the data above.
 for r in rows:
