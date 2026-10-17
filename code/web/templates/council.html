@@ -6,11 +6,13 @@
 {% endblock %}
 {% block after_main %}
 <dialog class="drawer" id="detail" aria-labelledby="d-title"></dialog>
+<dialog class="lightbox" id="lightbox" aria-label="Photo"><button class="iconbtn lb-close" data-lb-close aria-label="Close photo"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button><img id="lb-img" alt=""><p class="lb-cap" id="lb-cap"></p></dialog>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 {% endblock %}
 {% block scripts %}
 <script type="application/json" id="reports">{{ reports | tojson }}</script>
 <script type="application/json" id="labels">{{ labels | tojson }}</script>
+<script type="application/json" id="stats">{{ stats | tojson }}</script>
 <script>
 // Same views and filters as dashboard/prototype/index.html, reading the real
 // database. Status changes are saved to the server before the screen changes.
@@ -19,6 +21,10 @@ const REPORTS_URL={{ url_for('website.council_reports_json') | tojson }};
 const REFRESH_MS=15000;
 let saving=0,lastJSON=JSON.stringify(DATA),updated=new Date(),offline=false;
 const CATS=JSON.parse(document.getElementById("labels").textContent);
+// Figures computed by the server from kerbside.db; refreshed with the list.
+let STATS=JSON.parse(document.getElementById("stats").textContent);
+const STATS_CSV={{ url_for('website.council_stats_csv') | tojson }};
+const PHOTO_URL={{ url_for('website.council_photo', report_id='__ID__') | tojson }};
 const STATUS_URL={{ url_for('website.set_status', report_id='__ID__') | tojson }};
 const RESIDENT_URL={{ url_for('website.resident', token='__TOKEN__') | tojson }};
 const STATUS={new:"New",in_review:"In review",resolved:"Resolved"};
@@ -59,8 +65,58 @@ function sorted(rows){
   const street=r=>(r.location||"").replace(/^\d+\s/,"");
   const s={newest:(a,b)=>b.created_at.localeCompare(a.created_at),oldest:(a,b)=>a.created_at.localeCompare(b.created_at),
     severity:(a,b)=>(SEV[b.severity]||0)-(SEV[a.severity]||0)||b.created_at.localeCompare(a.created_at),
-    street:(a,b)=>street(a).localeCompare(street(b))||b.created_at.localeCompare(a.created_at)};
+    street:(a,b)=>street(a).localeCompare(street(b))||b.created_at.localeCompare(a.created_at),
+    priority:(a,b)=>((b.priority||{}).score||0)-((a.priority||{}).score||0)||b.created_at.localeCompare(a.created_at)};
   return rows.slice().sort(s[state.sort]);
+}
+const syn=r=>r.synthetic?`<span class="syn" title="Made-up demo data, not a real resident">Synthetic</span>`:"";
+function hours(h){if(h==null)return null;const t=n=>n.toFixed(1).replace(/\.0$/,"");return h<48?`${t(h)} hours`:`${t(h/24)} days`}
+function figures(){
+  const s=STATS,sv=s.open_by_severity,cats=Object.entries(s.open_by_category).sort((a,b)=>b[1]-a[1]||label(a[0]).localeCompare(label(b[0]))),top=cats.slice(0,5),wait=hours(s.first_change_avg_hours);
+  const synNote=s.synthetic?`<span class="badge">${s.synthetic===s.total?"All":`${s.synthetic} of`} ${s.total} reports are synthetic demo data</span>`:"";
+  return `<section class="panel figures" aria-labelledby="fig-h"><div class="ph"><h2 id="fig-h">Key figures</h2>
+    <span class="fig-meta">${synNote}<a class="btn-ghost" href="${esc(STATS_CSV)}" download>${ic("text")}Download CSV</a></span></div>
+    <dl class="figs">
+      <div><dt>Open</dt><dd><b>${s.open}</b><span>of ${s.total} reports are new or in review</span></dd></div>
+      <div><dt>Open, by severity</dt><dd class="fig-list">High ${sv.high} · Medium ${sv.medium} · Low ${sv.low}${sv["not set"]?` · Not set ${sv["not set"]}`:""}</dd></div>
+      <div><dt>Open, by category</dt><dd class="fig-list">${top.length?top.map(([id,n])=>`${esc(label(id))} ${n}`).join(" · ")+(cats.length>5?` · ${cats.length-5} more`:""):"None open"}</dd></div>
+      <div><dt>With a photo</dt><dd><b>${s.with_photo}</b><span>of ${s.total} reports</span></dd></div>
+      <div><dt>Duplicates caught</dt><dd><b>${s.duplicates_caught}</b><span>repeats joined to an earlier report</span></dd></div>
+      <div><dt>Time to first action</dt><dd>${wait?`<b>${wait}</b><span>average from report to first status change, over ${s.first_change_count} report${s.first_change_count===1?"":"s"}</span>`:`<b>None yet</b><span>no report has had its status changed</span>`}</dd></div>
+    </dl></section>`;
+}
+// Priority: the score never appears without the four factors behind it.
+const factorLine=f=>`Severity ${f.severity.value} · Exposure ${f.exposure.value} · ${f.cluster.value} here · ${f.age_days.value}d old`;
+const prio=r=>r.priority?`<span class="prio"><b class="p-n p-${r.priority.score>=50?"hi":r.priority.score>=25?"mid":"lo"}">${r.priority.score}</b><span class="pf">${esc(factorLine(r.priority.factors))}</span></span>`:"";
+function prioDetail(r){
+  const p=r.priority;if(!p)return "";const f=p.factors;
+  return `<div class="d-prio"><p class="d-label">Priority</p>
+    <p class="p-big"><b>${p.score}</b><span>out of 100</span></p>
+    <p class="p-why">${esc(p.explanation)}</p>
+    <dl class="pfacts">
+      <div><dt>Severity</dt><dd>${esc(f.severity.label)}<span>× ${f.severity.value}</span></dd></div>
+      <div><dt>Exposure</dt><dd>${esc(f.exposure.label)}<span>× ${f.exposure.value}</span></dd></div>
+      <div><dt>Same place</dt><dd>${f.cluster.value} open report${f.cluster.value===1?"":"s"}<span>× ${f.cluster.factor}</span></dd></div>
+      <div><dt>Age</dt><dd>${f.age_days.value} day${f.age_days.value===1?"":"s"}${f.age_days.capped?" (counted as 14)":""}<span>× ${f.age_days.factor}</span></dd></div>
+    </dl></div>`;
+}
+// Photos: served only by the password-protected route, never a public folder.
+const photoSrc=r=>PHOTO_URL.replace("__ID__",encodeURIComponent(r.id));
+function photoCell(r){
+  if(r.photo_stored)return `<button class="thumb" data-photo="${esc(r.id)}" data-key="p:${esc(r.id)}" aria-label="Enlarge the photo for ${esc(r.id)}"><img src="${esc(photoSrc(r))}" alt="" loading="lazy" width="64" height="48"></button>`;
+  return r.has_photo?`<span class="muted">Photo sent, not stored</span>`:`<span class="muted">No photo</span>`;
+}
+// A model-written description is labelled as such and kept apart from the
+// resident's own words. It is never shown as an officer's note.
+function aiFeatures(r){
+  let f=r.photo_features;if(!f)return null;
+  if(typeof f==="string"){try{f=JSON.parse(f)}catch(e){return null}}
+  return f&&f.what_is_visible?f:null;
+}
+function aiBlock(r){
+  const f=aiFeatures(r);if(!f)return "";
+  return `<div class="wide ai"><dt>${ic("info")}AI-generated description</dt><dd><p>${esc(f.what_is_visible)}</p>
+    <p class="ai-note">Written by a model from the photo. Not checked by an officer, and not an officer's note.</p></dd></div>`;
 }
 function repeatsOf(id){return DATA.filter(r=>r.duplicate_of===id).map(r=>r.id)}
 const activeCount=()=>Object.keys(blank).filter(k=>state[k]!==blank[k]).length;
@@ -79,14 +135,15 @@ function council(){
   const grouped=state.sort==="newest"||state.sort==="oldest";
   let body="",last="";
   rows.forEach(r=>{
-    if(grouped&&dayKey(r.created_at)!==last){last=dayKey(r.created_at);const [a,b]=dayLabel(last);body+=`<tr class="day"><td colspan="7">${a}<span>${b}</span></td></tr>`}
+    if(grouped&&dayKey(r.created_at)!==last){last=dayKey(r.created_at);const [a,b]=dayLabel(last);body+=`<tr class="day"><td colspan="8">${a}<span>${b}</span></td></tr>`}
     body+=`<tr class="rep${fresh.has(r.id)?" is-fresh":""}${openId===r.id?" is-open":""}" data-open="${esc(r.id)}">
-      <td class="c-id"><button class="idbtn" data-open="${esc(r.id)}" data-key="o:${esc(r.id)}" aria-label="Open report ${esc(r.id)}">${esc(r.id)}</button><span class="time">${grouped?hm(r.created_at):fmt(r.created_at)}</span></td>
+      <td class="c-id"><button class="idbtn" data-open="${esc(r.id)}" data-key="o:${esc(r.id)}" aria-label="Open report ${esc(r.id)}">${esc(r.id)}</button>${syn(r)}<span class="time">${grouped?hm(r.created_at):fmt(r.created_at)}</span></td>
       <td class="c-cat">${esc(label(r.category_id))}${r.duplicate_of?`<span class="sub">${ic("copy")}Repeat of ${esc(r.duplicate_of)}</span>`:""}${reps[r.id]?`<span class="sub">${ic("copy")}+${reps[r.id]} repeat${reps[r.id]>1?"s":""}</span>`:""}</td>
       <td class="c-loc">${esc(r.location||"Not given")}</td>
+      <td class="c-prio">${prio(r)}</td>
       <td class="c-sev">${sev(r.severity)}</td>
       <td class="c-status">${statusSelect(r)}</td>
-      <td class="c-photo">${r.has_photo?`${ic("camera")}Photo`:`<span class="muted">No photo</span>`}</td>
+      <td class="c-photo">${photoCell(r)}</td>
       <td class="c-go">${ic("chevron")}</td></tr>`});
   const empty=DATA.length
     ?`<div class="empty"><span class="e-ic">${ic("search")}</span><h3>No reports match these filters</h3><p>Try a different search, or clear the filters to see all ${DATA.length} reports.</p><button class="btn" id="f-reset2" data-key="reset2">Clear all filters</button></div>`
@@ -102,6 +159,7 @@ function council(){
     ${tile("resolved","status","resolved","Resolved",n("resolved"),"Closed by the council","circle-check")}
     ${tile("week","range","7","This week",DATA.filter(thisWeek).length,"Reported in the last 7 days","calendar")}
   </section>
+  ${figures()}
   <section class="panel" aria-labelledby="cat-h"><div class="ph"><h2 id="cat-h">Reports by category</h2><span class="hint">Select a category to filter the list</span></div>
     <div class="bars">${entries.map(([id,c])=>`<button class="bar" data-f="cat" data-v="${esc(id)}" data-key="b:${esc(id)}" aria-pressed="${state.cat===id}"><span class="name" title="${esc(label(id))}">${esc(label(id))}</span><span class="track"><span class="fill" style="width:${c/max*100}%"></span></span><span class="n">${c}</span></button>`).join("")}</div>
   </section>
@@ -111,7 +169,7 @@ function council(){
         <label class="search">Search${ic("search")}<input type="search" id="f-q" placeholder="Street, report ID or category" value="${esc(state.q)}" autocomplete="off"></label>
         <label class="field">Reported<select id="f-range">${[["all","Any time"],["1","Last 24 hours"],["7","Last 7 days"],["30","Last 30 days"]].map(([v,t])=>`<option value="${v}" ${state.range===v?"selected":""}>${t}</option>`).join("")}</select></label>
         <label class="field">Category<select id="f-cat"><option value="all">All categories</option>${Object.keys(count).sort((a,b)=>label(a).localeCompare(label(b))).map(k=>`<option value="${esc(k)}" ${state.cat===k?"selected":""}>${esc(label(k))}</option>`).join("")}</select></label>
-        <label class="field">Sort by<select id="f-sort">${[["newest","Newest first"],["oldest","Oldest first"],["severity","Most severe first"],["street","Street A to Z"]].map(([v,t])=>`<option value="${v}" ${state.sort===v?"selected":""}>${t}</option>`).join("")}</select></label>
+        <label class="field">Sort by<select id="f-sort">${[["newest","Newest first"],["oldest","Oldest first"],["priority","Highest priority first"],["severity","Most severe first"],["street","Street A to Z"]].map(([v,t])=>`<option value="${v}" ${state.sort===v?"selected":""}>${t}</option>`).join("")}</select></label>
       </div>
       <div class="frow">
         <div class="group" role="group" aria-labelledby="g-sev"><span class="glab" id="g-sev">Severity</span>${tg("sev","high","High")}${tg("sev","medium","Medium")}${tg("sev","low","Low")}</div>
@@ -120,24 +178,26 @@ function council(){
         <div class="factive">${active?`<span class="badge">${active} filter${active>1?"s":""} active</span>`:`<span class="hint">No filters active</span>`}<button class="btn-ghost" id="f-reset" data-key="reset" ${active?"":"disabled"}>${ic("x")}Clear all</button></div>
       </div>
     </div>
-    ${rows.length?`<div class="tablewrap"><table><thead><tr><th scope="col">Report</th><th scope="col">Category</th><th scope="col">Location</th><th scope="col">Severity</th><th scope="col">Status</th><th scope="col">Photo</th><th scope="col"><span class="sr">Open</span></th></tr></thead><tbody>${body}</tbody></table></div>`:empty}
+    ${rows.length?`<div class="tablewrap"><table><thead><tr><th scope="col">Report</th><th scope="col">Category</th><th scope="col">Location</th><th scope="col">Priority</th><th scope="col">Severity</th><th scope="col">Status</th><th scope="col">Photo</th><th scope="col"><span class="sr">Open</span></th></tr></thead><tbody>${body}</tbody></table></div>`:empty}
   </section>`;
 }
 function detail(r){
   const reps=repeatsOf(r.id),busy=busyIds.has(r.id);
-  return `<div class="d-head"><div><p class="d-id">${esc(r.id)}</p><h2 id="d-title">${esc(label(r.category_id))}</h2></div>
+  return `<div class="d-head"><div><p class="d-id">${esc(r.id)}${syn(r)}</p><h2 id="d-title">${esc(label(r.category_id))}</h2></div>
       <button class="iconbtn" data-close data-key="close" aria-label="Close details">${ic("x")}</button></div>
     <div class="d-body">
+      ${prioDetail(r)}
       <div><p class="d-label" id="d-st">Status</p>
         <div class="seg" role="group" aria-labelledby="d-st">${Object.entries(STATUS).map(([k,v])=>`<button data-set="${k}" data-key="d:${k}" aria-pressed="${r.status===k}"${busy?" disabled":""}>${ic(STATUS_ICON[k])}${v}</button>`).join("")}</div></div>
       <dl class="facts">
         <div class="wide"><dt>${ic("pin")}Location</dt><dd>${esc(r.location||"Not given")}</dd></div>
         <div><dt>${ic("calendar")}Reported</dt><dd>${fmt(r.created_at)}, ${hm(r.created_at)}<br><span class="muted small">${ago(r.created_at)}</span></dd></div>
         <div><dt>${ic("gauge")}Severity</dt><dd>${sev(r.severity)}</dd></div>
-        <div><dt>${ic("camera")}Photo</dt><dd>${r.has_photo?"Yes, the resident sent a photo":"No photo"}</dd></div>
+        <div class="wide"><dt>${ic("camera")}Photo</dt><dd>${r.photo_stored?`<button class="d-photo" data-photo="${esc(r.id)}" data-key="dp:${esc(r.id)}" aria-label="Enlarge the photo"><img src="${esc(photoSrc(r))}" alt="Photo the resident sent with ${esc(r.id)}"></button>`:r.has_photo?"The resident sent a photo, but it was not stored":"No photo"}</dd></div>
         <div><dt>${ic("copy")}Duplicate of</dt><dd>${r.duplicate_of?`<button class="linkbtn" data-goto="${esc(r.duplicate_of)}" data-key="g:${esc(r.duplicate_of)}">${esc(r.duplicate_of)}</button>`:`<span class="muted">Not a repeat</span>`}</dd></div>
         ${reps.length?`<div class="wide"><dt>${ic("copy")}Repeats joined to this report</dt><dd class="replist">${reps.map(id=>`<button class="linkbtn" data-goto="${esc(id)}" data-key="g:${esc(id)}">${esc(id)}</button>`).join("")}</dd></div>`:""}
-        <div class="wide"><dt>${ic("text")}Description</dt><dd class="quote">${esc(r.description||"No description given")}</dd></div>
+        <div class="wide"><dt>${ic("text")}Resident's words</dt><dd class="quote">${esc(r.description||"No description given")}</dd></div>
+        ${aiBlock(r)}
       </dl>
       <div class="d-foot"><a class="btn" href="${esc(RESIDENT_URL.replace("__TOKEN__",encodeURIComponent(r.link_token)))}" target="_blank" rel="noopener noreferrer">${ic("external")}Open resident view</a>
         <p class="muted small">The resident sees only this report at their private link. It never shows the report ID.</p></div>
@@ -189,7 +249,7 @@ async function refresh(){
     const added=out.reports.filter(r=>!seen.has(r.id));
     added.forEach(r=>seen.add(r.id));
     fresh=new Set(added.map(r=>r.id));
-    DATA=out.reports;lastJSON=json;render();
+    DATA=out.reports;if(out.stats)STATS=out.stats;lastJSON=json;render();
     if(added.length){toast(`${added.length} new report${added.length>1?"s":""}`,"inbox");setTimeout(()=>{fresh=new Set()},3000)}
   }catch(err){offline=true;showLive()}  // offline or server restarting: try again next time
 }
@@ -234,9 +294,19 @@ function render(){
   ["#f-reset","#f-reset2"].forEach(s=>{const b=$(s);if(b)b.onclick=()=>{Object.assign(state,blank);render()}});
   document.querySelectorAll("select[data-id]").forEach(s=>s.onchange=()=>saveStatus(s.dataset.id,s.value));
 }
+// Photo lightbox: a plain <dialog>, no library.
+const lb=$("#lightbox");
+function openPhoto(id){
+  const r=DATA.find(x=>x.id===id);if(!r||!r.photo_stored)return;
+  $("#lb-img").src=photoSrc(r);$("#lb-img").alt=`Photo the resident sent with ${r.id}`;
+  $("#lb-cap").textContent=`${r.id} · ${label(r.category_id)}${r.location?` · ${r.location}`:""}${r.synthetic?" · synthetic placeholder image":""}`;
+  lb.showModal();
+}
+lb.addEventListener("click",e=>{if(e.target===lb||e.target.closest("[data-lb-close]"))lb.close()});
+document.addEventListener("click",e=>{const t=e.target.closest("[data-photo]");if(t){e.stopPropagation();openPhoto(t.dataset.photo)}},true);
 // Rows open the detail drawer; the status select inside a row does not.
 $("#view").addEventListener("click",e=>{
-  if(e.target.closest("select,a,input,label"))return;
+  if(e.target.closest("select,a,input,label,[data-photo]"))return;
   const row=e.target.closest("[data-open]");if(row)openDetail(row.dataset.open);
 });
 render();

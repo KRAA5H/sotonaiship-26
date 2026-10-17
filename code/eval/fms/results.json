@@ -1,0 +1,956 @@
+{
+ "scored_at": "2026-10-17T20:58:32+01:00",
+ "categories": {
+  "summary": {
+   "clear": 48,
+   "ambiguous": 12,
+   "baseline": {
+    "right": 20,
+    "total": 48,
+    "accuracy": 0.417
+   }
+  },
+  "rows": [
+   {
+    "fms_id": "5589744",
+    "expected": "council_service_other",
+    "baseline": "property_concern"
+   },
+   {
+    "fms_id": "9187074",
+    "expected": "pothole",
+    "baseline": "litter_street_cleaning"
+   },
+   {
+    "fms_id": "9341608",
+    "expected": "council_service_other",
+    "baseline": "illegal_parking"
+   },
+   {
+    "fms_id": "8365370",
+    "expected": "ambiguous",
+    "baseline": "property_concern"
+   },
+   {
+    "fms_id": "6310284",
+    "expected": "ambiguous",
+    "baseline": "other_nuisance"
+   },
+   {
+    "fms_id": "8011940",
+    "expected": "abandoned_vehicle",
+    "baseline": "abandoned_vehicle"
+   },
+   {
+    "fms_id": "8814358",
+    "expected": "pothole",
+    "baseline": "pothole"
+   },
+   {
+    "fms_id": "5590868",
+    "expected": "pothole",
+    "baseline": "pothole"
+   },
+   {
+    "fms_id": "5738649",
+    "expected": "pothole",
+    "baseline": "glass_spillage_hazard"
+   },
+   {
+    "fms_id": "6267874",
+    "expected": "ambiguous",
+    "baseline": "noise_nuisance"
+   },
+   {
+    "fms_id": "4795841",
+    "expected": "illegal_parking",
+    "baseline": "illegal_parking"
+   },
+   {
+    "fms_id": "5469414",
+    "expected": "council_service_other",
+    "baseline": "unclear_other"
+   },
+   {
+    "fms_id": "8664171",
+    "expected": "pothole",
+    "baseline": "abandoned_vehicle"
+   },
+   {
+    "fms_id": "7801663",
+    "expected": "litter_street_cleaning",
+    "baseline": "fly_tipping"
+   },
+   {
+    "fms_id": "7887580",
+    "expected": "council_service_other",
+    "baseline": "dog_fouling"
+   },
+   {
+    "fms_id": "6652383",
+    "expected": "ambiguous",
+    "baseline": "glass_spillage_hazard"
+   },
+   {
+    "fms_id": "5254588",
+    "expected": "fly_tipping",
+    "baseline": "fly_tipping"
+   },
+   {
+    "fms_id": "7827501",
+    "expected": "not_council_utility",
+    "baseline": "not_council_utility"
+   },
+   {
+    "fms_id": "5582249",
+    "expected": "pothole",
+    "baseline": "pothole"
+   },
+   {
+    "fms_id": "9374920",
+    "expected": "pothole",
+    "baseline": "pothole"
+   },
+   {
+    "fms_id": "9789667",
+    "expected": "ambiguous",
+    "baseline": "fly_tipping"
+   },
+   {
+    "fms_id": "5703727",
+    "expected": "council_service_other",
+    "baseline": "illegal_parking"
+   },
+   {
+    "fms_id": "8855811",
+    "expected": "litter_street_cleaning",
+    "baseline": "fly_tipping"
+   },
+   {
+    "fms_id": "7956079",
+    "expected": "council_service_other",
+    "baseline": "graffiti_flyposting"
+   },
+   {
+    "fms_id": "6118303",
+    "expected": "ambiguous",
+    "baseline": "fly_tipping"
+   },
+   {
+    "fms_id": "9789641",
+    "expected": "noise_nuisance",
+    "baseline": "noise_nuisance"
+   },
+   {
+    "fms_id": "9080169",
+    "expected": "glass_spillage_hazard",
+    "baseline": "glass_spillage_hazard"
+   },
+   {
+    "fms_id": "7565074",
+    "expected": "pothole",
+    "baseline": "pothole"
+   },
+   {
+    "fms_id": "4795159",
+    "expected": "council_service_other",
+    "baseline": "graffiti_flyposting"
+   },
+   {
+    "fms_id": "10095327",
+    "expected": "council_service_other",
+    "baseline": "lost_damaged_bin"
+   },
+   {
+    "fms_id": "7994870",
+    "expected": "fly_tipping",
+    "baseline": "fly_tipping"
+   },
+   {
+    "fms_id": "6061890",
+    "expected": "council_service_other",
+    "baseline": "glass_spillage_hazard"
+   },
+   {
+    "fms_id": "9544705",
+    "expected": "council_service_other",
+    "baseline": "other_nuisance"
+   },
+   {
+    "fms_id": "9724739",
+    "expected": "ambiguous",
+    "baseline": "fly_tipping"
+   },
+   {
+    "fms_id": "8258704",
+    "expected": "ambiguous",
+    "baseline": "illegal_parking"
+   },
+   {
+    "fms_id": "8214660",
+    "expected": "council_service_other",
+    "baseline": "lost_damaged_bin"
+   },
+   {
+    "fms_id": "5894080",
+    "expected": "abandoned_vehicle",
+    "baseline": "illegal_parking"
+   },
+   {
+    "fms_id": "6200031",
+    "expected": "litter_street_cleaning",
+    "baseline": "litter_street_cleaning"
+   },
+   {
+    "fms_id": "5252387",
+    "expected": "dead_animal",
+    "baseline": "dead_animal"
+   },
+   {
+    "fms_id": "6667290",
+    "expected": "fly_tipping",
+    "baseline": "fly_tipping"
+   },
+   {
+    "fms_id": "5292862",
+    "expected": "flooding_severe_weather",
+    "baseline": "abandoned_vehicle"
+   },
+   {
+    "fms_id": "8313921",
+    "expected": "council_service_other",
+    "baseline": "graffiti_flyposting"
+   },
+   {
+    "fms_id": "5062785",
+    "expected": "ambiguous",
+    "baseline": "property_concern"
+   },
+   {
+    "fms_id": "6876119",
+    "expected": "fly_tipping",
+    "baseline": "fly_tipping"
+   },
+   {
+    "fms_id": "7191586",
+    "expected": "fly_tipping",
+    "baseline": "fly_tipping"
+   },
+   {
+    "fms_id": "10009043",
+    "expected": "ambiguous",
+    "baseline": "fly_tipping"
+   },
+   {
+    "fms_id": "7994888",
+    "expected": "council_service_other",
+    "baseline": "illegal_parking"
+   },
+   {
+    "fms_id": "6941360",
+    "expected": "council_service_other",
+    "baseline": "other_nuisance"
+   },
+   {
+    "fms_id": "4872227",
+    "expected": "ambiguous",
+    "baseline": "abandoned_vehicle"
+   },
+   {
+    "fms_id": "10139294",
+    "expected": "illegal_parking",
+    "baseline": "litter_street_cleaning"
+   },
+   {
+    "fms_id": "9796398",
+    "expected": "fly_tipping",
+    "baseline": "fly_tipping"
+   },
+   {
+    "fms_id": "6393281",
+    "expected": "council_service_other",
+    "baseline": "other_nuisance"
+   },
+   {
+    "fms_id": "8823697",
+    "expected": "litter_street_cleaning",
+    "baseline": "fly_tipping"
+   },
+   {
+    "fms_id": "8662193",
+    "expected": "pothole",
+    "baseline": "abandoned_vehicle"
+   },
+   {
+    "fms_id": "9686593",
+    "expected": "ambiguous",
+    "baseline": "info_student_waste_rules"
+   },
+   {
+    "fms_id": "6309226",
+    "expected": "litter_street_cleaning",
+    "baseline": "litter_street_cleaning"
+   },
+   {
+    "fms_id": "6896152",
+    "expected": "council_service_other",
+    "baseline": "unclear_other"
+   },
+   {
+    "fms_id": "7682082",
+    "expected": "litter_street_cleaning",
+    "baseline": "fly_tipping"
+   },
+   {
+    "fms_id": "7581532",
+    "expected": "council_service_other",
+    "baseline": "glass_spillage_hazard"
+   },
+   {
+    "fms_id": "7434374",
+    "expected": "noise_nuisance",
+    "baseline": "noise_nuisance"
+   }
+  ]
+ },
+ "duplicates": {
+  "summary": {
+   "true_duplicates": {
+    "flagged": 8,
+    "total": 10,
+    "no_street": 1
+   },
+   "not_duplicates": {
+    "flagged": 17,
+    "total": 40,
+    "no_street": 0
+   },
+   "ambiguous": {
+    "flagged": 9,
+    "total": 10,
+    "no_street": 0
+   },
+   "by_set": {
+    "repeats": {
+     "yes/duplicate": 6,
+     "no/duplicate": 9,
+     "yes/not duplicate": 1,
+     "ambiguous/duplicate": 4
+    },
+    "pairs": {
+     "no/not duplicate": 4,
+     "ambiguous/duplicate": 5,
+     "no/duplicate": 8,
+     "yes/duplicate": 2,
+     "yes/no street": 1
+    },
+    "negatives": {
+     "no/not duplicate": 19,
+     "ambiguous/not duplicate": 1
+    }
+   }
+  },
+  "rows": [
+   {
+    "set": "repeats",
+    "a": "1117074",
+    "b": "1124635",
+    "expected": "yes",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 13,
+    "days_apart": 12
+   },
+   {
+    "set": "repeats",
+    "a": "1253062",
+    "b": "1253079",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 0,
+    "days_apart": 0
+   },
+   {
+    "set": "repeats",
+    "a": "1253084",
+    "b": "1253086",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 0,
+    "days_apart": 0
+   },
+   {
+    "set": "repeats",
+    "a": "1324997",
+    "b": "1325000",
+    "expected": "yes",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 10,
+    "days_apart": 0
+   },
+   {
+    "set": "repeats",
+    "a": "1386274",
+    "b": "1386276",
+    "expected": "ambiguous",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 0,
+    "days_apart": 0
+   },
+   {
+    "set": "repeats",
+    "a": "1426008",
+    "b": "1426009",
+    "expected": "yes",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 0,
+    "days_apart": 0
+   },
+   {
+    "set": "repeats",
+    "a": "1692301",
+    "b": "1695453",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 21,
+    "days_apart": 3
+   },
+   {
+    "set": "repeats",
+    "a": "1719133",
+    "b": "1726948",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 7,
+    "days_apart": 5
+   },
+   {
+    "set": "repeats",
+    "a": "1723999",
+    "b": "1724005",
+    "expected": "ambiguous",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 13,
+    "days_apart": 0
+   },
+   {
+    "set": "repeats",
+    "a": "1759997",
+    "b": "1775573",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 24,
+    "days_apart": 13
+   },
+   {
+    "set": "repeats",
+    "a": "4983458",
+    "b": "4983460",
+    "expected": "yes",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 0,
+    "days_apart": 0
+   },
+   {
+    "set": "repeats",
+    "a": "1322874",
+    "b": "1334862",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 10,
+    "days_apart": 12
+   },
+   {
+    "set": "repeats",
+    "a": "1424018",
+    "b": "1432921",
+    "expected": "ambiguous",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 4,
+    "days_apart": 11
+   },
+   {
+    "set": "repeats",
+    "a": "1699012",
+    "b": "1710075",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 7,
+    "days_apart": 10
+   },
+   {
+    "set": "repeats",
+    "a": "1466650",
+    "b": "1466653",
+    "expected": "yes",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 15,
+    "days_apart": 0
+   },
+   {
+    "set": "repeats",
+    "a": "1511551",
+    "b": "1511552",
+    "expected": "yes",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 14,
+    "days_apart": 0
+   },
+   {
+    "set": "repeats",
+    "a": "1380236",
+    "b": "1381651",
+    "expected": "yes",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 2,
+    "days_apart": 2
+   },
+   {
+    "set": "repeats",
+    "a": "1575552",
+    "b": "1585432",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 3,
+    "days_apart": 8
+   },
+   {
+    "set": "repeats",
+    "a": "1200842",
+    "b": "1200847",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 3,
+    "days_apart": 0
+   },
+   {
+    "set": "repeats",
+    "a": "1260193",
+    "b": "1273522",
+    "expected": "ambiguous",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 15,
+    "days_apart": 11
+   },
+   {
+    "set": "pairs",
+    "a": "1668704",
+    "b": "1680863",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 45,
+    "days_apart": 11
+   },
+   {
+    "set": "pairs",
+    "a": "1556862",
+    "b": "1571781",
+    "expected": "ambiguous",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 48,
+    "days_apart": 14
+   },
+   {
+    "set": "pairs",
+    "a": "1118115",
+    "b": "1135015",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 11,
+    "days_apart": 28
+   },
+   {
+    "set": "pairs",
+    "a": "1228752",
+    "b": "1228755",
+    "expected": "ambiguous",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 16,
+    "days_apart": 0
+   },
+   {
+    "set": "pairs",
+    "a": "1247276",
+    "b": "1277168",
+    "expected": "yes",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 26,
+    "days_apart": 25
+   },
+   {
+    "set": "pairs",
+    "a": "1551497",
+    "b": "1580215",
+    "expected": "ambiguous",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 41,
+    "days_apart": 28
+   },
+   {
+    "set": "pairs",
+    "a": "1200847",
+    "b": "1205857",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 8,
+    "days_apart": 5
+   },
+   {
+    "set": "pairs",
+    "a": "1480491",
+    "b": "1482774",
+    "expected": "yes",
+    "rule": "no street",
+    "same_street_text": false,
+    "metres": 4,
+    "days_apart": 2
+   },
+   {
+    "set": "pairs",
+    "a": "1315558",
+    "b": "1340092",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 3,
+    "days_apart": 27
+   },
+   {
+    "set": "pairs",
+    "a": "1543708",
+    "b": "1543714",
+    "expected": "ambiguous",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 43,
+    "days_apart": 0
+   },
+   {
+    "set": "pairs",
+    "a": "1231243",
+    "b": "1256429",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 4,
+    "days_apart": 22
+   },
+   {
+    "set": "pairs",
+    "a": "1297527",
+    "b": "1299687",
+    "expected": "yes",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 1,
+    "days_apart": 2
+   },
+   {
+    "set": "pairs",
+    "a": "1163953",
+    "b": "1186209",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 39,
+    "days_apart": 29
+   },
+   {
+    "set": "pairs",
+    "a": "1753901",
+    "b": "1772754",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 22,
+    "days_apart": 15
+   },
+   {
+    "set": "pairs",
+    "a": "1388271",
+    "b": "1393846",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 22,
+    "days_apart": 7
+   },
+   {
+    "set": "pairs",
+    "a": "1507784",
+    "b": "1527607",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 19,
+    "days_apart": 20
+   },
+   {
+    "set": "pairs",
+    "a": "1360824",
+    "b": "1366628",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 24,
+    "days_apart": 7
+   },
+   {
+    "set": "pairs",
+    "a": "1696315",
+    "b": "1696321",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 35,
+    "days_apart": 0
+   },
+   {
+    "set": "pairs",
+    "a": "1129108",
+    "b": "1143141",
+    "expected": "no",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 18,
+    "days_apart": 24
+   },
+   {
+    "set": "pairs",
+    "a": "1575540",
+    "b": "1575544",
+    "expected": "ambiguous",
+    "rule": "duplicate",
+    "same_street_text": true,
+    "metres": 0,
+    "days_apart": 0
+   },
+   {
+    "set": "negatives",
+    "a": "1230202",
+    "b": "1241463",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 99,
+    "days_apart": 12
+   },
+   {
+    "set": "negatives",
+    "a": "1218999",
+    "b": "1238132",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": true,
+    "metres": 95,
+    "days_apart": 19
+   },
+   {
+    "set": "negatives",
+    "a": "1238119",
+    "b": "1238122",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 55,
+    "days_apart": 0
+   },
+   {
+    "set": "negatives",
+    "a": "1597216",
+    "b": "1597462",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 72,
+    "days_apart": 0
+   },
+   {
+    "set": "negatives",
+    "a": "1192628",
+    "b": "1200851",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 111,
+    "days_apart": 6
+   },
+   {
+    "set": "negatives",
+    "a": "1178514",
+    "b": "1209812",
+    "expected": "ambiguous",
+    "rule": "not duplicate",
+    "same_street_text": true,
+    "metres": 57,
+    "days_apart": 29
+   },
+   {
+    "set": "negatives",
+    "a": "1555412",
+    "b": "1564117",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 113,
+    "days_apart": 8
+   },
+   {
+    "set": "negatives",
+    "a": "1491551",
+    "b": "1511552",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": true,
+    "metres": 51,
+    "days_apart": 24
+   },
+   {
+    "set": "negatives",
+    "a": "1232771",
+    "b": "1235232",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 111,
+    "days_apart": 1
+   },
+   {
+    "set": "negatives",
+    "a": "1414797",
+    "b": "1433374",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": true,
+    "metres": 58,
+    "days_apart": 22
+   },
+   {
+    "set": "negatives",
+    "a": "1143145",
+    "b": "1152791",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 1291,
+    "days_apart": 15
+   },
+   {
+    "set": "negatives",
+    "a": "1262042",
+    "b": "1297527",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 2643,
+    "days_apart": 30
+   },
+   {
+    "set": "negatives",
+    "a": "1546945",
+    "b": "1574298",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 2981,
+    "days_apart": 27
+   },
+   {
+    "set": "negatives",
+    "a": "1322575",
+    "b": "1327931",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 1181,
+    "days_apart": 5
+   },
+   {
+    "set": "negatives",
+    "a": "1315540",
+    "b": "1327286",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 1201,
+    "days_apart": 13
+   },
+   {
+    "set": "negatives",
+    "a": "1228726",
+    "b": "1248733",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 2622,
+    "days_apart": 18
+   },
+   {
+    "set": "negatives",
+    "a": "1388277",
+    "b": "1388291",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 1448,
+    "days_apart": 0
+   },
+   {
+    "set": "negatives",
+    "a": "1636759",
+    "b": "1651318",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 3107,
+    "days_apart": 15
+   },
+   {
+    "set": "negatives",
+    "a": "1197855",
+    "b": "1228709",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 2407,
+    "days_apart": 30
+   },
+   {
+    "set": "negatives",
+    "a": "1341371",
+    "b": "1346208",
+    "expected": "no",
+    "rule": "not duplicate",
+    "same_street_text": false,
+    "metres": 2580,
+    "days_apart": 5
+   }
+  ]
+ }
+}

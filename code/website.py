@@ -15,7 +15,9 @@ Set COUNCIL_PASSWORD in code/.env. Without it /council is switched off rather
 than left open.
 """
 
+import csv
 import hmac
+import io
 import os
 import sys
 from contextlib import closing
@@ -25,14 +27,28 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from dotenv import load_dotenv
-from flask import Blueprint, Flask, Response, current_app, jsonify, render_template, request
+from flask import Blueprint, Flask, Response, current_app, jsonify, render_template, request, send_file
 
 load_dotenv(Path(__file__).with_name(".env"))
 
+import bb
+import photo_features
+import priority
 import reports_db
 import tools
 
+import loader  # noqa: E402  (agent/loader.py, on the path via tools)
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dashboard"))
+from make_fake_photos import photo_for as synthetic_photo_for  # noqa: E402
+
 WEB_DIR = Path(__file__).with_name("web")
+# Synthetic placeholder photos. Never under WEB_DIR/static: only /council/photos/<id>
+# serves them, behind the council password. Real photos stay in BlueBubbles.
+PHOTO_DIR = Path(__file__).with_name("photos")
+# Same whitelist as photos.py: BlueBubbles converts on download, so only these two.
+IMAGE_MIMES = ("image/jpeg", "image/png")
+PHOTO_WIDTH = 1024
 STEPS = (
     ("new", "Received", "We have your report."),
     ("in_review", "In review", "A council officer is looking at it."),
@@ -59,6 +75,23 @@ def _ukdate(iso_day):
     """'2026-10-17' -> '17 Oct 2026', as the prototype shows it."""
     day = datetime.strptime(iso_day, "%Y-%m-%d")
     return f"{day.day} {day:%b %Y}"
+
+
+_GROUPS = {cid: c["group"] for cid, c in loader.load(tools.AGENT_DIR)[0].items()}
+
+
+def _with_priority(reports):
+    """Adds the priority score and its four factors to each report, on read.
+
+    Photo features are validated again here, so the page only ever receives the
+    fixed shape (or nothing), never raw model text and never a location.
+    """
+    for report in reports:
+        report["photo_features"] = photo_features.from_stored(report.get("photo_features"))
+    scores = priority.score_all(reports, _GROUPS)
+    for report in reports:
+        report["priority"] = scores[report["id"]]
+    return reports
 
 
 def _connect():
@@ -104,8 +137,9 @@ def council():
     if denied:
         return denied
     with _connect() as conn:
-        reports = reports_db.council_reports(conn)
-    return render_template("council.html", reports=reports, labels=tools.category_labels())
+        reports = _with_priority(reports_db.council_reports(conn))
+        stats = reports_db.summary_stats(conn)
+    return render_template("council.html", reports=reports, stats=stats, labels=tools.category_labels())
 
 
 @site.get("/council/reports.json")
@@ -115,7 +149,79 @@ def council_reports_json():
     if denied:
         return denied
     with _connect() as conn:
-        return jsonify({"ok": True, "reports": reports_db.council_reports(conn)})
+        return jsonify({"ok": True, "reports": _with_priority(reports_db.council_reports(conn)),
+                        "stats": reports_db.summary_stats(conn)})
+
+
+@site.get("/council/stats.csv")
+def council_stats_csv():
+    """The same figures as the strip on /council, one per row, for NUMBERS.md."""
+    denied = _council_denied()
+    if denied:
+        return denied
+    with _connect() as conn:
+        stats = reports_db.summary_stats(conn)
+    labels = tools.category_labels()
+    rows = [
+        ("generated_at", datetime.now().astimezone().isoformat(timespec="seconds")),
+        ("total_reports", stats["total"]),
+        ("synthetic_reports", stats["synthetic"]),
+        ("open_reports", stats["open"]),
+        *((f"open_severity_{level.replace(' ', '_')}", n) for level, n in stats["open_by_severity"].items()),
+        *((f"open_category_{cid}", n) for cid, n in stats["open_by_category"].items()),
+        ("reports_with_photo", stats["with_photo"]),
+        ("duplicates_caught", stats["duplicates_caught"]),
+        ("reports_with_a_status_change", stats["first_change_count"]),
+        ("avg_hours_to_first_status_change", "" if stats["first_change_avg_hours"] is None
+         else stats["first_change_avg_hours"]),
+    ]
+    out = io.StringIO()
+    writer = csv.writer(out, lineterminator="\n")
+    writer.writerow(("metric", "value", "label"))
+    for metric, value in rows:
+        label = labels.get(metric[len("open_category_"):], "") if metric.startswith("open_category_") else ""
+        writer.writerow((metric, value, label))
+    return Response(out.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": 'attachment; filename="council-stats.csv"'})
+
+
+@site.get("/council/photos/<report_id>")
+def council_photo(report_id):
+    """A report's photo, for council staff only."""
+    denied = _council_denied()
+    if denied:
+        return denied
+    with _connect() as conn:
+        source = reports_db.council_photo_source(conn, report_id)
+    not_found = Response("No photo for this report.", 404, mimetype="text/plain")
+    if not source:
+        return not_found
+
+    if source["photo_guid"]:
+        # The resident's real photo, fetched from BlueBubbles as photos.py does for
+        # /r/<token>/photo. The guid never leaves the server.
+        fetched = bb.download_attachment(source["photo_guid"], width=PHOTO_WIDTH)
+        if not fetched:
+            return not_found
+        body, fetched_mime = fetched
+        mime = next((m for m in ((source["photo_mime"] or "").split(";")[0].strip().lower(),
+                                 (fetched_mime or "").split(";")[0].strip().lower())
+                     if m in IMAGE_MIMES), None)
+        if mime is None:
+            return not_found
+        response = Response(body, mimetype=mime)
+    elif source["synthetic"] and source["has_photo"]:
+        # Demo rows: a placeholder chosen by category, never a path from the database.
+        root = Path(current_app.config.get("PHOTO_DIR") or PHOTO_DIR).resolve()
+        path = (root / synthetic_photo_for(source["category_id"])).resolve()
+        if root not in path.parents or not path.is_file() or path.suffix.lower() != ".png":
+            return not_found
+        response = send_file(path, mimetype="image/png")
+    else:
+        return not_found
+    response.headers["Content-Security-Policy"] = "default-src 'none'"
+    response.headers["Content-Disposition"] = "inline"
+    return response
 
 
 @site.post("/council/reports/<report_id>/status")
@@ -157,10 +263,11 @@ def resident(token):
                            status_label=dict((k, t) for k, t, _ in STEPS).get(report["status"], report["status"]))
 
 
-def create_app(db_path=None, council_password=None):
+def create_app(db_path=None, council_password=None, photo_dir=None):
     app = Flask(__name__, static_folder=None)
     app.config["KERBSIDE_DB"] = db_path
     app.config["COUNCIL_PASSWORD"] = council_password
+    app.config["PHOTO_DIR"] = photo_dir
     app.register_blueprint(site)
     return app
 

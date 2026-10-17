@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -30,11 +31,12 @@ DB_PATH = Path(os.getenv("DB_PATH") or Path(__file__).with_name("kerbside.db"))
 COLUMNS = (
     "id", "created_at", "category_id", "status", "severity", "location", "area",
     "description", "has_photo", "photo_guid", "photo_mime", "duplicate_of",
-    "reporter_ref", "link_token",
+    "reporter_ref", "link_token", "status_changed_at", "photo_features",
 )
 # What the council dashboard may see. reporter_ref never leaves the database,
 # and neither does the attachment guid: it is a key to the resident's photo, not
-# something the dashboard reads.
+# something the dashboard reads. The page gets photo_stored instead and asks the
+# password-protected /council/photos/<id> route for the image.
 COUNCIL_COLUMNS = tuple(c for c in COLUMNS if c not in ("reporter_ref", "photo_guid", "photo_mime"))
 STATUSES = ("new", "in_review", "resolved")
 # The webhook threads and the website share one file, so a writer waits for
@@ -58,9 +60,19 @@ def connect(path=None):
 
 
 def council_reports(conn):
-    """Every report for the dashboard, newest first, without reporter_ref."""
+    """Every report for the dashboard, newest first, without reporter_ref.
+
+    `synthetic` is worked out here from reporter_ref, so the page can label
+    synthetic rows without ever receiving the reference itself.
+    """
     rows = conn.execute(
-        f"SELECT {', '.join(COUNCIL_COLUMNS)} FROM reports ORDER BY created_at DESC"
+        f"SELECT {', '.join(COUNCIL_COLUMNS)}, "
+        "COALESCE(reporter_ref LIKE 'synthetic-%', 0) AS synthetic, "
+        # A real photo is one BlueBubbles holds (photo_guid); a synthetic demo row
+        # with has_photo gets a placeholder image.
+        "(COALESCE(photo_guid, '') != '' OR (COALESCE(reporter_ref LIKE 'synthetic-%', 0) AND has_photo)) "
+        "AS photo_stored "
+        "FROM reports ORDER BY created_at DESC"
     ).fetchall()
     return [dict(row) for row in rows]
 
@@ -69,7 +81,14 @@ def set_status(conn, report_id, status):
     """Council action. Returns True if the report exists and was updated."""
     if status not in STATUSES:
         raise ValueError(f"status must be one of {', '.join(STATUSES)}")
-    cursor = conn.execute("UPDATE reports SET status = ? WHERE id = ?", (status, report_id))
+    # status_changed_at records the FIRST real change only, for "time to first
+    # action". SQLite evaluates every SET expression against the old row.
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    cursor = conn.execute(
+        "UPDATE reports SET status_changed_at = CASE WHEN status_changed_at IS NULL AND status != ? "
+        "THEN ? ELSE status_changed_at END, status = ? WHERE id = ?",
+        (status, now, status, report_id),
+    )
     return cursor.rowcount == 1
 
 
@@ -176,6 +195,42 @@ def latest_report_for(conn, reporter_ref):
     return dict(row) if row else None
 
 
+def _ensure_column(conn, name):
+    """Adds a nullable TEXT column to a database that predates it. Safe on every start."""
+    existing_columns = {row["name"] for row in conn.execute("PRAGMA table_info(reports)").fetchall()}
+    if name not in existing_columns:
+        conn.execute(f"ALTER TABLE reports ADD COLUMN {name} TEXT")
+
+
+def set_photo_features(conn, report_id, raw):
+    """Store a photo's structured features, validated against photo_features.
+
+    Returns (stored, problems). Nothing is stored unless the features fit the
+    shape; a location in the model's reply is never stored.
+    """
+    import photo_features  # noqa: PLC0415
+    features, problems = photo_features.validate(raw)
+    if features is None:
+        return False, problems
+    cursor = conn.execute("UPDATE reports SET photo_features = ? WHERE id = ?",
+                          (json.dumps(features), report_id))
+    return cursor.rowcount == 1, problems
+
+
+def council_photo_source(conn, report_id):
+    """What the council photo route needs to find one report's photo, or None.
+
+    photo_guid/photo_mime point at the resident's photo in BlueBubbles; synthetic
+    demo rows have neither and are given a placeholder by the route.
+    """
+    row = conn.execute(
+        "SELECT photo_guid, photo_mime, category_id, has_photo, "
+        "COALESCE(reporter_ref LIKE 'synthetic-%', 0) AS synthetic FROM reports WHERE id = ?",
+        (report_id,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
 def _ensure_area_column(conn):
     """Adds the area column to an existing database that predates it,
     without needing to touch schema.sql or delete the file. Safe to call
@@ -203,6 +258,8 @@ def init_db(path=None, seed=True):
         _add_photo_columns(conn)
 
         _ensure_area_column(conn)
+        for column in ("status_changed_at", "photo_features"):
+            _ensure_column(conn, column)
 
         count = conn.execute("SELECT COUNT(*) FROM reports").fetchone()[0]
         if seed and count == 0:
@@ -237,6 +294,8 @@ def load_reports(conn, reports):
         row = {column: report.get(column) for column in COLUMNS}
         # The JSON uses "" for "not a duplicate"; store NULL instead.
         row["duplicate_of"] = row["duplicate_of"] or None
+        row["status_changed_at"] = row["status_changed_at"] or None
+        row["photo_features"] = row["photo_features"] or None
         row["has_photo"] = int(bool(row["has_photo"]))
         rows.append(row)
 
@@ -298,6 +357,45 @@ def reports_by_area(conn):
         ORDER BY count DESC
     """).fetchall()
     return [dict(row) for row in rows]
+
+
+OPEN_STATUSES = ("new", "in_review")
+
+
+def summary_stats(conn):
+    """The figures for the strip above the council list and /council/stats.csv.
+
+    Computed from the database on every call, never stored or hardcoded.
+    "Open" means new or in review. Time to first status change is measured
+    only on reports whose status has changed at least once.
+    """
+    rows = conn.execute(
+        "SELECT category_id, status, severity, has_photo, duplicate_of, created_at, status_changed_at, "
+        "COALESCE(reporter_ref LIKE 'synthetic-%', 0) AS synthetic FROM reports"
+    ).fetchall()
+    open_rows = [r for r in rows if r["status"] in OPEN_STATUSES]
+
+    by_severity = {level: 0 for level in ("high", "medium", "low", "not set")}
+    by_category = {}
+    for r in open_rows:
+        by_severity[r["severity"] if r["severity"] in by_severity else "not set"] += 1
+        by_category[r["category_id"]] = by_category.get(r["category_id"], 0) + 1
+
+    waits = [
+        (datetime.fromisoformat(r["status_changed_at"]) - datetime.fromisoformat(r["created_at"])).total_seconds() / 3600
+        for r in rows if r["status_changed_at"]
+    ]
+    return {
+        "total": len(rows),
+        "open": len(open_rows),
+        "synthetic": sum(r["synthetic"] for r in rows),
+        "open_by_severity": by_severity,
+        "open_by_category": dict(sorted(by_category.items(), key=lambda kv: (-kv[1], kv[0]))),
+        "with_photo": sum(r["has_photo"] for r in rows),
+        "duplicates_caught": sum(1 for r in rows if r["duplicate_of"]),
+        "first_change_count": len(waits),
+        "first_change_avg_hours": round(sum(waits) / len(waits), 1) if waits else None,
+    }
 
 
 def main():
