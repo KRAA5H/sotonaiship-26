@@ -1,8 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Council view · Southampton Reports{% endblock %}
-{% block sub %}Council view. Every report the assistant has saved.{% endblock %}
-{% block scripts %}
+{% block sub %}Council view · every report the assistant has saved{% endblock %}
+{% block topbar_extra %}
+<span class="live" id="live"><i class="pulse" aria-hidden="true"></i><span id="updated">Updates every 15 seconds</span></span>
+{% endblock %}
+{% block after_main %}
+<dialog class="drawer" id="detail" aria-labelledby="d-title"></dialog>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+{% endblock %}
+{% block scripts %}
 <script type="application/json" id="reports">{{ reports | tojson }}</script>
 <script type="application/json" id="labels">{{ labels | tojson }}</script>
 <script>
@@ -11,25 +17,36 @@
 let DATA=JSON.parse(document.getElementById("reports").textContent);
 const REPORTS_URL={{ url_for('website.council_reports_json') | tojson }};
 const REFRESH_MS=15000;
-let saving=0,lastJSON=JSON.stringify(DATA),updated=new Date();
+let saving=0,lastJSON=JSON.stringify(DATA),updated=new Date(),offline=false;
 const CATS=JSON.parse(document.getElementById("labels").textContent);
 const STATUS_URL={{ url_for('website.set_status', report_id='__ID__') | tojson }};
 const RESIDENT_URL={{ url_for('website.resident', token='__TOKEN__') | tojson }};
 const STATUS={new:"New",in_review:"In review",resolved:"Resolved"};
+const STATUS_ICON={new:"dot",in_review:"clock",resolved:"circle-check"};
 const SEV={high:3,medium:2,low:1};
 const NOW=new Date();
 const DAY=864e5;
 const blank={status:"all",cat:"all",sev:"all",photo:"all",range:"all",q:"",hideDup:false};
 const state={sort:"newest",...blank};
+let openId=null;                       // report shown in the detail drawer
+const seen=new Set(DATA.map(r=>r.id)); // ids already on screen, so new ones can be highlighted
+let fresh=new Set();
+const busyIds=new Set();
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const label=id=>CATS[id]||id;
 const fmt=iso=>new Date(iso).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
+const hm=iso=>new Date(iso).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+const clock=d=>d.toLocaleTimeString("en-GB");
 const dayKey=iso=>iso.slice(0,10);
+const ic=(name,cls="")=>`<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 function dayLabel(k){const d=new Date(k+"T12:00:00Z"),n=Math.round((new Date(dayKey(NOW.toISOString())+"T12:00:00Z")-d)/DAY);
   const base=d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});return n===0?["Today",base]:n===1?["Yesterday",base]:[base,""]}
-function chip(cls,t,dot){return `<span class="chip ${esc(cls)}">${dot?"<i></i>":""}${esc(t)}</span>`}
+function ago(iso){const n=Math.floor((NOW-new Date(iso))/DAY);return n<=0?"today":n===1?"yesterday":`${n} days ago`}
 const cap=s=>s?s[0].toUpperCase()+s.slice(1):"Not set";
+const chip=s=>`<span class="chip s-${esc(s)}">${ic(STATUS_ICON[s]||"dot")}${esc(STATUS[s]||s)}</span>`;
+const sev=s=>s?`<span class="sev sev-${esc(s)}"><span class="bars3" aria-hidden="true"><i></i><i></i><i></i></span>${esc(cap(s))}</span>`:`<span class="muted">Not set</span>`;
+const thisWeek=r=>(NOW-new Date(r.created_at))/DAY<=7;
 function filtered(){
   const lim={all:Infinity,"1":1,"7":7,"30":30}[state.range];
   return DATA.filter(r=>(state.status==="all"||r.status===state.status)&&(state.cat==="all"||r.category_id===state.cat)
@@ -45,56 +62,95 @@ function sorted(rows){
     street:(a,b)=>street(a).localeCompare(street(b))||b.created_at.localeCompare(a.created_at)};
   return rows.slice().sort(s[state.sort]);
 }
+function repeatsOf(id){return DATA.filter(r=>r.duplicate_of===id).map(r=>r.id)}
+const activeCount=()=>Object.keys(blank).filter(k=>state[k]!==blank[k]).length;
+function statusSelect(r){
+  const busy=busyIds.has(r.id);
+  return `<select data-id="${esc(r.id)}" data-key="s:${esc(r.id)}" aria-label="Status for ${esc(r.id)}"${busy?" disabled class=\"saving\"":""}>${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${r.status===k?"selected":""}>${v}</option>`).join("")}</select>`;
+}
 function council(){
   const n=k=>DATA.filter(r=>r.status===k).length;
   const count={};DATA.forEach(r=>count[r.category_id]=(count[r.category_id]||0)+1);
   const entries=Object.entries(count).sort((a,b)=>b[1]-a[1]);const max=entries.length?entries[0][1]:1;
   const reps={};DATA.forEach(r=>{if(r.duplicate_of)reps[r.duplicate_of]=(reps[r.duplicate_of]||0)+1});
+  const repeatTotal=DATA.filter(r=>r.duplicate_of).length;
   const rows=sorted(filtered());
-  const active=Object.keys(blank).filter(k=>state[k]!==blank[k]).length;
+  const active=activeCount();
   const grouped=state.sort==="newest"||state.sort==="oldest";
   let body="",last="";
   rows.forEach(r=>{
     if(grouped&&dayKey(r.created_at)!==last){last=dayKey(r.created_at);const [a,b]=dayLabel(last);body+=`<tr class="day"><td colspan="7">${a}<span>${b}</span></td></tr>`}
-    body+=`<tr><td><span class="id">${esc(r.id)}</span>${grouped?"":`<div class="dup">${fmt(r.created_at)}</div>`}</td>
-      <td>${esc(label(r.category_id))}${r.duplicate_of?`<div class="dup">Repeat of ${esc(r.duplicate_of)}</div>`:""}${reps[r.id]?`<div class="dup">+${reps[r.id]} repeat${reps[r.id]>1?"s":""}</div>`:""}</td>
-      <td>${esc(r.location)}</td><td>${r.severity?chip(r.severity,cap(r.severity),true):`<span class="dup">Not set</span>`}</td>
-      <td><select data-id="${esc(r.id)}" aria-label="Status for ${esc(r.id)}">${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${r.status===k?"selected":""}>${v}</option>`).join("")}</select></td>
-      <td>${r.has_photo?"Yes":"No"}</td><td><a class="link" href="${esc(RESIDENT_URL.replace("__TOKEN__",encodeURIComponent(r.link_token)))}" target="_blank" rel="noopener noreferrer">Resident view</a></td></tr>`});
-  if(!rows.length)body=`<tr><td colspan="7" class="empty">No reports match these filters.</td></tr>`;
-  const tg=(k,v,t)=>`<button class="tg" data-f="${k}" data-v="${v}" aria-pressed="${state[k]===v}">${t}</button>`;
+    body+=`<tr class="rep${fresh.has(r.id)?" is-fresh":""}${openId===r.id?" is-open":""}" data-open="${esc(r.id)}">
+      <td class="c-id"><button class="idbtn" data-open="${esc(r.id)}" data-key="o:${esc(r.id)}" aria-label="Open report ${esc(r.id)}">${esc(r.id)}</button><span class="time">${grouped?hm(r.created_at):fmt(r.created_at)}</span></td>
+      <td class="c-cat">${esc(label(r.category_id))}${r.duplicate_of?`<span class="sub">${ic("copy")}Repeat of ${esc(r.duplicate_of)}</span>`:""}${reps[r.id]?`<span class="sub">${ic("copy")}+${reps[r.id]} repeat${reps[r.id]>1?"s":""}</span>`:""}</td>
+      <td class="c-loc">${esc(r.location||"Not given")}</td>
+      <td class="c-sev">${sev(r.severity)}</td>
+      <td class="c-status">${statusSelect(r)}</td>
+      <td class="c-photo">${r.has_photo?`${ic("camera")}Photo`:`<span class="muted">No photo</span>`}</td>
+      <td class="c-go">${ic("chevron")}</td></tr>`});
+  const empty=DATA.length
+    ?`<div class="empty"><span class="e-ic">${ic("search")}</span><h3>No reports match these filters</h3><p>Try a different search, or clear the filters to see all ${DATA.length} reports.</p><button class="btn" id="f-reset2" data-key="reset2">Clear all filters</button></div>`
+    :`<div class="empty"><span class="e-ic">${ic("inbox")}</span><h3>No reports yet</h3><p>When a resident reports an issue over iMessage, it appears here within 15 seconds.</p></div>`;
+  const tg=(k,v,t)=>`<button class="tg" data-f="${k}" data-v="${v}" data-key="f:${k}:${v}" aria-pressed="${state[k]===v}">${ic("check")}${t}</button>`;
+  const tile=(key,f,v,lab,num,note,icon)=>`<button class="tile t-${key}" data-f="${f}" data-v="${v}" data-key="k:${key}" aria-pressed="${state[f]===v}">
+      <span class="t-label">${lab}</span><span class="t-n">${num}</span><span class="t-ic">${ic(icon)}</span><span class="t-note">${note}</span></button>`;
   return `
-  <div class="kpis">
-    <button class="kpi" data-f="status" data-v="all" aria-pressed="${state.status==="all"}"><b>${DATA.length}</b><span>All reports</span></button>
-    ${Object.entries(STATUS).map(([k,v])=>`<button class="kpi" data-f="status" data-v="${k}" aria-pressed="${state.status===k}"><b>${n(k)}</b><span>${v}</span></button>`).join("")}
-    <button class="kpi" data-f="hideDup" data-v="toggle" aria-pressed="${state.hideDup}"><b>${DATA.filter(r=>r.duplicate_of).length}</b><span>Repeat reports${state.hideDup?" (hidden)":""}</span></button>
-  </div>
-  <div class="panel"><div class="ph"><h2>Reports by category</h2><span class="hint">Select a bar to filter the list</span></div>
-    <div class="bars">${entries.map(([id,c])=>`<button class="bar" data-f="cat" data-v="${esc(id)}" aria-pressed="${state.cat===id}"><span class="name" title="${esc(label(id))}">${esc(label(id))}</span><span><span class="fill" style="width:${c/max*100}%"></span></span><span class="n">${c}</span></button>`).join("")}</div>
-  </div>
-  <div class="panel"><div class="ph"><h2>All reports</h2><span class="hint" id="updated">Updates every 15 seconds. Last checked ${updated.toLocaleTimeString("en-GB")}</span></div>
-    <div class="toolbar">
-      <div class="row">
-        <input type="text" id="f-q" placeholder="Search street, ID or category" value="${esc(state.q)}" aria-label="Search">
-        <select id="f-range" aria-label="Date range">${[["all","All time"],["1","Last 24 hours"],["7","Last 7 days"],["30","Last 30 days"]].map(([v,t])=>`<option value="${v}" ${state.range===v?"selected":""}>${t}</option>`).join("")}</select>
-        <select id="f-sort" aria-label="Sort by">${[["newest","Newest first"],["oldest","Oldest first"],["severity","Most severe first"],["street","Street A to Z"]].map(([v,t])=>`<option value="${v}" ${state.sort===v?"selected":""}>${t}</option>`).join("")}</select>
-        <select id="f-cat" aria-label="Category"><option value="all">All categories</option>${Object.keys(count).sort((a,b)=>label(a).localeCompare(label(b))).map(k=>`<option value="${esc(k)}" ${state.cat===k?"selected":""}>${esc(label(k))}</option>`).join("")}</select>
+  <div class="page-head"><h1>Reports</h1><p>${DATA.length} in total · ${repeatTotal} repeat${repeatTotal===1?"":"s"} joined to an earlier report</p></div>
+  <section class="summary" aria-label="Summary. Select a number to filter the list">
+    ${tile("new","status","new","New",n("new"),"Waiting for an officer","dot")}
+    ${tile("in_review","status","in_review","In review",n("in_review"),"Being looked at","clock")}
+    ${tile("resolved","status","resolved","Resolved",n("resolved"),"Closed by the council","circle-check")}
+    ${tile("week","range","7","This week",DATA.filter(thisWeek).length,"Reported in the last 7 days","calendar")}
+  </section>
+  <section class="panel" aria-labelledby="cat-h"><div class="ph"><h2 id="cat-h">Reports by category</h2><span class="hint">Select a category to filter the list</span></div>
+    <div class="bars">${entries.map(([id,c])=>`<button class="bar" data-f="cat" data-v="${esc(id)}" data-key="b:${esc(id)}" aria-pressed="${state.cat===id}"><span class="name" title="${esc(label(id))}">${esc(label(id))}</span><span class="track"><span class="fill" style="width:${c/max*100}%"></span></span><span class="n">${c}</span></button>`).join("")}</div>
+  </section>
+  <section class="panel list" aria-labelledby="list-h"><div class="ph"><h2 id="list-h">All reports</h2><span class="count" aria-live="polite">Showing <b>${rows.length}</b> of ${DATA.length}</span></div>
+    <div class="filters">
+      <div class="frow">
+        <label class="search">Search${ic("search")}<input type="search" id="f-q" placeholder="Street, report ID or category" value="${esc(state.q)}" autocomplete="off"></label>
+        <label class="field">Reported<select id="f-range">${[["all","Any time"],["1","Last 24 hours"],["7","Last 7 days"],["30","Last 30 days"]].map(([v,t])=>`<option value="${v}" ${state.range===v?"selected":""}>${t}</option>`).join("")}</select></label>
+        <label class="field">Category<select id="f-cat"><option value="all">All categories</option>${Object.keys(count).sort((a,b)=>label(a).localeCompare(label(b))).map(k=>`<option value="${esc(k)}" ${state.cat===k?"selected":""}>${esc(label(k))}</option>`).join("")}</select></label>
+        <label class="field">Sort by<select id="f-sort">${[["newest","Newest first"],["oldest","Oldest first"],["severity","Most severe first"],["street","Street A to Z"]].map(([v,t])=>`<option value="${v}" ${state.sort===v?"selected":""}>${t}</option>`).join("")}</select></label>
       </div>
-      <div class="row">
-        <div class="chips"><span class="lab">Severity</span>${tg("sev","high","High")}${tg("sev","medium","Medium")}${tg("sev","low","Low")}</div>
-        <div class="chips"><span class="lab">Photo</span>${tg("photo","1","With photo")}${tg("photo","0","No photo")}</div>
-        <div class="chips"><button class="tg" data-f="hideDup" data-v="toggle" aria-pressed="${state.hideDup}">Hide repeats</button></div>
-        <span class="count">${rows.length} of ${DATA.length} reports${active?` <button class="link" id="f-reset">Clear ${active} filter${active>1?"s":""}</button>`:""}</span>
+      <div class="frow">
+        <div class="group" role="group" aria-labelledby="g-sev"><span class="glab" id="g-sev">Severity</span>${tg("sev","high","High")}${tg("sev","medium","Medium")}${tg("sev","low","Low")}</div>
+        <div class="group" role="group" aria-labelledby="g-photo"><span class="glab" id="g-photo">Photo</span>${tg("photo","1","With photo")}${tg("photo","0","No photo")}</div>
+        <div class="group"><button class="tg" data-f="hideDup" data-v="toggle" data-key="f:hideDup" aria-pressed="${state.hideDup}">${ic("check")}Hide repeats (${repeatTotal})</button></div>
+        <div class="factive">${active?`<span class="badge">${active} filter${active>1?"s":""} active</span>`:`<span class="hint">No filters active</span>`}<button class="btn-ghost" id="f-reset" data-key="reset" ${active?"":"disabled"}>${ic("x")}Clear all</button></div>
       </div>
     </div>
-    <div class="tablewrap"><table><thead><tr><th>Report</th><th>Category</th><th>Location</th><th>Severity</th><th>Status</th><th>Photo</th><th></th></tr></thead><tbody>${body}</tbody></table></div>
-  </div>`;
+    ${rows.length?`<div class="tablewrap"><table><thead><tr><th scope="col">Report</th><th scope="col">Category</th><th scope="col">Location</th><th scope="col">Severity</th><th scope="col">Status</th><th scope="col">Photo</th><th scope="col"><span class="sr">Open</span></th></tr></thead><tbody>${body}</tbody></table></div>`:empty}
+  </section>`;
+}
+function detail(r){
+  const reps=repeatsOf(r.id),busy=busyIds.has(r.id);
+  return `<div class="d-head"><div><p class="d-id">${esc(r.id)}</p><h2 id="d-title">${esc(label(r.category_id))}</h2></div>
+      <button class="iconbtn" data-close data-key="close" aria-label="Close details">${ic("x")}</button></div>
+    <div class="d-body">
+      <div><p class="d-label" id="d-st">Status</p>
+        <div class="seg" role="group" aria-labelledby="d-st">${Object.entries(STATUS).map(([k,v])=>`<button data-set="${k}" data-key="d:${k}" aria-pressed="${r.status===k}"${busy?" disabled":""}>${ic(STATUS_ICON[k])}${v}</button>`).join("")}</div></div>
+      <dl class="facts">
+        <div class="wide"><dt>${ic("pin")}Location</dt><dd>${esc(r.location||"Not given")}</dd></div>
+        <div><dt>${ic("calendar")}Reported</dt><dd>${fmt(r.created_at)}, ${hm(r.created_at)}<br><span class="muted small">${ago(r.created_at)}</span></dd></div>
+        <div><dt>${ic("gauge")}Severity</dt><dd>${sev(r.severity)}</dd></div>
+        <div><dt>${ic("camera")}Photo</dt><dd>${r.has_photo?"Yes, the resident sent a photo":"No photo"}</dd></div>
+        <div><dt>${ic("copy")}Duplicate of</dt><dd>${r.duplicate_of?`<button class="linkbtn" data-goto="${esc(r.duplicate_of)}" data-key="g:${esc(r.duplicate_of)}">${esc(r.duplicate_of)}</button>`:`<span class="muted">Not a repeat</span>`}</dd></div>
+        ${reps.length?`<div class="wide"><dt>${ic("copy")}Repeats joined to this report</dt><dd class="replist">${reps.map(id=>`<button class="linkbtn" data-goto="${esc(id)}" data-key="g:${esc(id)}">${esc(id)}</button>`).join("")}</dd></div>`:""}
+        <div class="wide"><dt>${ic("text")}Description</dt><dd class="quote">${esc(r.description||"No description given")}</dd></div>
+      </dl>
+      <div class="d-foot"><a class="btn" href="${esc(RESIDENT_URL.replace("__TOKEN__",encodeURIComponent(r.link_token)))}" target="_blank" rel="noopener noreferrer">${ic("external")}Open resident view</a>
+        <p class="muted small">The resident sees only this report at their private link. It never shows the report ID.</p></div>
+    </div>`;
 }
 let toastTimer;
-function toast(text){const t=$("#toast");t.textContent=text;t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.hidden=true,3500)}
-async function saveStatus(select){
-  const id=select.dataset.id,next=select.value,prev=DATA.find(x=>x.id===id).status;
-  select.disabled=true;select.classList.add("saving");saving++;
+function toast(text,icon="check"){const t=$("#toast");t.innerHTML=ic(icon)+esc(text);t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.hidden=true,3500)}
+async function saveStatus(id,next){
+  const prev=DATA.find(x=>x.id===id).status;
+  if(next===prev||busyIds.has(id))return;
+  busyIds.add(id);saving++;
+  document.querySelectorAll(`select[data-id="${CSS.escape(id)}"]`).forEach(s=>{s.disabled=true;s.classList.add("saving")});
+  if(openId===id)document.querySelectorAll("#detail [data-set]").forEach(b=>b.disabled=true);
   let final=prev;
   try{
     const res=await fetch(STATUS_URL.replace("__ID__",encodeURIComponent(id)),{method:"POST",credentials:"same-origin",
@@ -102,12 +158,17 @@ async function saveStatus(select){
     const out=await res.json().catch(()=>({}));
     if(!res.ok||!out.ok)throw new Error(out.error||`server said ${res.status}`);
     final=out.status;toast(`${id} marked ${STATUS[final]}`);
-  }catch(err){toast(`Not saved: ${err.message}`)}
-  saving--;
+  }catch(err){toast(`Not saved: ${err.message}`,"alert")}
+  saving--;busyIds.delete(id);
   // Look the row up again: DATA may have been replaced while the save was in flight.
   const r=DATA.find(x=>x.id===id);if(r)r.status=final;
   lastJSON=JSON.stringify(DATA);
   render();
+}
+function showLive(){
+  const live=$("#live"),h=$("#updated");
+  live.classList.toggle("is-off",offline);
+  h.innerHTML=offline?`Can't reach the server<span class="long">. Last checked ${clock(updated)}</span>, trying again`:`<span class="long">Updates every 15 seconds · </span>Last checked ${clock(updated)}`;
 }
 // Auto-refresh. Skips a beat while a status is being changed or saved, and
 // re-renders only when something changed, so filters and scroll stay put.
@@ -119,30 +180,69 @@ async function refresh(){
   if(busy())return;
   try{
     const res=await fetch(REPORTS_URL,{credentials:"same-origin",cache:"no-store"});
-    if(!res.ok)return;
+    if(!res.ok)throw new Error(res.status);
     const out=await res.json();
-    updated=new Date();
+    updated=new Date();offline=false;showLive();
     if(busy())return;  // someone started changing a status while we fetched
     const json=JSON.stringify(out.reports);
-    if(json===lastJSON){const h=$("#updated");if(h)h.textContent=`Updates every 15 seconds. Last checked ${updated.toLocaleTimeString("en-GB")}`;return}
+    if(json===lastJSON)return;
+    const added=out.reports.filter(r=>!seen.has(r.id));
+    added.forEach(r=>seen.add(r.id));
+    fresh=new Set(added.map(r=>r.id));
     DATA=out.reports;lastJSON=json;render();
-  }catch(err){/* offline or server restarting: try again next time */}
+    if(added.length){toast(`${added.length} new report${added.length>1?"s":""}`,"inbox");setTimeout(()=>{fresh=new Set()},3000)}
+  }catch(err){offline=true;showLive()}  // offline or server restarting: try again next time
 }
+const dlg=$("#detail");
+function openDetail(id,focusKey){
+  if(!DATA.some(r=>r.id===id))return;
+  openId=id;
+  if(location.hash!=="#"+id)history.replaceState(null,"","#"+id);
+  render();
+  if(!dlg.open)dlg.showModal();
+  const f=focusKey&&dlg.querySelector(`[data-key="${CSS.escape(focusKey)}"]`);
+  (f||dlg.querySelector("[data-close]")).focus();
+}
+dlg.addEventListener("close",()=>{
+  const id=openId;openId=null;
+  history.replaceState(null,"",location.pathname+location.search);
+  render();
+  const back=document.querySelector(`[data-key="o:${CSS.escape(id||"")}"]`);if(back)back.focus({preventScroll:true});
+});
+dlg.addEventListener("click",e=>{
+  if(e.target===dlg){dlg.close();return}  // click on the backdrop
+  if(e.target.closest("[data-close]")){dlg.close();return}
+  const set=e.target.closest("[data-set]");if(set&&openId){saveStatus(openId,set.dataset.set);return}
+  const go=e.target.closest("[data-goto]");if(go)openDetail(go.dataset.goto);
+});
 function render(){
-  const q=document.activeElement&&document.activeElement.id==="f-q"?[$("#f-q").selectionStart,$("#f-q").selectionEnd]:null;
+  // Keep focus, caret and scroll where they were, because the list is redrawn.
+  const a=document.activeElement,key=a&&a.dataset?a.dataset.key||a.id:null;
+  const caret=a&&a.id==="f-q"?[a.selectionStart,a.selectionEnd]:null;
   const y=window.scrollY;
   $("#view").innerHTML=council();
+  if(openId){const r=DATA.find(x=>x.id===openId);if(r){const sc=dlg.querySelector(".d-body"),top=sc?sc.scrollTop:0;dlg.innerHTML=detail(r);const nb=dlg.querySelector(".d-body");if(nb)nb.scrollTop=top}else if(dlg.open)dlg.close()}
   window.scrollTo(0,y);
-  if(q){const f=$("#f-q");f.focus();f.setSelectionRange(q[0],q[1])}
-  document.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{const k=b.dataset.f,v=b.dataset.v;
+  if(key){const el=document.getElementById(key)||document.querySelector(`[data-key="${CSS.escape(key)}"]`);
+    if(el&&!el.disabled){el.focus({preventScroll:true});if(caret)el.setSelectionRange(caret[0],caret[1])}
+    else if(key==="reset"||key==="reset2"){$("#f-q").focus({preventScroll:true})}}
+  document.querySelectorAll("#view [data-f]").forEach(b=>b.onclick=()=>{const k=b.dataset.f,v=b.dataset.v;
     if(v==="toggle")state[k]=!state[k];else state[k]=state[k]===v&&v!=="all"?"all":v;render()});
   const sel=(id,k)=>{$(id).onchange=e=>{state[k]=e.target.value;render()}};
-  sel("#f-range","range");sel("#f-sort","sort");sel("#f-cat","cat");
+  if($("#f-range")){sel("#f-range","range");sel("#f-sort","sort");sel("#f-cat","cat")}
   $("#f-q").oninput=e=>{state.q=e.target.value;render()};
-  const rs=$("#f-reset");if(rs)rs.onclick=()=>{Object.assign(state,blank);render()};
-  document.querySelectorAll("select[data-id]").forEach(s=>s.onchange=()=>saveStatus(s));
+  ["#f-reset","#f-reset2"].forEach(s=>{const b=$(s);if(b)b.onclick=()=>{Object.assign(state,blank);render()}});
+  document.querySelectorAll("select[data-id]").forEach(s=>s.onchange=()=>saveStatus(s.dataset.id,s.value));
 }
+// Rows open the detail drawer; the status select inside a row does not.
+$("#view").addEventListener("click",e=>{
+  if(e.target.closest("select,a,input,label"))return;
+  const row=e.target.closest("[data-open]");if(row)openDetail(row.dataset.open);
+});
 render();
+showLive();
+if(location.hash.length>1)openDetail(decodeURIComponent(location.hash.slice(1)));
+window.addEventListener("hashchange",()=>{const id=decodeURIComponent(location.hash.slice(1));if(id&&id!==openId)openDetail(id)});
 setInterval(refresh,REFRESH_MS);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
 </script>
