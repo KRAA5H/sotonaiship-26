@@ -1,0 +1,69 @@
+id,created_at,category_id,status,severity,location,description,has_photo,duplicate_of,reporter_ref,link_token
+R-0001,2026-10-11T01:00:00+00:00,other_nuisance,in_review,high,84 Portswood Road,"Synthetic example: light, dust, smoke or odour from a neighbouring property",0,,synthetic-2542,6PSUE9Bqr-TYHyFk
+R-0002,2026-09-22T15:00:00+00:00,property_concern,new,medium,117 Old Northam Road,"Synthetic example: concern about a property (very dirty, hoarding, possible rodents)",1,,synthetic-8104,Uty0Q-3Mu5LSx6rs
+R-0003,2026-10-14T12:00:00+00:00,lost_damaged_bin,new,low,12 Old Northam Road,"Synthetic example: lost, damaged or stray bin",1,,synthetic-3028,lhGjbeXwtupm-k1-
+R-0004,2026-09-20T14:00:00+00:00,abandoned_vehicle,resolved,low,8 Cumberland Place,Synthetic example: abandoned vehicle,1,,synthetic-4622,QuZwQQcjKLXPAYFq
+R-0005,2026-09-23T17:00:00+00:00,dog_fouling,new,medium,38 Burgess Road,Synthetic example: dog fouling,0,,synthetic-6054,NBZrvXWimOuOXoaB
+R-0006,2026-10-13T02:00:00+00:00,glass_spillage_hazard,resolved,medium,74 Shirley High Street,Synthetic example: broken glass / spillage / dangerous item on the street,1,,synthetic-2028,_0Wr4oTeOk392Kp1
+R-0007,2026-09-21T02:00:00+00:00,dog_fouling,new,low,64 Old Northam Road,Synthetic example: dog fouling,0,,synthetic-8628,mbhEOpeAD8zyyvB7
+R-0008,2026-10-02T01:00:00+00:00,council_housing_repair,new,medium,32 Bevois Valley,Synthetic example: repair for a council tenant or leaseholder,1,,synthetic-5919,s6JOjFIAOOjR9Nnb
+R-0009,2026-10-02T20:00:00+00:00,unclear_other,in_review,high,37 Cumberland Place,Synthetic example: unclear or other,1,,synthetic-7850,7crvqeodWlu7X7nK
+R-0010,2026-10-02T21:00:00+00:00,glass_spillage_hazard,new,low,120 Bitterne Road,Synthetic example: broken glass / spillage / dangerous item on the street,1,,synthetic-2271,7GCSr4vgjvqzGqSw
+R-0011,2026-10-02T23:00:00+00:00,other_nuisance,new,low,77 Bitterne Road,"Synthetic example: light, dust, smoke or odour from a neighbouring property",1,,synthetic-2533,ZxucP_2WlLmFdWut
+R-0012,2026-09-27T06:00:00+00:00,illegal_parking,new,low,8 Winchester Road,Synthetic example: illegal or obstructive parking,1,,synthetic-7320,HjSXwFle1LrFNwbr
+R-0013,2026-10-16T12:00:00+00:00,property_concern,in_review,high,46 Bevois Valley,"Synthetic example: concern about a property (very dirty, hoarding, possible rodents)",1,,synthetic-4575,eZiARVj4egbtSOpJ
+R-0014,2026-10-11T23:00:00+00:00,noise_nuisance,new,low,51 Burgess Road,Synthetic example: noise from a neighbouring property,1,,synthetic-8359,HkbuPPzlBVyuugbt
+R-0015,2026-09-24T01:00:00+00:00,missed_bin,new,low,114 Bevois Valley,Synthetic example: missed bin collection,0,,synthetic-5561,lO4H35TgC_AuaLbu
+R-0016,2026-10-02T04:00:00+00:00,lost_damaged_bin,in_review,high,30 Bevois Valley,"Synthetic example: lost, damaged or stray bin",1,,synthetic-4800,_Oi5UyWU_bqYKP-4
+R-0017,2026-10-16T23:00:00+00:00,abandoned_vehicle,in_review,medium,107 Cumberland Place,Synthetic example: abandoned vehicle,1,,synthetic-1067,keuoK1FNJUIl08Z4
+R-0018,2026-09-29T14:00:00+00:00,graffiti_flyposting,resolved,medium,48 Cumberland Place,Synthetic example: graffiti / fly-posting,0,,synthetic-9445,8BmeyNqpzp5nHSFT
+R-0019,2026-09-28T00:00:00+00:00,dog_fouling,resolved,low,51 Burgess Road,Synthetic example: dog fouling,1,,synthetic-8889,qcVZ4725UBLRUlpl
+R-0020,2026-10-14T20:00:00+00:00,missed_bin,new,low,9 Shirley High Street,Synthetic example: missed bin collection,1,,synthetic-6571,WV1n2eMruOyA66Up
+R-0021,2026-10-13T03:00:00+00:00,dog_fouling,new,high,73 Bevois Valley,Synthetic example: dog fouling,0,,synthetic-1417,bm0_p4HmXJPB5Ddr
+R-0022,2026-10-08T15:00:00+00:00,dead_animal,resolved,medium,49 Bevois Valley,Synthetic example: dead animal,0,,synthetic-6966,yVq1TTMe0fz7E7P5
+R-0023,2026-10-12T06:00:00+00:00,unclear_other,new,low,109 Bitterne Road,Synthetic example: unclear or other,1,,synthetic-6109,hlsd2AxsC92jK4Pu
+R-0024,2026-10-11T08:00:00+00:00,dead_animal,new,medium,96 Hill Lane,Synthetic example: dead animal,1,,synthetic-3645,PJ-dmh__09YwtkhS
+R-0025,2026-10-08T17:00:00+00:00,fly_tipping,resolved,high,47 Bevois Valley,Synthetic example: fly-tipping,0,,synthetic-5883,tH6It6eEFgZLmjXg
+R-0026,2026-09-17T19:00:00+00:00,dead_animal,new,medium,67 Hill Lane,Synthetic example: dead animal,1,,synthetic-4650,Pr7-IwNuR4Pm0zZV
+R-0027,2026-09-20T08:00:00+00:00,other_nuisance,new,medium,79 Shirley High Street,"Synthetic example: light, dust, smoke or odour from a neighbouring property",0,,synthetic-4714,WNTtidKlYvbX5VDB
+R-0028,2026-09-25T09:00:00+00:00,pothole,in_review,high,46 Portswood Road,Synthetic example: pothole,0,,synthetic-8737,5aLKLMIKAEWBWNBp
+R-0029,2026-10-09T05:00:00+00:00,illegal_parking,resolved,medium,45 Bitterne Road,Synthetic example: illegal or obstructive parking,0,,synthetic-6974,bX3sT8YCtsMlVNAs
+R-0030,2026-10-08T02:00:00+00:00,dead_animal,new,medium,30 Bitterne Road,Synthetic example: dead animal,1,,synthetic-8907,9d6psBw5os6j2cvj
+R-0031,2026-09-27T01:00:00+00:00,fly_tipping,new,high,103 Highfield Road,Synthetic example: fly-tipping,0,,synthetic-4265,fV4Qx8cNeuHkV5X2
+R-0032,2026-10-09T21:00:00+00:00,unclear_other,in_review,high,102 Hill Lane,Synthetic example: unclear or other,0,,synthetic-7485,oF1pQuWH2YmIquEH
+R-0033,2026-09-30T08:00:00+00:00,council_housing_repair,new,medium,93 Bevois Valley,Synthetic example: repair for a council tenant or leaseholder,0,,synthetic-1451,LHSk2DeUhTrpVY3G
+R-0034,2026-09-22T07:00:00+00:00,graffiti_flyposting,in_review,low,104 Bevois Valley,Synthetic example: graffiti / fly-posting,0,,synthetic-6741,Mp5ncNllfFPzb2X0
+R-0035,2026-09-24T02:00:00+00:00,graffiti_flyposting,resolved,high,17 Portswood Road,Synthetic example: graffiti / fly-posting,0,,synthetic-2683,DfVHEMXgen9DKn3u
+R-0036,2026-09-28T23:00:00+00:00,graffiti_flyposting,new,high,106 Shirley High Street,Synthetic example: graffiti / fly-posting,1,,synthetic-5799,7Xc-D3Qoxtnp9kW1
+R-0037,2026-09-22T11:00:00+00:00,abandoned_vehicle,new,low,34 Old Northam Road,Synthetic example: abandoned vehicle,0,,synthetic-1997,DdzJ-Ia1GCocVGdn
+R-0038,2026-09-27T22:00:00+00:00,property_concern,resolved,low,105 Old Northam Road,"Synthetic example: concern about a property (very dirty, hoarding, possible rodents)",0,,synthetic-9219,eZvETUoHHWsH6xvG
+R-0039,2026-09-24T19:00:00+00:00,graffiti_flyposting,new,high,68 Old Northam Road,Synthetic example: graffiti / fly-posting,0,,synthetic-4000,5w4_b9ugmUyT38aV
+R-0040,2026-10-11T02:00:00+00:00,fly_tipping,new,high,19 Bitterne Road,Synthetic example: fly-tipping,0,,synthetic-6340,rAPBSYT7hZ_qlrl5
+R-0041,2026-10-12T23:00:00+00:00,unclear_other,resolved,medium,8 Shirley High Street,Synthetic example: unclear or other,1,,synthetic-2601,ISgVpnoBdOc2mga-
+R-0042,2026-09-23T12:00:00+00:00,council_housing_repair,new,low,98 Highfield Road,Synthetic example: repair for a council tenant or leaseholder,1,,synthetic-9282,9YL3TjSg8UNos-uh
+R-0043,2026-09-17T22:00:00+00:00,pothole,new,low,58 Old Northam Road,Synthetic example: pothole,0,,synthetic-5057,vNWAK35Pjy8aHbuK
+R-0044,2026-09-23T15:00:00+00:00,illegal_parking,new,medium,108 Bitterne Road,Synthetic example: illegal or obstructive parking,1,,synthetic-7428,D_AS0oJjAQBg45Q4
+R-0045,2026-10-04T00:00:00+00:00,council_housing_repair,new,low,86 Shirley High Street,Synthetic example: repair for a council tenant or leaseholder,1,,synthetic-5960,js3Ps5lwzMDj6mXE
+R-0046,2026-10-10T21:00:00+00:00,litter_street_cleaning,new,medium,19 Winchester Road,Synthetic example: litter / street needs cleaning,0,,synthetic-4597,5NUR3gT-uX5jBC97
+R-0047,2026-09-30T12:00:00+00:00,litter_street_cleaning,in_review,medium,21 Shirley High Street,Synthetic example: litter / street needs cleaning,0,,synthetic-9447,42NULkaUJ2pwzuCm
+R-0048,2026-10-03T00:00:00+00:00,missed_bin,in_review,medium,26 Hill Lane,Synthetic example: missed bin collection,1,,synthetic-6995,wNIOSubNArvdRMT0
+R-0049,2026-10-03T01:00:00+00:00,fly_tipping,resolved,high,59 Bitterne Road,Synthetic example: fly-tipping,1,,synthetic-9477,NGHnDL1UlkvMb3Rg
+R-0050,2026-09-25T15:00:00+00:00,noise_nuisance,new,high,15 Shirley High Street,Synthetic example: noise from a neighbouring property,1,,synthetic-5455,1HIXrhr-KFuj39cC
+R-0051,2026-10-09T18:00:00+00:00,dog_fouling,new,low,97 Bevois Valley,Synthetic example: dog fouling,0,,synthetic-5237,yV2g1AOQT_Ld3oNj
+R-0052,2026-10-11T03:00:00+00:00,missed_bin,resolved,low,118 Old Northam Road,Synthetic example: missed bin collection,0,,synthetic-2465,NRMhQvZgxh9EnMGx
+R-0053,2026-10-15T01:00:00+00:00,illegal_parking,new,medium,55 Highfield Road,Synthetic example: illegal or obstructive parking,0,,synthetic-2451,lW9M8fLV_N5VG65W
+R-0054,2026-10-13T22:00:00+00:00,illegal_parking,resolved,high,110 Shirley High Street,Synthetic example: illegal or obstructive parking,1,,synthetic-2993,CvSnudZ7zvWKK49A
+R-0055,2026-10-17T00:00:00+00:00,council_housing_repair,new,medium,71 Burgess Road,Synthetic example: repair for a council tenant or leaseholder,0,,synthetic-1707,VtqgBxOfCvvSi0G2
+R-0056,2026-10-12T19:00:00+00:00,abandoned_vehicle,new,medium,34 Portswood Road,Synthetic example: abandoned vehicle,1,,synthetic-6111,gGxhEGBwsUvtq8QI
+R-0057,2026-09-24T20:00:00+00:00,noise_nuisance,new,medium,38 Bitterne Road,Synthetic example: noise from a neighbouring property,1,,synthetic-1297,t3wmbUgGWL5vh0d3
+R-0058,2026-10-15T22:00:00+00:00,illegal_parking,new,medium,3 Old Northam Road,Synthetic example: illegal or obstructive parking,0,,synthetic-5025,BewLElXSaDzsznXD
+R-0059,2026-10-12T23:00:00+00:00,council_housing_repair,in_review,low,85 Bitterne Road,Synthetic example: repair for a council tenant or leaseholder,0,,synthetic-6042,APlIsLaF9lsSaIZ4
+R-0060,2026-10-07T16:00:00+00:00,pothole,new,low,26 Bevois Valley,Synthetic example: pothole,0,,synthetic-1891,-FSfaHZwUtjdvECC
+R-0061,2026-10-04T20:00:00+00:00,unclear_other,new,low,37 Cumberland Place,Synthetic example: unclear or other,0,R-0009,synthetic-5619,1pD-64beaDeSr4Mq
+R-0062,2026-10-13T01:00:00+00:00,other_nuisance,new,medium,84 Portswood Road,"Synthetic example: light, dust, smoke or odour from a neighbouring property",0,R-0001,synthetic-1741,YdP82YVp4mC7vuDa
+R-0063,2026-09-25T17:00:00+00:00,dog_fouling,new,low,38 Burgess Road,Synthetic example: dog fouling,1,R-0005,synthetic-5407,gn923wcjacBn3TY2
+R-0064,2026-10-18T23:00:00+00:00,abandoned_vehicle,new,low,107 Cumberland Place,Synthetic example: abandoned vehicle,1,R-0017,synthetic-6966,kks_JFlS_-aoAc5E
+R-0065,2026-09-27T09:00:00+00:00,pothole,new,medium,46 Portswood Road,Synthetic example: pothole,0,R-0028,synthetic-9963,l1eQ3WLnlc1rQ_Dv
+R-0066,2026-10-04T23:00:00+00:00,other_nuisance,new,medium,77 Bitterne Road,"Synthetic example: light, dust, smoke or odour from a neighbouring property",1,R-0011,synthetic-6071,-Dev53yDxXAMuavC
+R-0067,2026-09-22T14:00:00+00:00,abandoned_vehicle,new,medium,8 Cumberland Place,Synthetic example: abandoned vehicle,1,R-0004,synthetic-1017,e9ECucVozHcDwsGy
+R-0068,2026-10-15T02:00:00+00:00,glass_spillage_hazard,new,medium,74 Shirley High Street,Synthetic example: broken glass / spillage / dangerous item on the street,1,R-0006,synthetic-8776,xXRURG_-0WX1xjqq

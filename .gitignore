@@ -1,0 +1,12 @@
+# secrets
+.env
+*.env
+# local database
+*.db
+*.sqlite
+*.sqlite3
+# python
+__pycache__/
+.venv/
+# mac
+.DS_Store

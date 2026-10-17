@@ -1,0 +1,34 @@
+# Project context for Claude (SotonShip 2026, Southampton City track)
+
+## What we are building
+An AI assistant residents message on iMessage (demo runs from one team Mac) to report council issues or ask questions.
+- Info questions: answer only from verified facts in agent/confirmed_with_websites.csv, with source link and date.
+- Council issues: ask follow-up questions (max 5 exchanges), save one structured report, check for duplicates, then send the resident a private link.
+- Not council / outside Southampton / emergency: point to official guidance (999, National Highways, utilities), save nothing.
+Submissions lock Sunday 18 Oct 2026 13:00.
+
+## Files
+- agent/categories.json: rulebook (22 fully confirmed categories, outcomes, follow-up questions, official form links, location rule). Only fully confirmed items are allowed.
+- agent/confirmed_with_websites.csv: fact sheet (53 rows, source URL + date 2026-10-17). category_id may hold several ids separated by ";".
+- agent/loader.py: joins the two on category_id.
+- dashboard/schema.sql + SCHEMA.md: reports table, 11 columns (id, created_at, category_id, status, severity, location, description, has_photo, duplicate_of, reporter_ref, link_token). No coordinates, no channel column.
+- dashboard/fake_reports.*: 68 SYNTHETIC reports. dashboard/prototype/index.html: clickable prototype.
+- reference/: team/judge material. Do NOT load into the agent.
+
+## Decisions
+- Website: one site, two views. /council (staff dashboard, private) and /r/<link_token> (resident sees only their own report). Never put the report id in a public link.
+- Database: SQLite file on the demo Mac. Never commit it (.gitignore).
+- Agent tools planned: find_category_facts, check_duplicate, save_report (returns link_token), get_report_status. Start as plain tool use in the relay script; wrap as an MCP server only if time allows.
+- Duplicate rule: same category, same location text, within 30 days (placeholder).
+- Location: ask where the PROBLEM is. Do not judge the city boundary from postcode prefix alone (council says some SO16/SO18/SO19 addresses are outside the city).
+
+## Rules
+- No real personal data in demos. Use team or synthetic numbers; store only a hashed or fake reporter_ref.
+- Do not scrape individual FixMyStreet reports. mySociety counts dataset (ODC-BY) is allowed with credit; do not rank areas.
+- Never state anything not in confirmed_with_websites.csv. Show date checked.
+- API keys go in .env, never committed.
+
+## Open items
+- Council out-of-hours number appears as both 023 8023 3344 and 023 8083 3344. Check before quoting.
+- A36/A33 National Highways status not confirmed; do not name roads.
+- Most council multi-step forms only read to their first steps.

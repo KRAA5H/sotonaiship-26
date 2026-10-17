@@ -1,0 +1,754 @@
+{
+  "meta": {
+    "name": "Southampton resident report categories",
+    "version": "0.3",
+    "created": "2026-10-17",
+    "notes": [
+      "Team names are OUR labels, not official council team names. team_confirmed is false everywhere until checked with the council.",
+      "example_phrases are written by us (synthetic), not copied from FixMyStreet or any resident.",
+      "fms_categories are the 26 category names shown on the public FixMyStreet Southampton page (fetched 2026-10-17). They are set by the council, so they can change.",
+      "v0.3: only fully confirmed categories kept. Removed (not fully confirmed): road_pavement_defect, manhole_drain, road_signs_markings, street_lighting_traffic_lights, overgrown_vegetation, pests_rats_public, private_rented_disrepair, hmo_concern"
+    ],
+    "duplicate_rule": {
+      "default": {
+        "same_category": true,
+        "radius_metres": 50,
+        "window_days": 30
+      },
+      "address_based_categories": [
+        "missed_bin",
+        "lost_damaged_bin",
+        "council_housing_repair",
+        "private_rented_disrepair",
+        "hmo_concern"
+      ],
+      "note": "Geo radius makes no sense for bins and housing. Match those on address or postcode plus category instead. Window_days is a starting guess, tune it on test data."
+    },
+    "conversation": {
+      "max_exchanges": 5,
+      "on_limit": "force_complete_as_incomplete"
+    },
+    "updated": "2026-10-17"
+  },
+  "outcomes": {
+    "council_report": "Collect required fields, create a report, route to team, give resident a reference number.",
+    "info_only": "Answer from a cited council page (URL + fetch date). No report is created unless the resident asks.",
+    "not_council": "Tell the resident this is not a council responsibility, say who to contact, log it as not_council for evaluation.",
+    "emergency_redirect": "Show official guidance only. Do not write our own safety instructions. Still log a report if the resident wants one."
+  },
+  "guidance_links": {
+    "emergency": {
+      "label": "Emergency services",
+      "contact": "999"
+    },
+    "flood_warnings": {
+      "label": "Environment Agency flood warnings",
+      "url": "https://www.gov.uk/check-flood-risk"
+    },
+    "national_highways": {
+      "label": "National Highways (motorways and trunk roads)",
+      "contact": "0300 123 5000",
+      "source": "https://www.hants.gov.uk/transport/highways/report-a-problem/streetlight"
+    },
+    "find_your_council": {
+      "label": "Find your local council",
+      "url": "https://www.gov.uk/find-local-council"
+    }
+  },
+  "categories": [
+    {
+      "id": "fly_tipping",
+      "label": "Fly-tipping",
+      "group": "street_cleansing",
+      "outcome": "council_report",
+      "team": "Street cleansing",
+      "team_confirmed": false,
+      "fms_categories": [
+        "Flytipping",
+        "Rubbish accumulation on private property"
+      ],
+      "example_phrases": [
+        "someone dumped a sofa by the bins",
+        "bags of rubbish left on the verge",
+        "mattress dumped in the alley"
+      ],
+      "required_fields": [
+        "location",
+        "description",
+        "photo_recommended"
+      ],
+      "follow_up_questions": [
+        "Where exactly is it (street name or nearest house number)?",
+        "What has been dumped, and roughly how much?",
+        "Can you send a photo?",
+        "Is it blocking a path or road?"
+      ],
+      "severity_hints": {
+        "high": [
+          "blocking road or pavement",
+          "hazardous items such as asbestos, needles, chemicals"
+        ],
+        "low": [
+          "a single small bag"
+        ]
+      },
+      "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+      "official_form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-street-cleaning-issue",
+      "form_scope_notes": "Private land: owner/occupier resolves it. Report only if on public land, or witnessed with evidence of who did it."
+    },
+    {
+      "id": "dog_fouling",
+      "label": "Dog fouling",
+      "group": "street_cleansing",
+      "outcome": "council_report",
+      "team": "Street cleansing",
+      "team_confirmed": false,
+      "fms_categories": [
+        "Dog fouling"
+      ],
+      "example_phrases": [
+        "dog mess all along the path",
+        "nobody picks up after their dog on our road"
+      ],
+      "required_fields": [
+        "location",
+        "description"
+      ],
+      "follow_up_questions": [
+        "Which street or park, and which part of it?",
+        "Is it a one-off or a regular problem?"
+      ],
+      "severity_hints": {
+        "high": [
+          "near a school entrance or play area"
+        ],
+        "low": [
+          "one-off"
+        ]
+      },
+      "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    {
+      "id": "dead_animal",
+      "label": "Dead animal",
+      "group": "street_cleansing",
+      "outcome": "council_report",
+      "team": "Street cleansing",
+      "team_confirmed": false,
+      "fms_categories": [
+        "Dead animals"
+      ],
+      "example_phrases": [
+        "dead fox on the road",
+        "dead bird on the pavement"
+      ],
+      "required_fields": [
+        "location",
+        "description"
+      ],
+      "follow_up_questions": [
+        "Where exactly is it?",
+        "What kind of animal is it (roughly)?",
+        "Is it in the road or on the pavement?"
+      ],
+      "severity_hints": {
+        "high": [
+          "in a live road lane"
+        ],
+        "low": []
+      },
+      "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+      "official_form_url": "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/dead-animals/",
+      "form_scope_notes": "Council clears on council-owned/managed land. Private land: owner, contact a vet. Ask if it is a traffic hazard on a busy road (high priority)."
+    },
+    {
+      "id": "litter_street_cleaning",
+      "label": "Litter / street needs cleaning",
+      "group": "street_cleansing",
+      "outcome": "council_report",
+      "team": "Street cleansing",
+      "team_confirmed": false,
+      "fms_categories": [
+        "Litter in the street",
+        "Street cleaning",
+        "Leaves",
+        "Shopping trolleys"
+      ],
+      "example_phrases": [
+        "litter everywhere outside the shops",
+        "street never gets swept",
+        "abandoned shopping trolley"
+      ],
+      "required_fields": [
+        "location",
+        "description"
+      ],
+      "follow_up_questions": [
+        "Which street and which stretch?",
+        "Is it litter, leaves, or something else?"
+      ],
+      "severity_hints": {
+        "high": [],
+        "low": [
+          "general litter"
+        ]
+      },
+      "source_url": "https://www.southampton.gov.uk/environment/street-cleaning",
+      "official_form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-street-cleaning-issue",
+      "form_scope_notes": "Shopping trolleys: tell resident to contact the retailer first. Leaves: only serious hazard or flood risk."
+    },
+    {
+      "id": "graffiti_flyposting",
+      "label": "Graffiti / fly-posting",
+      "group": "street_cleansing",
+      "outcome": "council_report",
+      "team": "Street cleansing",
+      "team_confirmed": false,
+      "fms_categories": [
+        "Graffiti",
+        "Flyposting",
+        "To let signs"
+      ],
+      "example_phrases": [
+        "graffiti on the wall by the bus stop",
+        "posters stuck on every lamp post"
+      ],
+      "required_fields": [
+        "location",
+        "description",
+        "photo_recommended"
+      ],
+      "follow_up_questions": [
+        "Where is it, and is it on a council building or private property?",
+        "Is it offensive or threatening in content?"
+      ],
+      "severity_hints": {
+        "high": [
+          "offensive or hateful content"
+        ],
+        "low": []
+      },
+      "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+      "official_form_url": "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/graffiti/",
+      "form_scope_notes": "Private/commercial property not in core service; advise police report (criminal damage). Hate/obscene graffiti is aimed within 1 working day."
+    },
+    {
+      "id": "glass_spillage_hazard",
+      "label": "Broken glass / spillage / dangerous item on the street",
+      "group": "street_cleansing",
+      "outcome": "council_report",
+      "team": "Street cleansing",
+      "team_confirmed": false,
+      "fms_categories": [
+        "Other"
+      ],
+      "example_phrases": [
+        "broken glass all over the cycle path",
+        "oil spill on the road"
+      ],
+      "required_fields": [
+        "location",
+        "description"
+      ],
+      "follow_up_questions": [
+        "Where exactly is it?",
+        "What is it (glass, oil, something else)?",
+        "Is it on the road, pavement or cycle path?"
+      ],
+      "severity_hints": {
+        "high": [
+          "live road lane",
+          "cycle path",
+          "fuel or chemical spill"
+        ],
+        "low": []
+      },
+      "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    {
+      "id": "pothole",
+      "label": "Pothole",
+      "group": "roads_and_parking",
+      "outcome": "council_report",
+      "team": "Highways",
+      "team_confirmed": false,
+      "fms_categories": [
+        "Potholes"
+      ],
+      "example_phrases": [
+        "massive crater nearly burst my tyre",
+        "hole in the road by the crossing",
+        "road surface is breaking up"
+      ],
+      "required_fields": [
+        "location",
+        "description",
+        "road_name",
+        "photo_recommended"
+      ],
+      "follow_up_questions": [
+        "Which road, and nearest house number or junction?",
+        "Roughly how big and how deep?",
+        "Is it in the road, on a cycle lane, or on the pavement?",
+        "Is it a main road or a motorway/trunk road?"
+      ],
+      "severity_hints": {
+        "high": [
+          "deep or wide",
+          "in a live lane",
+          "on a cycle lane",
+          "has caused damage or injury"
+        ],
+        "low": [
+          "hairline crack",
+          "shallow"
+        ]
+      },
+      "check_ownership": "If the road is a motorway or trunk road, switch to not_council_trunk_road.",
+      "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+      "official_form_url": "https://www.southampton.gov.uk/travel-transport/report-issue/potholes/",
+      "form_scope_notes": "One report per pothole. Needs location, depth, photo if possible. Depth bands: road <4cm monitor, 4-7.5cm 6 months, >7.5cm 24h; pavement <2/2-4/>4cm."
+    },
+    {
+      "id": "abandoned_vehicle",
+      "label": "Abandoned vehicle",
+      "group": "roads_and_parking",
+      "outcome": "council_report",
+      "team": "Highways / parking enforcement",
+      "team_confirmed": false,
+      "fms_categories": [
+        "Other"
+      ],
+      "example_phrases": [
+        "car has not moved for months and has flat tyres",
+        "burnt out car left on the street"
+      ],
+      "required_fields": [
+        "location",
+        "description",
+        "vehicle_registration_if_visible"
+      ],
+      "follow_up_questions": [
+        "Where is it?",
+        "How long has it been there?",
+        "Can you see a registration plate, and is it burnt out or damaged?"
+      ],
+      "severity_hints": {
+        "high": [
+          "burnt out",
+          "blocking access"
+        ],
+        "low": []
+      },
+      "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+      "official_form_url": "https://www.southampton.gov.uk/travel-transport/report-issue/parking-offence/abandoned-vehicles/",
+      "form_scope_notes": "Must not be in use. Reporter needs contact details (DVLA condition), registration, photos. Private land needs signed landowner declaration."
+    },
+    {
+      "id": "illegal_parking",
+      "label": "Illegal or obstructive parking",
+      "group": "roads_and_parking",
+      "outcome": "council_report",
+      "team": "Parking enforcement",
+      "team_confirmed": false,
+      "fms_categories": [
+        "Illegal parking"
+      ],
+      "example_phrases": [
+        "car blocking my driveway",
+        "cars parked on the pavement",
+        "parked on double yellows by the school"
+      ],
+      "required_fields": [
+        "location",
+        "description",
+        "time_observed"
+      ],
+      "follow_up_questions": [
+        "Where exactly, and what is being blocked (driveway, pavement, junction, crossing)?",
+        "What time was it, and does it happen regularly?"
+      ],
+      "severity_hints": {
+        "high": [
+          "blocking an emergency route or dropped kerb used by a wheelchair user"
+        ],
+        "low": []
+      },
+      "source_url": "https://www.fixmystreet.com/reports/Southampton",
+      "official_form_url": "https://www.southampton.gov.uk/travel-transport/report-issue/parking-offence/",
+      "form_scope_notes": "Dangerous parking with no restriction: police 101. Blocked driveway needs name, address, phone."
+    },
+    {
+      "id": "noise_nuisance",
+      "label": "Noise from a neighbouring property",
+      "group": "neighbourhood_nuisance",
+      "outcome": "council_report",
+      "team": "Environmental health",
+      "team_confirmed": false,
+      "fms_categories": [
+        "Noise nuisance"
+      ],
+      "example_phrases": [
+        "loud music every night from next door",
+        "neighbours shouting late",
+        "dog barking all day"
+      ],
+      "required_fields": [
+        "address_of_noise_source_or_nearest",
+        "description",
+        "times_and_frequency"
+      ],
+      "follow_up_questions": [
+        "What kind of noise is it?",
+        "What times does it happen, and how often?",
+        "How long has it been going on?",
+        "Is it a house, flat or HMO?"
+      ],
+      "severity_hints": {
+        "high": [
+          "late night and regular",
+          "threats or violence involved (use emergency_redirect)"
+        ],
+        "low": [
+          "one-off"
+        ]
+      },
+      "note": "If there are threats or violence, show 999 guidance. Do not handle it as a normal noise report.",
+      "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+      "official_form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/environmental-health-report-local-nuisance-or-concern",
+      "form_scope_notes": "Check the council's excluded noise list before taking a report; car/motorcycle noise: police first; council needs contact details."
+    },
+    {
+      "id": "other_nuisance",
+      "label": "Light, dust, smoke or odour from a neighbouring property",
+      "group": "neighbourhood_nuisance",
+      "outcome": "council_report",
+      "team": "Environmental health",
+      "team_confirmed": false,
+      "fms_categories": [
+        "Other"
+      ],
+      "example_phrases": [
+        "neighbour burns rubbish every weekend",
+        "floodlight shines into our bedroom",
+        "smell from next door"
+      ],
+      "required_fields": [
+        "address_of_source_or_nearest",
+        "description",
+        "times_and_frequency"
+      ],
+      "follow_up_questions": [
+        "What is the problem (light, dust, smoke, smell)?",
+        "When does it happen and how often?"
+      ],
+      "severity_hints": {
+        "high": [
+          "health impact described",
+          "regular and ongoing"
+        ],
+        "low": [
+          "one-off"
+        ]
+      },
+      "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+      "official_form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/environmental-health-report-local-nuisance-or-concern",
+      "form_scope_notes": "Council form types include dust, bonfire smoke, smells, security light nuisance, birds."
+    },
+    {
+      "id": "property_concern",
+      "label": "Concern about a property (very dirty, hoarding, possible rodents)",
+      "group": "neighbourhood_nuisance",
+      "outcome": "council_report",
+      "team": "Environmental health",
+      "team_confirmed": false,
+      "fms_categories": [
+        "Rubbish accumulation on private property",
+        "Rats"
+      ],
+      "example_phrases": [
+        "house full of rubbish and rats seen going in",
+        "neighbour's garden is piled with junk and smells"
+      ],
+      "required_fields": [
+        "address",
+        "description"
+      ],
+      "follow_up_questions": [
+        "What is the address or nearest address?",
+        "What can you see or smell from outside?",
+        "Have you seen rats or other pests?"
+      ],
+      "severity_hints": {
+        "high": [
+          "rodent infestation",
+          "health hazard described"
+        ],
+        "low": []
+      },
+      "note": "Do not ask for or store the name of the person living there.",
+      "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+      "official_form_url": "https://www.southampton.gov.uk/environment/neighbourhood-nuisances-and-property-concerns/concern-about-property/",
+      "form_scope_notes": "Types: blocked drains, empty/derelict, filthy, overcrowded, overgrown garden. Speak to owner first."
+    },
+    {
+      "id": "missed_bin",
+      "label": "Missed bin collection",
+      "group": "bins",
+      "outcome": "council_report",
+      "team": "Waste collection",
+      "team_confirmed": false,
+      "fms_categories": [],
+      "example_phrases": [
+        "bins weren't collected today",
+        "they skipped our street again"
+      ],
+      "required_fields": [
+        "address",
+        "which_bin",
+        "scheduled_collection_day"
+      ],
+      "follow_up_questions": [
+        "What is your address or postcode?",
+        "Which bin was missed (general waste, recycling, glass)?",
+        "What was the scheduled collection day?",
+        "Was the bin out the right day and clearly visible?"
+      ],
+      "rules_from_council_page": [
+        "Check the bin was out on the correct day and clearly visible.",
+        "Report within two working days of the original collection day.",
+        "The council aims to return within two to five working days."
+      ],
+      "info_first": true,
+      "info_first_note": "Check the council's conditions before creating a report. If the resident is past the reporting window, explain and point to the page.",
+      "severity_hints": {
+        "high": [],
+        "low": []
+      },
+      "source_url": "https://southampton.gov.uk/bins-recycling/bins/missed-collections",
+      "official_form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-missed-bin-collection",
+      "form_scope_notes": "Council checklist: out on correct day, visible, out by 6:30am, within 2 working days; if due today only after 4pm."
+    },
+    {
+      "id": "lost_damaged_bin",
+      "label": "Lost, damaged or stray bin",
+      "group": "bins",
+      "outcome": "council_report",
+      "team": "Waste collection",
+      "team_confirmed": false,
+      "fms_categories": [],
+      "example_phrases": [
+        "my recycling bin has gone missing",
+        "bin lid is broken"
+      ],
+      "required_fields": [
+        "address",
+        "which_bin",
+        "problem"
+      ],
+      "follow_up_questions": [
+        "What is your address?",
+        "Which bin is it?",
+        "Is it missing or damaged?",
+        "Have you checked neighbours and nearby streets?"
+      ],
+      "info_first": true,
+      "info_first_note": "The council page asks residents to check whether the bin was moved, claimed by a neighbour or returned to the wrong house before reporting.",
+      "severity_hints": {
+        "high": [],
+        "low": []
+      },
+      "source_url": "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/"
+    },
+    {
+      "id": "council_housing_repair",
+      "label": "Repair for a council tenant or leaseholder",
+      "group": "housing",
+      "outcome": "council_report",
+      "team": "Housing repairs",
+      "team_confirmed": false,
+      "fms_categories": [],
+      "example_phrases": [
+        "my council flat has a broken boiler",
+        "leak in the ceiling of my council house"
+      ],
+      "required_fields": [
+        "address",
+        "description"
+      ],
+      "follow_up_questions": [
+        "Is your landlord Southampton City Council?",
+        "What is broken and where in the home?",
+        "Is it urgent (no heating, water leak, safety)?"
+      ],
+      "severity_hints": {
+        "high": [
+          "no heating or water",
+          "active leak",
+          "safety issue"
+        ],
+        "low": []
+      },
+      "note": "The council has a separate online form for council tenants and leaseholders, so this must not be mixed up with private rented disrepair.",
+      "source_url": "https://southampton.gov.uk/contact-us/online-forms",
+      "official_form_url": "https://www.southampton.gov.uk/housing/council-housing-tenants-and-leaseholders/repairs-maintenance-and-improvements/report-a-repair/"
+    },
+    {
+      "id": "info_student_waste_rules",
+      "label": "Student question: who deals with bins and rubbish at my house",
+      "group": "info",
+      "outcome": "info_only",
+      "team": null,
+      "team_confirmed": false,
+      "fms_categories": [],
+      "example_phrases": [
+        "who is responsible for the bins in my student house",
+        "will I get fined if bins stay out",
+        "what do I do with my old furniture when I move out"
+      ],
+      "answer_source": "https://southampton.gov.uk/bins-recycling/bins/information-for-students",
+      "answer_facts_to_cite": [
+        "Tenants (not landlords) are responsible for making sure household waste is disposed of properly.",
+        "Repeatedly leaving bins on the street can lead to a \u00a360 fine.",
+        "Everyone in the house shares responsibility for putting the right waste in bins, putting them out, and bringing them back in."
+      ],
+      "must_cite": [
+        "source_url",
+        "fetched_date"
+      ],
+      "note": "Re-fetch the page and confirm the facts and fine amount before the demo. Facts here were read on 2026-10-17."
+    },
+    {
+      "id": "flooding_severe_weather",
+      "label": "Flooding or severe weather",
+      "group": "emergency",
+      "outcome": "info_only",
+      "team": "Emergency planning / highways (our label)",
+      "team_confirmed": false,
+      "fms_categories": [
+        "Other"
+      ],
+      "example_phrases": [
+        "road is flooded",
+        "river is coming up to the houses",
+        "storm brought down a tree on the road"
+      ],
+      "required_fields": [
+        "location",
+        "description"
+      ],
+      "follow_up_questions": [
+        "Where is it?",
+        "Is anyone in danger right now?"
+      ],
+      "show_guidance": [
+        "emergency",
+        "flood_warnings"
+      ],
+      "note": "Do not write our own safety instructions. Show the official links first, then offer to log a report.",
+      "severity_hints": {
+        "high": [
+          "anyone in danger",
+          "water entering homes"
+        ],
+        "low": []
+      },
+      "source_url": "https://www.southampton.gov.uk/environment",
+      "notes": "Not taken as a report. Show official guidance only (999 for danger, Environment Agency flood warnings, council report-a-flood page)."
+    },
+    {
+      "id": "not_council_trunk_road",
+      "label": "Motorway or trunk road problem",
+      "group": "not_council",
+      "outcome": "not_council",
+      "team": null,
+      "team_confirmed": false,
+      "fms_categories": [],
+      "example_phrases": [
+        "pothole on the motorway slip road",
+        "streetlight out on the M27"
+      ],
+      "redirect_to": "national_highways",
+      "note": "Roads in Southampton are the city council's responsibility except motorways and trunk roads, which belong to National Highways. Ask for the road name or number so we can tell. If unsure, log with low confidence for manual review.",
+      "source_url": "https://newweb.fareham.gov.uk/parking_and_traffic/traffic_management/reportaproblem.aspx",
+      "notes": "A36/A33 status not verified: do not name specific roads. Say motorways and trunk roads are National Highways and point to its contact."
+    },
+    {
+      "id": "not_council_utility",
+      "label": "Utility problem (water, gas, electricity, telecoms)",
+      "group": "not_council",
+      "outcome": "not_council",
+      "team": null,
+      "team_confirmed": false,
+      "fms_categories": [],
+      "example_phrases": [
+        "water leak running down the road for weeks",
+        "BT cable box open on the pavement"
+      ],
+      "redirect_to": "find_your_council",
+      "note": "We do not yet have verified contact details for each utility. Add them after checking. Until then, tell the resident it is probably the utility company's job and log it as low confidence for officer review.",
+      "source_url": "https://www.fixmystreet.com/reports/Southampton"
+    },
+    {
+      "id": "outside_southampton",
+      "label": "Location is outside Southampton",
+      "group": "not_council",
+      "outcome": "not_council",
+      "team": null,
+      "team_confirmed": false,
+      "fms_categories": [],
+      "example_phrases": [
+        "pothole in Eastleigh",
+        "fly-tipping near Totton"
+      ],
+      "redirect_to": "find_your_council",
+      "note": "Demo failure case: location check fails, resident is told it is outside coverage and pointed to the right council."
+    },
+    {
+      "id": "unclear_other",
+      "label": "Unclear or other",
+      "group": "fallback",
+      "outcome": "council_report",
+      "team": "Manual review",
+      "team_confirmed": false,
+      "fms_categories": [
+        "Other"
+      ],
+      "example_phrases": [],
+      "required_fields": [
+        "description"
+      ],
+      "follow_up_questions": [
+        "Can you tell me a bit more about what is happening and where?"
+      ],
+      "note": "Use when confidence is low or after the conversation limit. Never guess a category. Flag for officer review."
+    },
+    {
+      "id": "council_service_other",
+      "label": "A council service the agent does not handle",
+      "group": "routing",
+      "outcome": "info_only",
+      "team": "Southampton City Council",
+      "team_confirmed": false,
+      "fms_categories": [],
+      "example_phrases": [
+        "how do I pay my council tax",
+        "I need a blue badge",
+        "my taxi complaint"
+      ],
+      "required_fields": [
+        "topic"
+      ],
+      "follow_up_questions": [],
+      "severity_hints": {},
+      "source_url": "https://www.southampton.gov.uk/contact-us/online-forms",
+      "notes": "Council runs ~700 services. Give the official online forms page, do not guess. Never create a report."
+    }
+  ],
+  "location_check": {
+    "rule": "Ask where the PROBLEM is, not where the resident lives. Do not decide city boundary from postcode prefix alone.",
+    "evidence": "Council address search covers SO14-SO19 only, and some SO16, SO18 and SO19 properties are outside the city boundary.",
+    "source_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-missed-bin-collection",
+    "if_outside_or_unsure": "outside_southampton"
+  }
+}
