@@ -50,12 +50,26 @@ class FakeWeb:
         self.lookup = {"SO14 7BQ": ("Southampton", 50.9069, -1.4058),
                        "SO50 9YN": ("Eastleigh", 50.9690, -1.3510),
                        "SW1A 1AA": ("Westminster", 51.5010, -0.1416)}
+        self.search_results = {
+            "lawn road": [
+                {"name": "Lawn Road", "lat": "50.9262", "lon": "-1.3935", "address": {"road": "Lawn Road", "suburb": "Portswood"}},
+                {"name": "Lawn Road", "lat": "51.5500", "lon": "-0.1600", "address": {"road": "Lawn Road", "suburb": "Belsize Park"}},
+            ],
+            "evil": [
+                {"name": "<img src=x onerror=alert(1)>Evil\x07 Place" + "y" * 300, "lat": "50.91", "lon": "-1.40", "address": {}},
+                {"name": "Broken", "lat": "not-a-number", "lon": "-1.40"},
+                {"name": "Nan", "lat": "NaN", "lon": "-1.40"},
+            ],
+        }
 
     def __call__(self, url, params=None, headers=None, timeout=5):
         self.calls.append(url)
+        self.last_params = params
         assert headers and headers.get("User-Agent"), "third parties must get a real User-Agent"
         if self.down:
             raise OSError("network down")
+        if url == pin_service.NOMINATIM_SEARCH:
+            return 200, self.search_results.get(params["q"].lower(), [])
         if url.startswith(pin_service.NOMINATIM_REVERSE):
             return 200, {"name": self.name, "address": {
                 "road": self.road, "quarter": self.area, "postcode": self.postcode}}
@@ -85,6 +99,7 @@ class PinCase(unittest.TestCase):
         self.http.start()
         pin_service.geocoder = pin_service.ReverseGeocoder()
         pin_service.geocoder.lock = FreeLock()
+        pin_service.place_search = pin_service.PlaceSearch()
         self.app = pin_service.create_app()
         self.client = self.app.test_client()
 
@@ -302,6 +317,68 @@ class Postcode(PinCase):
         self.assertEqual(self.post("/api/postcode", token="bad-token-x", postcode="SO14 7BQ").status_code, 404)
 
 
+class Search(PinCase):
+    def search(self, query, token=None):
+        return self.post("/api/search", token=token or self.token, query=query)
+
+    def setUp(self):
+        super().setUp()
+        self.token = self.link()
+
+    def test_street_search_is_bounded_and_cleaned(self):
+        r = self.search("Lawn Road")
+        self.assertEqual(r.status_code, 200)
+        results = r.get_json()["results"]
+        self.assertEqual(results, [{"label": "Lawn Road, Portswood", "lat": 50.9262, "lng": -1.3935}],
+                         "the London Lawn Road is dropped by the city box")
+        p = self.web.last_params
+        self.assertEqual((p["bounded"], p["countrycodes"], p["viewbox"]), (1, "gb", "-1.56,50.99,-1.28,50.84"))
+
+    def test_hostile_and_broken_results(self):
+        results = self.search("evil").get_json()["results"]
+        self.assertEqual(len(results), 1, "non-numeric and NaN coordinates dropped")
+        label = results[0]["label"]
+        self.assertNotIn("<", label)
+        self.assertNotIn("\x07", label)
+        self.assertLessEqual(len(label), 120)
+
+    def test_bad_queries(self):
+        for bad in ("", " ", "a", "x" * 81, 42, None, ["Lawn Road"]):
+            self.assertEqual(self.search(bad).status_code, 400, repr(bad))
+        self.assertEqual(self.web.calls, [], "bad queries never leave the server")
+
+    def test_links_and_no_results(self):
+        self.assertEqual(self.search("Lawn Road", token="not-a-real-token").status_code, 404)
+        self.expire(self.token, -timedelta(seconds=1))
+        self.assertEqual(self.search("Lawn Road").status_code, 410)
+        r = self.search("Nowhere Street", token=self.link("R-2"))
+        self.assertEqual(r.status_code, 422)
+        self.assertIn("could not find", r.get_json()["error"])
+
+    def test_busy_lock_and_failure(self):
+        class BusyLock:
+            def acquire(self, timeout):
+                return False
+
+            def release(self):
+                raise AssertionError("never acquired")
+
+        pin_service.geocoder.lock = BusyLock()
+        r = self.search("Lawn Road")
+        self.assertEqual(r.status_code, 503)
+        self.assertEqual(self.web.calls, [])
+        pin_service.geocoder.lock = FreeLock()
+        self.web.down = True
+        self.assertEqual(self.search("Lawn Road").status_code, 503)
+
+    def test_cache_and_rate_limit(self):
+        self.search("Lawn Road")
+        self.search("lawn road")
+        self.assertEqual(self.web.calls.count(pin_service.NOMINATIM_SEARCH), 1, "second search served from cache")
+        codes = [self.search("Lawn Road").status_code for _ in range(19)]
+        self.assertEqual(codes, [200] * 18 + [429])
+
+
 class Security(PinCase):
     def test_rate_limit(self):
         token = self.link()
@@ -393,6 +470,21 @@ class StaticFiles(unittest.TestCase):
         use = self.js.index("getCurrentPosition")
         end = self.js.index("});", handler)
         self.assertTrue(handler < use < end, "geolocation must only be requested in the click handler")
+
+    def test_centre_pin_and_keyboard(self):
+        self.assertRegex(self.html, r'class="centre-pin" aria-hidden="true"><img src="/static/vendor/leaflet/images/marker-icon-2x.png" alt=""')
+        self.assertIn("pointer-events: none", self.css)
+        self.assertIn("keyboard: true", self.js)
+        self.assertIn(".map:focus-visible", self.css)
+        self.assertIn("arrow keys", self.html)
+        self.assertIn("map.getCenter()", self.js)
+        self.assertNotIn("L.marker(", self.js, "no draggable marker: the pin is fixed in the middle")
+        self.assertIn("vendor/leaflet/images/marker-icon-2x.png", pin_service.ALLOWED_STATIC)
+
+    def test_search_box(self):
+        self.assertIn("Postcode, street or place", self.html)
+        self.assertIn('"/api/search"', self.js)
+        self.assertIn('id="results"', self.html)
 
     def test_page_copy(self):
         for text in ("Where is the problem?", "Use my phone's location (optional)", "Confirm location",
