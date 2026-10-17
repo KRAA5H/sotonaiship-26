@@ -31,7 +31,7 @@ One-shot build. No database, no session, no classification.
 - [x] `echo_ai.py "there is a pothole on Weston Lane"`, prints reply, latency, mode
 - [x] `MODE=echo` in the webhook: ignore `isFromMe`, one call, one reply, return 200
 - [x] Point BlueBubbles webhook at `http://192.168.0.202:5005/webhook`
-- [ ] Inbound test from a **different** account, because a message from the Mac's own address arrives as `isFromMe` and is correctly ignored
+- [x] Inbound test from a **different** account (51 real webhook deliveries by 17:35, see `WORKLOG.md`)
 
 ## Verify
 
@@ -41,7 +41,7 @@ One-shot build. No database, no session, no classification.
 | `python code/send_test.py --chats` | Two GUIDs |
 | `python code/send_test.py --to "anirudh.udupi@gmail.com" --text "test"` | 200 and the message arrives |
 | `python code/echo_ai.py "pothole on Weston Lane"` | Model reply, latency, `mode=model` |
-| Text the number from another phone | Webhook logs it, reply arrives. **Not yet done: needs a second phone or account** |
+| Text the number from another phone | Webhook logs it, reply arrives. Done, see `WORKLOG.md` 17:35 |
 
 Stage 1 is done when a phone buzzes. Nothing else counts.
 

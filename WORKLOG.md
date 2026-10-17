@@ -14,7 +14,7 @@ Three places, no more:
 | | |
 |---|---|
 | Docs | Final. `PLAN.md` v2, `DECISIONS.md`, `VIDEO.md`, `CRITIQUE-vs-GOMER.md` |
-| Product code | **I have not changed a line.** The three modules in `code/` are yours and are untouched |
+| Product code | Superseded: see `PLAN.md` section 0 for current status |
 | Can it run? | Not yet. Flask, requests, python-dotenv and anthropic were missing on this machine and are now installed. No `.env`, no API key |
 | Duplicates | `blue_bubbles.py`, `conversational_ai.py`, `database.py` exist at the repo root and in `code/`. Frozen at the root, `code/` is the home (D17) |
 | Next gate | **G1, 18:00: one message becomes a row in the database and a card on screen** |
@@ -23,6 +23,16 @@ Three places, no more:
 ---
 
 ## Log
+
+### after 17:55, code and docs, reports database and agent tools
+- New `code/reports_db.py`: builds `code/kerbside.db` from `dashboard/schema.sql` and loads the 68 synthetic reports. The `.db` file is gitignored.
+- New `code/tools.py`: `find_category_facts`, `check_duplicate`, `save_report`, `get_report_status`, tool schemas and `call_tool()`. New `code/test_tools.py`: 34 tests, standard library only, all passing.
+- Duplicate rule is now open report (new or in_review), same category, same location text, 30 days. `agent/categories.json` updated, the 50 m radius removed.
+- `dashboard/make_fake_reports.py`: no report dated after the newest original, repeats only link to open reports, and it refreshes the copy embedded in the prototype. Data regenerated.
+- `agent/loader.py` reads files as UTF-8 (a pound sign was breaking on Windows).
+- `DECISIONS.md` D26: `CLAUDE.md` and `schema.sql` reports replace `PLAN.md` section 4.
+- `PLAN.md`: new section 0 with status, open questions and the next backend tasks.
+- On branch `aadil/agent-tools` (pushed), not merged into `main`. The tools are not wired into `blue_bubbles.py` yet. `database.py` untouched on request.
 
 ### 17:55, code, photos work
 - `bb.download_attachment`: `GET /api/v1/attachment/<guid>/download`. Omit `original` and the server converts HEIC to JPEG; `width=1024` returns PNG. No Private API needed. Confirmed from the server source by the research agent.
