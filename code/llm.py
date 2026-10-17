@@ -61,9 +61,9 @@ def _candidates(image):
         # DeepSeek defaults to high effort and can spend the whole output budget
         # thinking, returning empty content. Low effort keeps it short and cheap.
         out.append({"base": DS_BASE, "model": DS_MODEL, "key": ds_key,
-                    "image": False, "reasoning": True})
+                    "image": False, "reasoning": False})
         out.append({"base": DS_BASE, "model": "deepseek-v4-pro", "key": ds_key,
-                    "image": False, "reasoning": True})
+                    "image": False, "reasoning": False})
 
     if not image and or_key:
         out.append({"base": BASE_URL, "model": MODEL, "key": or_key,
@@ -92,11 +92,14 @@ def _payload(system, user, image, candidate, max_tokens=None, temperature=None):
         "temperature": 0.7 if temperature is None else temperature,
     }
     if candidate["reasoning"]:
-        # Reasoning models think before they answer, and the thinking counts
-        # against the budget. Never let a short caller ask for so little that
-        # the reply comes back empty.
+        # Images need the reasoning object, or DeepSeek returns empty content.
+        # Thinking also counts against the budget, so keep a floor.
         payload["max_tokens"] = max(payload["max_tokens"], 400)
         payload["reasoning"] = {"effort": "low"}
+    else:
+        # Text does not need thinking. DeepSeek still thinks by default, so the
+        # switch has to be explicit; effort "none" and enabled:false are ignored.
+        payload["thinking"] = {"type": "disabled"}
     return payload
 
 

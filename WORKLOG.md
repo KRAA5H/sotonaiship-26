@@ -9,6 +9,14 @@ Three places, no more:
 
 ---
 
+## 23:05, Saturday: text stops thinking
+
+- DeepSeek ignores `reasoning: {effort: none}`, `enabled: false` and `reasoning_effort: none`, but `thinking: {"type": "disabled"}` really works: output dropped from 64 to 170 tokens to 3 to 4, with no reasoning content.
+- `llm.py`: text candidates no longer request reasoning and send `thinking: disabled`; image candidates keep `reasoning: low` because without it DeepSeek returns empty content.
+- Tests: 294 pass (new `test_llm.py`, 5 payload cases), 31 evaluation cases.
+- Live: a glass report on Alma Road answered normally; a photo was still described correctly ("packet of biscuits on a desk").
+- Honest note: the model call is still about 1.2 to 1.7 seconds, so the gain is cost and less thinking, not much wall clock.
+
 ## 22:50, Saturday: links as their own text, and pins wired
 
 - **Links are a second message.** `deliver()` splits the words from the link and sends the link on its own after `LINK_DELAY` (0.8s). A follow-it line, a council page, a finder link: all arrive as a normal human follow-up. Live proof: "got it, pothole logged on Alma Road..." then the report link as a separate send.
