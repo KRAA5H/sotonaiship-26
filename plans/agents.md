@@ -1,8 +1,8 @@
 # Kerbside agents
 
-## Orchestrator (plain code, not an LLM)
+## Orchestrator: the triage agent
 
-Receives every inbound message, keeps the conversation state (pending report, what is missing), calls the agents below in order, and is the only thing that sends texts to the resident.
+The triage agent is the orchestrator (decided 17 Oct, DECISIONS.md D45). It receives every inbound message, keeps the conversation state (pending report, a shared pin, who to reply to), calls the agents below in order, and hands back the one text the resident gets. Its own job, classifying the message, is the only model call on the happy path. Code: `code/agents/triage_agent.py`; the channel (`code/blue_bubbles.py`, `code/simulator.py`) only delivers what it returns.
 
 ## Core agents, in the order they run
 
@@ -50,6 +50,28 @@ Missing fields, the follow-up question to ask, severity, owning team, form link,
 Message in, Orchestrator, Safety check, then Triage and Photo in parallel. Triage picks the category and the matching Category agent takes over. If it is "not ours" or unclear, the form link goes out and the flow ends. If there is no location, the Location agent asks and the flow waits for the answer. Then the Duplicate agent, the Records agent, and finally the Reply agent texts the resident.
 
 Separate path: council marks a report fixed, the Status agent triggers the Reply agent, resident is texted.
+
+## Built (branch `aadil/agents`)
+
+| # | Agent | File | Notes |
+|---|---|---|---|
+| | Orchestrator = triage agent | `code/agents/triage_agent.py` | `handle(turn)` returns the reply plus a trace of every agent and its milliseconds |
+| 1 | Safety | `code/agents/safety.py` | 999, threats and spam by rules, then a second net after triage. Fixed words, never the model |
+| 2 | Triage | `code/triage.py` (the model call) | DeepSeek, thinking off, temperature 0.1, 10 s timeout |
+| 3 | Photo | `code/agents/photo.py` | Starts in parallel with triage; features stored when ready, never waited for |
+| 4 | Category | `code/agents/categories.py` | One base class plus fly-tipping, pothole and graffiti specialists, all driven by the `agent` block in `categories.json` |
+| 5 | Location | `code/agents/location_agent.py`, `code/geo/`, `code/pin_service.py`, `code/pin/static/` | Map link, typed street (offline, no model), shared pin or iMessage location card. Southampton's real boundary, never a postcode prefix |
+| 6 | Duplicate | `code/agents/duplicate.py` | Same person: nothing new. Someone else: linked. Per-category window, never on a missing location |
+| 7 | Records | `code/agents/records.py` | The only writer |
+| 8 | Reply | `code/agents/reply.py` (uses `code/voice.py`) | Model words checked by the style lint, template on doubt or delay (6 s) |
+| 9 | Status | `code/agents/status.py` | Council changes a status on the dashboard, the resident is texted |
+
+Where this differs from the table above, deliberately:
+- Streetlight and trees have no category agent: neither is a confirmed category in `categories.json`, so triage sends them to `council_service_other`.
+- Missed bins use a 7 day window (one collection cycle), not "same day": a bin still not emptied two days later is the same missed collection.
+- Owners stay dashboard-only. `team_confirmed` is false everywhere, so no team is ever named to a resident.
+
+Live check with the real model: `python code/agents/smoke.py` (needs `DEEPSEEK_API_KEY`).
 
 ## Rules to keep it fast and trustworthy
 

@@ -155,18 +155,33 @@ def find_category_facts(category_id):
 # ---------------------------------------------------------------------------
 # check_duplicate
 # ---------------------------------------------------------------------------
+# Placeholders saved while we wait for a street. Two of them are never the same place.
+MISSING_LOCATIONS = ("", "not given")
+
+
 def duplicate_rule():
     """The rule in categories.json: same category, same location text, open, within N days."""
     return _rulebook()[2]["meta"]["duplicate_rule"]["default"]
+
+
+def duplicate_window_days(category_id):
+    """The category agent's own window (fly-tipping 7 days, pothole 30...), else the default."""
+    agent = (_rulebook()[0].get(category_id) or {}).get("agent") or {}
+    days = agent.get("dup_window_days")
+    return days if isinstance(days, (int, float)) and days > 0 else duplicate_rule()["window_days"]
 
 
 def check_duplicate(category_id, location, conn=None, now=None):
     if not location or not location.strip():
         return {"ok": False, "error": "location is required"}
     rule = duplicate_rule()
-    since = (now or _now()) - timedelta(days=rule["window_days"])
+    since = (now or _now()) - timedelta(days=duplicate_window_days(category_id))
     wanted = _normalise_location(location)
     statuses = rule["open_statuses_only"]
+    if wanted in MISSING_LOCATIONS:
+        # Never match on a missing street: two reports waiting for a location are
+        # not the same problem just because neither has one yet.
+        return {"ok": True, "is_duplicate": False, "duplicate_of": None, "matching_reports": 0}
 
     def work(c):
         # Resolved reports never count: a problem back after a repair is a new report.
@@ -178,7 +193,8 @@ def check_duplicate(category_id, location, conn=None, now=None):
         ).fetchall()
         matches = [
             r for r in rows
-            if _same_place(_normalise_location(r["location"]), wanted)
+            if _normalise_location(r["location"]) not in MISSING_LOCATIONS
+            and _same_place(_normalise_location(r["location"]), wanted)
             and datetime.fromisoformat(r["created_at"]) >= since
         ]
         if not matches:
@@ -198,8 +214,23 @@ def check_duplicate(category_id, location, conn=None, now=None):
 # ---------------------------------------------------------------------------
 # save_report
 # ---------------------------------------------------------------------------
+def local_area(location):
+    """The area a Southampton street is in, from the offline street list, or None."""
+    try:
+        from geo import southampton as city  # noqa: PLC0415
+    except ImportError:
+        return None
+    rows = city.street_in_text(location or "")
+    if not rows:
+        return None
+    if len(rows) == 1:
+        return rows[0]["area"] or None
+    named = city.area_in_text(rows, location)
+    return named["area"] if named else None
+
+
 def save_report(category_id, location, description, severity=None, has_photo=False,
-                reporter=None, conn=None):
+                reporter=None, conn=None, area=None):
     categories = _rulebook()[0]
     if category_id not in categories:
         return {"ok": False, "error": f"unknown category_id: {category_id}"}
@@ -226,13 +257,20 @@ def save_report(category_id, location, description, severity=None, has_photo=Fal
     # return_value=None)` to its setUp (see the updated test_website.py)
     # so the test suite stays network-free, matching every other test file
     # in this repo.
-    area = None
-    try:
-        geocoded = _location_service.forward_geocode(location)
-        if geocoded:
-            area = geocoded.get("area")
-    except Exception as error:  # noqa: BLE001 - geocoding must never block a save
-        print(f"[geocode] forward_geocode failed for {location!r}: {error}")
+    #
+    # Speed: the location agent usually knows the area already (it is passed
+    # in), and the offline street list knows it for any Southampton street.
+    # Nominatim is only asked when neither does, and never for the "Not given"
+    # placeholder, which no geocoder can place.
+    if area is None:
+        area = local_area(location)
+    if area is None and location.strip().lower() not in MISSING_LOCATIONS:
+        try:
+            geocoded = _location_service.forward_geocode(location)
+            if geocoded:
+                area = geocoded.get("area")
+        except Exception as error:  # noqa: BLE001 - geocoding must never block a save
+            print(f"[geocode] forward_geocode failed for {location!r}: {error}")
 
     def work(c):
         # IMMEDIATE takes the write lock now, so two webhooks cannot pick the same id.

@@ -1,29 +1,55 @@
 """Temporary web simulator for the resident conversation.
 
-No BlueBubbles, no Mac. It runs the same triage, voice and reply code as the
-real line, saves to the same database, and makes believe the typing took a
-human amount of time. Built for a phone first.
+No BlueBubbles, no Mac. Every message goes through the same multi-agent
+workflow as the real line (the triage agent orchestrates, see code/agents/),
+saves to the same database, and makes believe the typing took a human amount
+of time. Built for a phone first.
 
   python code/simulator.py          http://<this machine>:5007
+
+It also serves the drop-a-pin map and the resident's report page on the same
+address, and texts that arrive later (a pin confirmed on the map, a status the
+council changed) appear in the chat. Set SITE_URL to this address so report
+links open here too. "Use my current location" needs HTTPS on a phone.
 
 The real number still runs on 5005; this is a second, separate app.
 """
 
 import os
+import threading
 import time
 import uuid
+from collections import defaultdict
 from pathlib import Path
 
 from flask import Flask, jsonify, make_response, request
 
 import blue_bubbles as bot
-import messages
-import triage
-import voice
+import messages  # noqa: F401
+import pin_service
+import triage  # noqa: F401  patched by tests; the orchestrator calls it
+import voice  # noqa: F401
+from agents import ORCHESTRATOR, Turn
+from website import site
 
 PORT = int(os.getenv("SIM_PORT") or "5007")
 
 app = Flask(__name__)
+app.register_blueprint(site)      # /r/<token>, the resident's own page
+pin_service.mount(app)            # /p/<token>, the drop-a-pin map
+
+# Texts that arrive after the turn: a pin confirmed on the map, a status change.
+OUTBOX = defaultdict(list)
+OUTBOX_LOCK = threading.Lock()
+
+
+def _to_outbox(chat, text):
+    with OUTBOX_LOCK:
+        OUTBOX[chat].append(text)
+
+
+ORCHESTRATOR.set_notifier(_to_outbox)
+orchestrator = ORCHESTRATOR
 
 
 def _sender(req):
@@ -31,26 +57,13 @@ def _sender(req):
     return "sim:" + sid, sid
 
 
-def run_turn(sender, text, image=None):
-    """The same path as the webhook, minus the phone."""
+def run_turn(sender, text, image=None, link_base=None):
+    """The same path as the webhook, minus the phone: the triage agent orchestrates."""
     started = time.time()
-
-    if bot.wants_silence(text):
-        return "", "", {"reason": "silence", "photo": False}, started
-    if bot.wants_greeting(text):
-        reply = voice.say("greeting", {}, messages.greeting())
-        return reply, "", {"reason": "greeting", "photo": False}, started
-    if bot.wants_status(text):
-        found = bot.status_reply(sender)
-        if found:
-            return found[1], "", {"reason": "status", "photo": False}, started
-
-    place = bot.place_from_text(text)
-    text, pending = bot.merge_pending(sender, text)
-    decision = triage.triage(text, image)
-    decision = bot.apply_place(decision, place)
-    reply = bot.reply_for(decision, sender, text, has_photo=bool(image), pending=pending)
-    body, link = bot.split_reply(reply)
+    outcome = orchestrator.handle(Turn(sender=sender, text=text, chat=sender, image=image,
+                                       link_base=link_base))
+    body, link = bot.split_reply(outcome.reply or "")
+    decision = outcome.decision or {}
     debug = {
         "category": decision.get("category_id"),
         "label": decision.get("category_label"),
@@ -58,7 +71,10 @@ def run_turn(sender, text, image=None):
         "confidence": decision.get("confidence"),
         "reason": decision.get("reason"),
         "is_report": decision.get("is_report"),
+        "location": decision.get("location"),
         "photo": bool(image),
+        "agents": outcome.trace,
+        "category_agent": decision.get("agent"),
     }
     return body, link, debug, started
 
@@ -87,7 +103,7 @@ def turn():
         return jsonify({"ok": False, "error": "send a message or a photo"}), 400
 
     try:
-        body, link, debug, started = run_turn(sender, text, image)
+        body, link, debug, started = run_turn(sender, text, image, link_base=request.host_url.rstrip("/"))
     except Exception as error:  # noqa: BLE001 - show the failure, do not crash
         return jsonify({"ok": False, "error": f"{type(error).__name__}: {error}"}), 500
 
@@ -243,6 +259,29 @@ Pothole, dumped rubbish, missed bin, broken glass.</div></div>
   simulate.onchange = function () { localStorage.setItem('simulate', simulate.checked ? '1' : '0'); };
   if (localStorage.getItem('simulate') === '0') simulate.checked = false;
 
+  function linkBubble(url) {
+    var row = add('bot', '', 'link');
+    var a = document.createElement('a');
+    a.href = url; a.textContent = url; a.target = '_blank'; a.rel = 'noopener';
+    row.firstChild.textContent = '';
+    row.firstChild.appendChild(a);
+  }
+
+  // Texts that arrive later: a pin confirmed on the map, a status change.
+  async function poll() {
+    try {
+      var response = await fetch('/api/outbox', { cache: 'no-store' });
+      var result = await response.json();
+      for (var i = 0; i < (result.texts || []).length; i++) {
+        var t = result.texts[i];
+        if (t.body) add('bot', t.body);
+        if (t.link) { await wait(500); linkBubble(t.link); }
+      }
+    } catch (ignored) {}
+  }
+  setInterval(poll, 3000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
+
   form.onsubmit = async function (event) {
     event.preventDefault();
     var message = text.value.trim();
@@ -274,9 +313,9 @@ Pothole, dumped rubbish, missed bin, broken glass.</div></div>
       if (result.body) add('bot', result.body);
       if (result.link) {
         await wait(result.link_delay_ms || 800);
-        add('bot', result.link, 'link');
+        linkBubble(result.link);
       }
-      timing.textContent = 'model ' + result.model_ms + 'ms, typed ' + (result.typing_ms || 0) + 'ms';
+      timing.textContent = 'agents ' + result.model_ms + 'ms, typed ' + (result.typing_ms || 0) + 'ms';
       debug.textContent = JSON.stringify(result.debug, null, 2);
     } catch (failure) {
       dots.remove();
@@ -287,6 +326,19 @@ Pothole, dumped rubbish, missed bin, broken glass.</div></div>
 </body>
 </html>
 """
+
+
+@app.get("/api/outbox")
+def outbox():
+    """Texts the agents sent this resident since the last look."""
+    sender, _ = _sender(request)
+    with OUTBOX_LOCK:
+        waiting = OUTBOX.pop(sender, [])
+    texts = []
+    for text in waiting:
+        body, link = bot.split_reply(text)
+        texts.append({"body": body, "link": link})
+    return jsonify({"ok": True, "texts": texts})
 
 
 @app.get("/")

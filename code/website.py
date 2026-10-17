@@ -56,6 +56,11 @@ STEPS = (
 )
 SYNTHETIC_PREFIX = "Synthetic example: "
 
+# Called with (report_id, status) after the council saves a status: the status
+# agent texts the resident. Hooks run after the response is decided and must
+# never fail the click.
+STATUS_HOOKS = []
+
 site = Blueprint(
     "website",
     __name__,
@@ -239,6 +244,11 @@ def set_status(report_id):
     with _connect() as conn:
         if not reports_db.set_status(conn, report_id, status):
             return jsonify({"ok": False, "error": "no such report"}), 404
+    for hook in STATUS_HOOKS:
+        try:
+            hook(report_id, status)
+        except Exception as error:  # noqa: BLE001 - the status is saved either way
+            print(f"[status] hook failed for {report_id}: {error}")
     return jsonify({"ok": True, "id": report_id, "status": status})
 
 

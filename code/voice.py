@@ -34,6 +34,9 @@ MAX_CHARS = 300
 MAX_LINES = 3
 TEMPERATURE = 0.9
 MAX_TOKENS = 700
+# The reply agent is the last step before a resident's phone buzzes: a slow
+# model is not waited for, the template goes out instead.
+REPLY_TIMEOUT = 6
 EMERGENCY_LEAD = "Call 999 now."
 FALLBACK_SPOKEN = "report"
 
@@ -76,6 +79,12 @@ SITUATIONS = {
     "photo_added": "A photo arrived for a report already open. Confirm it landed.",
     "photo_not_report": "A photo shows something the council cannot act on. Nothing was saved.",
     "emergency": f"This may be an emergency. The first line is fixed: {EMERGENCY_LEAD}",
+    "located": "The street for their report just arrived (a pin, a shared location or a reply). "
+               "Confirm it was added.",
+    "already_yours": "They reported this same problem before and it is still open. Nothing new "
+                     "was saved. Say so kindly.",
+    "handoff": "Problems with a neighbour go through the council's own form, so nothing was "
+               "logged here. Point them to it kindly.",
 }
 
 # The corporate register, banned outright. Lower case, matched after _norm.
@@ -294,6 +303,18 @@ def brief(kind, facts=None):
         must_contain = ["999"] + ([contact] if contact and contact != "999" else [])
         must_any = ["999", "call"]
         banned = ["don't call", "no need to call", "wait for"]
+    elif kind == "located":
+        must_contain = [spoken, location]
+        must_any = ["added", "got it", "logged", "on the list", "thanks", "noted"]
+        banned = list(PHOTO_ASKS)
+    elif kind == "already_yours":
+        must_contain = [spoken]
+        must_any = ["already", "again", "earlier"]
+        banned = list(PHOTO_ASKS) + ["new report", "logged it again"]
+    elif kind == "handoff":
+        must_contain = []
+        must_any = ["form", "online"]
+        banned = ["logged", "saved", "on the list", "noted", "reported it"]
     else:
         raise ValueError(f"unknown kind: {kind!r}")
 
@@ -342,11 +363,12 @@ def _json_object(raw):
 def generate(brief_data):
     """One model call. None when no model answered or the JSON was unreadable."""
     user = json.dumps(brief_data, ensure_ascii=False, sort_keys=True)
-    reply, mode = llm.chat(SYSTEM, user, max_tokens=MAX_TOKENS, temperature=TEMPERATURE)
+    reply, mode = llm.chat(SYSTEM, user, max_tokens=MAX_TOKENS, temperature=TEMPERATURE,
+                           timeout=REPLY_TIMEOUT, purpose="reply")
     data = _json_object(reply) if mode == "model" else None
     if data is None and mode == "model":
         reply, mode = llm.chat(SYSTEM, user + RETRY, max_tokens=MAX_TOKENS,
-                               temperature=TEMPERATURE)
+                               temperature=TEMPERATURE, timeout=REPLY_TIMEOUT, purpose="reply")
         data = _json_object(reply) if mode == "model" else None
     if data is None:
         return None

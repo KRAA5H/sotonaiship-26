@@ -76,7 +76,7 @@ def fake_chat(*responses):
     replies = list(responses)
     calls = []
 
-    def chat(system, user, image=None, max_tokens=None, temperature=None):
+    def chat(system, user, image=None, max_tokens=None, temperature=None, **_):
         calls.append({"system": system, "user": user, "max_tokens": max_tokens,
                       "temperature": temperature})
         value = replies.pop(0) if len(replies) > 1 else replies[0]

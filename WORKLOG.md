@@ -97,6 +97,13 @@ Gate G1 met and beaten: one iMessage becomes one row, one card and one link.
 
 ## Log
 
+### Sat 17 Oct, late, code: multi-agent workflow and the location system (branch `aadil/agents`)
+- `code/agents/`: the triage agent orchestrates safety, location, photo (parallel), category, duplicate, records, reply and status agents, per `plans/agents.md` (DECISIONS.md D45).
+- `code/llm.py`: DeepSeek with thinking off for every call; an empty image reply is the only retry with thinking (D46). Every call logs tokens and latency, never text.
+- Location: `code/geo/` holds Southampton's real boundary and 2,192 streets from OpenStreetMap. The bot serves the map page on its own address; the page has "use my current location", a street drop-down filtered on the phone, and a visible pin drop. A confirmed pin updates the report and texts the resident. Typed streets and iMessage location cards are handled with no model call (D47).
+- Fixed: TODO 1.2, 1.3, 1.4, 1.5 and most of 1.1 and 1.7; neighbour problems go to the council form (D48); per-category duplicate windows (D49); `save_report` no longer waits on Nominatim when the street is known.
+- Tests: `test_agents.py` (36), `test_geo.py` (14), new pin and simulator tests; all 16 suites pass offline. Walked the location flow in headless Edge at phone size. Live model check: `python code/agents/smoke.py`, not run here (no key on this machine).
+
 ### after 17:55, code and docs, reports database and agent tools
 - New `code/reports_db.py`: builds `code/kerbside.db` from `dashboard/schema.sql` and loads the 68 synthetic reports. The `.db` file is gitignored.
 - New `code/tools.py`: `find_category_facts`, `check_duplicate`, `save_report`, `get_report_status`, tool schemas and `call_tool()`. New `code/test_tools.py`: 34 tests, standard library only, all passing.

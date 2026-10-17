@@ -13,9 +13,21 @@ Privacy design, in priority order (see COMPLIANCE_LOCATION.md):
   - No cookies, no analytics, no browser storage, no continuous tracking.
 
 Functions the bot calls:
-  create_location_link(report_ref) -> URL
+  create_location_link(report_ref, base=None) -> URL
   get_location(report_ref)        -> dict or None
   purge_expired()                 -> number of old links deleted
+
+Callbacks the bot sets (agents/triage_agent.py), both optional:
+  HOOKS["on_confirm"](report_ref, place, source)  a pin was confirmed: update the report
+  HOOKS["describe"](report_ref) -> "pothole"      what to ask: "Where is the pothole?"
+
+Inside or outside the city is decided from Southampton City Council's real
+boundary (geo/southampton_boundary.json) before any third-party call. A
+postcode prefix is never enough: some SO postcodes are Eastleigh or Totton.
+
+The bot serves these pages on its own address (blue_bubbles.py routes /p/,
+/api/, /static/ and /privacy here), so one HTTPS link works for everything.
+"My current location" needs HTTPS on a phone: browsers refuse it over http.
 
 Run:
   python code/pin_service.py      serves on PIN_PORT (default 5007), behind HTTPS
@@ -50,6 +62,14 @@ except ImportError:
 
 HERE = Path(__file__).resolve().parent
 STATIC_DIR = HERE / "pin" / "static"
+STREETS_FILE = HERE / "geo" / "southampton_streets.json"
+
+try:
+    from geo import southampton as city
+except ImportError:  # run from another folder: the box check still works
+    city = None
+
+HOOKS = {"on_confirm": None, "describe": None}
 
 REPORT_REF_RE = re.compile(r"^[A-Za-z0-9_.-]{1,40}$")
 TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
@@ -77,6 +97,7 @@ MSG = {
     "bad_request": "Something was missing from that request. Please try again.",
     "bad_coords": "That pin position was not valid. Tap the map to place it again.",
     "outside_box": "That spot is outside Southampton. We can only take reports for the area Southampton City Council looks after.",
+    "outside_city": "That spot is just outside Southampton City Council's area, so your own council handles it. Move the pin if the problem is inside the city.",
     "bad_postcode": "That does not look like a UK postcode. Check it and try again.",
     "postcode_unknown": "We could not find that postcode. Check it, or tap the map instead.",
     "postcode_down": "We could not look up that postcode just now. Tap the map instead.",
@@ -87,7 +108,7 @@ MSG = {
 }
 
 ALLOWED_STATIC = {
-    "pin.css", "pin.js",
+    "pin.css", "pin.js", "streets.json",
     "vendor/leaflet/leaflet.js", "vendor/leaflet/leaflet.css",
     "vendor/leaflet/images/marker-icon.png", "vendor/leaflet/images/marker-icon-2x.png",
     "vendor/leaflet/images/marker-shadow.png", "vendor/leaflet/images/layers.png",
@@ -172,8 +193,12 @@ def _valid_ref(report_ref):
     return isinstance(report_ref, str) and bool(REPORT_REF_RE.fullmatch(report_ref))
 
 
-def create_location_link(report_ref):
-    """A fresh 2 hour link for one report. Only the hash of the token is kept."""
+def create_location_link(report_ref, base=None):
+    """A fresh 2 hour link for one report. Only the hash of the token is kept.
+
+    base: where the page is served. Defaults to PIN_BASE_URL, BASE_URL, then
+    SITE_URL (the bot's own address, which serves these pages too).
+    """
     if not _valid_ref(report_ref):
         raise ValueError("report_ref must match ^[A-Za-z0-9_.-]{1,40}$")
     init_db()
@@ -187,7 +212,8 @@ def create_location_link(report_ref):
         )
     finally:
         conn.close()
-    base = (os.getenv("BASE_URL") or "http://localhost:5007").rstrip("/")
+    base = (base or os.getenv("PIN_BASE_URL") or os.getenv("BASE_URL") or os.getenv("SITE_URL")
+            or "http://localhost:5007").rstrip("/")
     return f"{base}/p/{token}"
 
 
@@ -489,12 +515,21 @@ def assess(lat, lng):
     The payload never contains coordinates."""
     if not _in_box(lat, lng):
         return 422, {"ok": False, "error": MSG["outside_box"]}  # no third-party call at all
+    inside = city.in_city(lat, lng) if city else None
     nearest = _nearest_postcode(lat, lng)
-    coverage = "unverified"
+    if inside is False:
+        # The council's real boundary decides; the postcode lookup only names who to tell.
+        district = nearest[1] if nearest else None
+        if district and district != "Southampton":
+            return 422, {"ok": False, "error":
+                         f"That spot looks like it is in {district}, not Southampton. "
+                         f"Please report it to {district} instead."}
+        return 422, {"ok": False, "error": MSG["outside_city"]}
+    coverage = "inside" if inside else "unverified"
     postcode = None
     if nearest:
         postcode, district = nearest
-        if district and district != "Southampton":
+        if district and district != "Southampton" and not inside:
             return 422, {"ok": False, "error":
                          f"That spot looks like it is in {district}, not Southampton. "
                          f"Please report it to {district} instead."}
@@ -616,6 +651,11 @@ def create_app():
     def static_file(name):
         if name not in ALLOWED_STATIC:
             return Response("Not found", 404, mimetype="text/plain")
+        if name == "streets.json":
+            # Every Southampton street, for the drop-down: filtered on the phone,
+            # so what someone types never leaves it.
+            return send_from_directory(STREETS_FILE.parent, STREETS_FILE.name,
+                                       mimetype="application/json", max_age=86400)
         return send_from_directory(STATIC_DIR, name)
 
     @app.post("/api/check")
@@ -626,7 +666,13 @@ def create_app():
         link, error = live_link(body)
         if error:
             return error
-        return jsonify({"ok": True})
+        what = None
+        if HOOKS["describe"]:
+            try:
+                what = clean(HOOKS["describe"](link["report_ref"]))
+            except Exception:  # noqa: BLE001 - the page still works with "the problem"
+                what = None
+        return jsonify({"ok": True, "what": what})
 
     @app.post("/api/postcode")
     def postcode():
@@ -712,6 +758,12 @@ def create_app():
             return jsonify(place), status
         _save(link, place, source, *coords)  # writes only the link's own report_ref
         saved = {k: place[k] for k in ("street", "landmark", "area", "postcode", "coverage")}
+        if HOOKS["on_confirm"]:
+            try:
+                # The report itself gets the street, and the resident gets a text.
+                HOOKS["on_confirm"](link["report_ref"], dict(saved), source)
+            except Exception as error:  # noqa: BLE001 - the pin is saved either way
+                logging.getLogger(__name__).warning("on_confirm failed: %s", error)
         return jsonify({"ok": True, "saved": saved, "change_minutes": int(AFTER_CONFIRM.total_seconds() // 60)})
 
     @app.get("/api/location/<report_ref>")
@@ -742,6 +794,44 @@ def create_app():
         url = create_location_link("DEMO-1")
         return redirect("/p/" + url.rsplit("/p/", 1)[1], code=302)
 
+    return app
+
+
+# Exact prefixes, so a host app's own /api/... routes are left alone.
+PIN_PATHS = ("/p/", "/api/check", "/api/postcode", "/api/search", "/api/preview", "/api/confirm",
+             "/api/location/", "/static/", "/privacy", "/demo")
+
+
+class _PinRoutes:
+    """WSGI router: the map page's paths go to the pin app, everything else to the host app.
+
+    The pin app is built on its first request, so importing the bot (or its
+    tests) never creates the pin database.
+    """
+
+    def __init__(self, host_wsgi):
+        self.host = host_wsgi
+        self._pin = None
+        self._lock = threading.Lock()
+
+    def _pin_wsgi(self):
+        if self._pin is None:
+            with self._lock:
+                if self._pin is None:
+                    self._pin = create_app().wsgi_app
+        return self._pin
+
+    def __call__(self, environ, start_response):
+        path = environ.get("PATH_INFO") or ""
+        if path.startswith(PIN_PATHS):
+            return self._pin_wsgi()(environ, start_response)
+        return self.host(environ, start_response)
+
+
+def mount(app):
+    """Serve the drop-a-pin pages on an existing Flask app's own address and port."""
+    if not isinstance(app.wsgi_app, _PinRoutes):
+        app.wsgi_app = _PinRoutes(app.wsgi_app)
     return app
 
 

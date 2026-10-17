@@ -37,6 +37,10 @@ class PageTest(unittest.TestCase):
 class TurnTest(unittest.TestCase):
     def setUp(self):
         self.client = simulator.app.test_client()
+        # The photo agent would call a model in the background; these tests check the turn.
+        patch = unittest.mock.patch.object(simulator.orchestrator.photo, "start", return_value=None)
+        patch.start()
+        self.addCleanup(patch.stop)
 
     def test_an_empty_message_is_refused(self):
         response = self.client.post("/api/turn", json={"text": "  "})
@@ -44,7 +48,7 @@ class TurnTest(unittest.TestCase):
 
     def test_a_text_turn_returns_body_and_link_separately(self):
         with unittest.mock.patch.object(simulator.triage, "triage", return_value=DECISION), \
-             unittest.mock.patch.object(simulator.bot, "reply_for", return_value=REPLY):
+             unittest.mock.patch.object(simulator.orchestrator, "act", return_value=REPLY):
             data = self.client.post("/api/turn", json={"text": "pothole on Alma Road"}).get_json()
         self.assertTrue(data["ok"])
         self.assertIn("logged", data["body"])
@@ -55,7 +59,7 @@ class TurnTest(unittest.TestCase):
 
     def test_simulated_typing_can_be_turned_off(self):
         with unittest.mock.patch.object(simulator.triage, "triage", return_value=DECISION), \
-             unittest.mock.patch.object(simulator.bot, "reply_for", return_value=REPLY):
+             unittest.mock.patch.object(simulator.orchestrator, "act", return_value=REPLY):
             data = self.client.post("/api/turn",
                                     json={"text": "pothole", "simulate": False}).get_json()
         self.assertEqual(data["typing_ms"], 0)
@@ -73,7 +77,7 @@ class TurnTest(unittest.TestCase):
             return {**DECISION, "reason": "model_says_not_a_report"}
 
         with unittest.mock.patch.object(simulator.triage, "triage", side_effect=fake_triage), \
-             unittest.mock.patch.object(simulator.bot, "reply_for", return_value="From your photo: a bag."):
+             unittest.mock.patch.object(simulator.orchestrator, "act", return_value="From your photo: a bag."):
             data = self.client.post(
                 "/api/turn",
                 data={"text": "", "photo": (io.BytesIO(b"png-bytes"), "photo.png")},
@@ -82,6 +86,24 @@ class TurnTest(unittest.TestCase):
         self.assertTrue(data["ok"])
         self.assertEqual(seen["image"][0], b"png-bytes")
         self.assertTrue(data["debug"]["photo"])
+
+
+class LaterTextsTest(unittest.TestCase):
+    def test_a_text_sent_later_reaches_the_chat_once(self):
+        client = simulator.app.test_client()
+        client.post("/api/turn", json={"text": "thanks"})   # sets the simulator cookie
+        sid = client.get_cookie("sim_sid").value
+        simulator._to_outbox("sim:" + sid, "Thanks, added: pothole at Lawn Road.\nFollow it: https://x.test/r/t")
+        texts = client.get("/api/outbox").get_json()["texts"]
+        self.assertEqual(texts, [{"body": "Thanks, added: pothole at Lawn Road.", "link": "https://x.test/r/t"}])
+        self.assertEqual(client.get("/api/outbox").get_json()["texts"], [])
+
+    def test_the_map_and_report_pages_are_served_here(self):
+        client = simulator.app.test_client()
+        self.assertEqual(client.get("/p/some-token-123").status_code, 200)
+        self.assertEqual(client.get("/static/pin.js").status_code, 200)
+        self.assertEqual(client.get("/r/not-a-real-token").status_code, 404)
+        self.assertEqual(client.post("/api/turn", json={"text": " "}).status_code, 400)
 
 
 if __name__ == "__main__":

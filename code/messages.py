@@ -91,19 +91,60 @@ def duplicate(decision, saved):
     )
 
 
-def need_location(decision):
-    """Ask exactly one question, in the rulebook's own words where we have them."""
+def need_location(decision, map_link=None, mode="pin"):
+    """Ask exactly one question, in the rulebook's own words where we have them.
+
+    mode "pin": the street, a shared location, or the map link to drop a pin.
+    mode "address": bins and housing need a house, never a pin.
+    """
     questions = _category(decision.get("category_id")).get("follow_up_questions") or []
     question = (questions[0] if questions else "Where exactly is it").strip()
     if not question.endswith("?"):
         question += "?"
+    if mode == "address":
+        return _join(
+            f"Logged: {_label(decision)}.",
+            question,
+            "Reply with the house number and street and I will add it.",
+        )
     ask = "" if decision.get("has_photo") else PHOTO_ASK
+    if map_link:
+        how = f"Reply with the street, share your location, or drop a pin on the map: {map_link}"
+    else:
+        how = "Reply with the street and I will add it."
+    return _join(f"Logged: {_label(decision)}.", question, how, ask)
+
+
+def located(decision, link):
+    """The street arrived after the report: from a pin, a shared location or a reply."""
+    where = _where(decision) or "the spot you gave"
+    return _join(f"Thanks, added: {_label(decision)} at {where}.",
+                 "The council has it for review.", f"Follow it: {link}")
+
+
+def already_yours(decision, link):
+    """The same person reported the same problem again. Nothing new is saved."""
+    head = f"You've already reported this one: {_label(decision)}"
+    where = _where(decision)
+    if where:
+        head += f", {where}"
+    return _join(head + ".", "No need to send it again, it's with the council.", f"Follow it: {link}")
+
+
+def handoff(decision, form_url):
+    """Neighbour problems go to the council's own form, so we never log someone's home."""
     return _join(
-        f"Logged: {_label(decision)}.",
-        question,
-        "Reply with the street and I will add it.",
-        ask,
+        "Problems with a neighbour go through the council's own form, "
+        "so an officer can follow it up with you directly.",
+        "Nothing has been logged here.",
+        f"Form: {form_url or COUNCIL_CONTACT}",
     )
+
+
+def threat():
+    """Fixed wording, never model-written."""
+    return _join("I can only help with street problems here.",
+                 "If anyone is in danger, call 999.")
 
 
 def answered(text):

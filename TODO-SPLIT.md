@@ -22,45 +22,45 @@ Evidence. At 20:08 a resident sent an Apple Maps pin. It arrived as text `https:
 
 The coordinates are in the plain text, so no payload decoding is needed. A live reverse lookup on OpenStreetMap Nominatim returned "Windsor Terrace, Cultural Quarter, The Polygon, Southampton, SO14 7BQ" in one keyless call.
 
-- [ ] Parse `coordinate=lat,lon` out of any message text, plus the `/place`, `/search` and bare map URL forms
+- [x] Parse `coordinate=lat,lon` out of any message text, plus the `/place`, `/search` and bare map URL forms
 - [ ] Reverse geocode with Nominatim: one call, cached by rounded coordinate, a real User-Agent, at most one request per second
 - [ ] Use the result as the location, street plus nearby landmark plus postcode
-- [ ] A pin carries no words, so when a location arrives with no category, ask only what the problem is and keep the location
-- [ ] Check the postcode is in Southampton, and refuse politely when it is not
-- [ ] Never store coordinates, only the street. Never send the pin to anything except the geocoder
-- [ ] Test: the exact pin text above produces "Windsor Terrace" and no "I could not read that"
+- [x] A pin carries no words, so when a location arrives with no category, ask only what the problem is and keep the location
+- [x] Check the postcode is in Southampton, and refuse politely when it is not
+- [x] Never store coordinates, only the street. Never send the pin to anything except the geocoder
+- [x] Test: the exact pin text above produces "Windsor Terrace" and no "I could not read that"
 
 ## 1.2 The follow-up loses the category
 
 Evidence. `R-0074` was fly-tipping with no street. The resident replied "lawn road" and the bot saved `R-0075` as `unclear_other`, because triage was re-run on the joined text and answered badly. The pending record holds the report id and link but not the category, so the guard that should have caught this never fired.
 
-- [ ] A pending report keeps its category, and a follow-up only supplies the missing field
-- [ ] When a follow-up has no usable category of its own, keep the original one
-- [ ] Test: `R-0074` style flow, "there is a chair on the street" then "lawn road", produces one row, fly-tipping, Lawn Road
+- [x] A pending report keeps its category, and a follow-up only supplies the missing field
+- [x] When a follow-up has no usable category of its own, keep the original one
+- [x] Test: `R-0074` style flow, "there is a chair on the street" then "lawn road", produces one row, fly-tipping, Lawn Road
 
 ## 1.3 A fragment must not become a refusal
 
 Evidence. The same "lawn road" message produced `outside_southampton` and the reply "That one is not Southampton City Council's to fix." Lawn Road is in Southampton.
 
-- [ ] Do not decide "outside Southampton" from a short message with no place evidence
-- [ ] Require a postcode or a named place outside the city before that conclusion
-- [ ] Test: "lawn road" never yields `outside_southampton`
+- [x] Do not decide "outside Southampton" from a short message with no place evidence
+- [x] Require a postcode or a named place outside the city before that conclusion
+- [x] Test: "lawn road" never yields `outside_southampton`
 
 ## 1.4 Never link two reports still waiting for a street
 
 Evidence. `R-0076` (Rigby Road) and `R-0077` (Lawn Road) are flagged as duplicates of each other. Both were saved with `location = 'Not given'`, so they matched on the placeholder.
 
-- [ ] Duplicate matching runs on the final location, never on `Not given`
-- [ ] Two incomplete reports are never duplicates of each other
-- [ ] Test: two different streets, both starting incomplete, end up unlinked
+- [x] Duplicate matching runs on the final location, never on `Not given`
+- [x] Two incomplete reports are never duplicates of each other
+- [x] Test: two different streets, both starting incomplete, end up unlinked
 
 ## 1.5 Severity is missing when the model is unsure
 
 Evidence. `R-0073`, `R-0075` and `R-0076` have `severity = NULL`. `categories.json` carries `severity_hints` per category and nothing reads them.
 
 - [ ] When the model returns null, derive severity from the category's `severity_hints` and the description
-- [ ] Never leave severity null for a council report
-- [ ] Test: a pothole report with no explicit severity gets a non-null severity
+- [x] Never leave severity null for a council report
+- [x] Test: a pothole report with no explicit severity gets a non-null severity
 
 ## 1.6 Speed under load
 
@@ -77,8 +77,8 @@ Evidence. One unbounded thread per message, one to three sequential model calls 
 Evidence. "Saw graffiti on a wall" arrived with a jpeg and logged nothing, because the category came back as not-a-report. A photo plus a category should always produce a report, or a request for the street.
 
 - [ ] A photo with a council category saves, using the ask-for-street path when the street is missing
-- [ ] Non-image attachments (the maps plugin payload) are detected as a location, not as a photo
-- [ ] A message with no text and no image gets the unclear reply without a model call
+- [x] Non-image attachments (the maps plugin payload) are detected as a location, not as a photo
+- [x] A message with no text and no image gets the unclear reply without a model call
 - [ ] Fix the log line that runs "[inbound] ... attachments=0[pending] joined a follow-up" together on one line
 
 ---

@@ -14,7 +14,10 @@
         "same_category": true,
         "same_location_text": true,
         "window_days": 30,
-        "open_statuses_only": ["new", "in_review"]
+        "open_statuses_only": [
+          "new",
+          "in_review"
+        ]
       },
       "note": "Same rule as CLAUDE.md, implemented in code/tools.py check_duplicate. Location text is compared ignoring case, spacing and punctuation. Resolved reports are never matched. No coordinates are stored, so there is no radius. Window_days is a placeholder, tune it on test data."
     },
@@ -22,7 +25,8 @@
       "max_exchanges": 5,
       "on_limit": "force_complete_as_incomplete"
     },
-    "updated": "2026-10-17"
+    "updated": "2026-10-17",
+    "agents_note": "Each council_report category's 'agent' block configures its category agent (code/agents/categories.py): dup_window_days (same place, open reports), location_mode (pin = map link, street or shared location; address = house number and street, no pin; handoff = the council's own form, nothing saved), severity_keywords (raise or lower severity), and an optional one-line detail_question. These are our operational settings, not council facts."
   },
   "outcomes": {
     "council_report": "Collect required fields, create a report, route to team, give resident a reference number.",
@@ -98,7 +102,63 @@
       },
       "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
       "official_form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-street-cleaning-issue",
-      "form_scope_notes": "Private land: owner/occupier resolves it. Report only if on public land, or witnessed with evidence of who did it."
+      "form_scope_notes": "Private land: owner/occupier resolves it. Report only if on public land, or witnessed with evidence of who did it.",
+      "agent": {
+        "dup_window_days": 7,
+        "location_mode": "pin",
+        "severity_keywords": {
+          "high": [
+            "asbestos",
+            "needle",
+            "needles",
+            "syringe",
+            "chemical",
+            "chemicals",
+            "paint tins",
+            "oil",
+            "gas bottle",
+            "gas canister",
+            "blocking",
+            "van load",
+            "vanload",
+            "fridge",
+            "freezer",
+            "tyres",
+            "mattresses"
+          ],
+          "low": [
+            "one bag",
+            "single bag",
+            "small bag",
+            "a bag"
+          ]
+        },
+        "detail_question": "What's been dumped, and roughly how much?",
+        "detail_words": [
+          "sofa",
+          "mattress",
+          "bag",
+          "bags",
+          "fridge",
+          "freezer",
+          "tyre",
+          "tyres",
+          "rubble",
+          "furniture",
+          "wood",
+          "pallet",
+          "pallets",
+          "rubbish",
+          "waste",
+          "trolley",
+          "bed",
+          "chair",
+          "table",
+          "boxes",
+          "carpet",
+          "van"
+        ]
+      }
     },
     {
       "id": "dog_fouling",
@@ -130,7 +190,11 @@
           "one-off"
         ]
       },
-      "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+      "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+      "agent": {
+        "dup_window_days": 3,
+        "location_mode": "pin"
+      }
     },
     {
       "id": "dead_animal",
@@ -163,7 +227,22 @@
       },
       "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
       "official_form_url": "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/dead-animals/",
-      "form_scope_notes": "Council clears on council-owned/managed land. Private land: owner, contact a vet. Ask if it is a traffic hazard on a busy road (high priority)."
+      "form_scope_notes": "Council clears on council-owned/managed land. Private land: owner, contact a vet. Ask if it is a traffic hazard on a busy road (high priority).",
+      "agent": {
+        "dup_window_days": 3,
+        "location_mode": "pin",
+        "severity_keywords": {
+          "high": [
+            "road",
+            "blocking",
+            "deer"
+          ],
+          "low": [
+            "bird",
+            "small"
+          ]
+        }
+      }
     },
     {
       "id": "litter_street_cleaning",
@@ -199,7 +278,11 @@
       },
       "source_url": "https://www.southampton.gov.uk/environment/street-cleaning",
       "official_form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-street-cleaning-issue",
-      "form_scope_notes": "Shopping trolleys: tell resident to contact the retailer first. Leaves: only serious hazard or flood risk."
+      "form_scope_notes": "Shopping trolleys: tell resident to contact the retailer first. Leaves: only serious hazard or flood risk.",
+      "agent": {
+        "dup_window_days": 3,
+        "location_mode": "pin"
+      }
     },
     {
       "id": "graffiti_flyposting",
@@ -234,7 +317,41 @@
       },
       "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
       "official_form_url": "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/graffiti/",
-      "form_scope_notes": "Private/commercial property not in core service; advise police report (criminal damage). Hate/obscene graffiti is aimed within 1 working day."
+      "form_scope_notes": "Private/commercial property not in core service; advise police report (criminal damage). Hate/obscene graffiti is aimed within 1 working day.",
+      "agent": {
+        "dup_window_days": 14,
+        "location_mode": "pin",
+        "severity_keywords": {
+          "high": [
+            "racist",
+            "offensive",
+            "swastika",
+            "hate",
+            "obscene",
+            "abusive",
+            "homophobic",
+            "sexual",
+            "slur"
+          ],
+          "low": [
+            "small",
+            "tag"
+          ]
+        },
+        "detail_question": "Is it on a council wall or a private building?",
+        "detail_words": [
+          "wall",
+          "building",
+          "shop",
+          "bridge",
+          "bus stop",
+          "sign",
+          "fence",
+          "council",
+          "private",
+          "house"
+        ]
+      }
     },
     {
       "id": "glass_spillage_hazard",
@@ -267,7 +384,25 @@
         ],
         "low": []
       },
-      "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+      "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+      "agent": {
+        "dup_window_days": 3,
+        "location_mode": "pin",
+        "severity_keywords": {
+          "high": [
+            "glass",
+            "needle",
+            "syringe",
+            "oil",
+            "fuel",
+            "diesel",
+            "cycle path",
+            "playground",
+            "school"
+          ],
+          "low": []
+        }
+      }
     },
     {
       "id": "pothole",
@@ -311,7 +446,51 @@
       "check_ownership": "If the road is a motorway, or a named trunk or main road (A33, A36 or similar) that the facts do not say the council looks after, switch to not_council_trunk_road.",
       "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
       "official_form_url": "https://www.southampton.gov.uk/travel-transport/report-issue/potholes/",
-      "form_scope_notes": "One report per pothole. Needs location, depth, photo if possible. Depth bands: road <4cm monitor, 4-7.5cm 6 months, >7.5cm 24h; pavement <2/2-4/>4cm."
+      "form_scope_notes": "One report per pothole. Needs location, depth, photo if possible. Depth bands: road <4cm monitor, 4-7.5cm 6 months, >7.5cm 24h; pavement <2/2-4/>4cm.",
+      "agent": {
+        "dup_window_days": 30,
+        "location_mode": "pin",
+        "severity_keywords": {
+          "high": [
+            "deep",
+            "huge",
+            "massive",
+            "crater",
+            "dangerous",
+            "cycle lane",
+            "bike lane",
+            "school",
+            "burst",
+            "tyre",
+            "wheel",
+            "fell",
+            "injury",
+            "injured",
+            "bus route",
+            "main road",
+            "swerve",
+            "swerving",
+            "ankle"
+          ],
+          "low": [
+            "small",
+            "hairline",
+            "crack",
+            "shallow"
+          ]
+        },
+        "detail_question": "Is it in the road, a cycle lane or on the pavement?",
+        "detail_words": [
+          "road",
+          "pavement",
+          "footpath",
+          "cycle",
+          "lane",
+          "kerb",
+          "junction",
+          "crossing"
+        ]
+      }
     },
     {
       "id": "abandoned_vehicle",
@@ -346,7 +525,13 @@
       },
       "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
       "official_form_url": "https://www.southampton.gov.uk/travel-transport/report-issue/parking-offence/abandoned-vehicles/",
-      "form_scope_notes": "Must not be in use. Reporter needs contact details (DVLA condition), registration, photos. Private land needs signed landowner declaration."
+      "form_scope_notes": "Must not be in use. Reporter needs contact details (DVLA condition), registration, photos. Private land needs signed landowner declaration.",
+      "agent": {
+        "dup_window_days": 30,
+        "location_mode": "pin",
+        "detail_question": "If you can, send the registration plate.",
+        "detail_pattern": "\b[A-Z]{2}[0-9]{2}\\s?[A-Z]{3}\b"
+      }
     },
     {
       "id": "illegal_parking",
@@ -380,7 +565,23 @@
       },
       "source_url": "https://www.fixmystreet.com/reports/Southampton",
       "official_form_url": "https://www.southampton.gov.uk/travel-transport/report-issue/parking-offence/",
-      "form_scope_notes": "Dangerous parking with no restriction: police 101. Blocked driveway needs name, address, phone."
+      "form_scope_notes": "Dangerous parking with no restriction: police 101. Blocked driveway needs name, address, phone.",
+      "agent": {
+        "dup_window_days": 1,
+        "location_mode": "pin",
+        "severity_keywords": {
+          "high": [
+            "blocking",
+            "ambulance",
+            "fire engine",
+            "bus",
+            "dropped kerb",
+            "wheelchair",
+            "school"
+          ],
+          "low": []
+        }
+      }
     },
     {
       "id": "noise_nuisance",
@@ -420,7 +621,10 @@
       "note": "If there are threats or violence, show 999 guidance. Do not handle it as a normal noise report.",
       "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
       "official_form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/environmental-health-report-local-nuisance-or-concern",
-      "form_scope_notes": "Check the council's excluded noise list before taking a report; car/motorcycle noise: police first; council needs contact details."
+      "form_scope_notes": "Check the council's excluded noise list before taking a report; car/motorcycle noise: police first; council needs contact details.",
+      "agent": {
+        "location_mode": "handoff"
+      }
     },
     {
       "id": "other_nuisance",
@@ -457,7 +661,10 @@
       },
       "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
       "official_form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/environmental-health-report-local-nuisance-or-concern",
-      "form_scope_notes": "Council form types include dust, bonfire smoke, smells, security light nuisance, birds."
+      "form_scope_notes": "Council form types include dust, bonfire smoke, smells, security light nuisance, birds.",
+      "agent": {
+        "location_mode": "handoff"
+      }
     },
     {
       "id": "property_concern",
@@ -493,7 +700,10 @@
       "note": "Do not ask for or store the name of the person living there.",
       "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
       "official_form_url": "https://www.southampton.gov.uk/environment/neighbourhood-nuisances-and-property-concerns/concern-about-property/",
-      "form_scope_notes": "Types: blocked drains, empty/derelict, filthy, overcrowded, overgrown garden. Speak to owner first."
+      "form_scope_notes": "Types: blocked drains, empty/derelict, filthy, overcrowded, overgrown garden. Speak to owner first.",
+      "agent": {
+        "location_mode": "handoff"
+      }
     },
     {
       "id": "missed_bin",
@@ -531,7 +741,12 @@
       },
       "source_url": "https://southampton.gov.uk/bins-recycling/bins/missed-collections",
       "official_form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-missed-bin-collection",
-      "form_scope_notes": "Council checklist: out on correct day, visible, out by 6:30am, within 2 working days; if due today only after 4pm."
+      "form_scope_notes": "Council checklist: out on correct day, visible, out by 6:30am, within 2 working days; if due today only after 4pm.",
+      "agent": {
+        "dup_window_days": 7,
+        "location_mode": "address",
+        "dup_note": "Same address within one collection cycle: a bin still not emptied days later is the same missed collection."
+      }
     },
     {
       "id": "lost_damaged_bin",
@@ -562,7 +777,11 @@
         "high": [],
         "low": []
       },
-      "source_url": "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/"
+      "source_url": "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/",
+      "agent": {
+        "dup_window_days": 14,
+        "location_mode": "address"
+      }
     },
     {
       "id": "council_housing_repair",
@@ -595,7 +814,11 @@
       },
       "note": "The council has a separate online form for council tenants and leaseholders, so this must not be mixed up with private rented disrepair.",
       "source_url": "https://southampton.gov.uk/contact-us/online-forms",
-      "official_form_url": "https://www.southampton.gov.uk/housing/council-housing-tenants-and-leaseholders/repairs-maintenance-and-improvements/report-a-repair/"
+      "official_form_url": "https://www.southampton.gov.uk/housing/council-housing-tenants-and-leaseholders/repairs-maintenance-and-improvements/report-a-repair/",
+      "agent": {
+        "dup_window_days": 14,
+        "location_mode": "address"
+      }
     },
     {
       "id": "info_student_waste_rules",
@@ -725,7 +948,11 @@
       "follow_up_questions": [
         "Can you tell me a bit more about what is happening and where?"
       ],
-      "note": "Use when confidence is low or after the conversation limit. Never guess a category. Flag for officer review."
+      "note": "Use when confidence is low or after the conversation limit. Never guess a category. Flag for officer review.",
+      "agent": {
+        "dup_window_days": 7,
+        "location_mode": "pin"
+      }
     },
     {
       "id": "council_service_other",

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#005ea5">
 <title>Where is the problem?</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
@@ -15,31 +16,51 @@
 <body>
 <div class="app" id="app">
   <header class="top">
-    <h1>Where is the problem?</h1>
-    <p class="lede">Move the map so the pin sits on the problem, or tap the spot, then confirm.</p>
+    <h1 id="title">Where is the problem?</h1>
+    <p class="lede">Three ways, pick whichever is easiest. Then confirm.</p>
+
+    <ol class="ways">
+      <li>
+        <button type="button" class="gps" id="gpsBtn">
+          <span class="gps-dot" aria-hidden="true"></span>Use my current location
+        </button>
+        <p class="hint">Optional. Your phone asks first, and we take one reading only.</p>
+      </li>
+      <li>
+        <form class="search" id="pcForm" role="search" novalidate>
+          <label class="way-label" for="pc">Or search for the street</label>
+          <div class="combo">
+            <input id="pc" name="query" type="search" inputmode="search" autocomplete="off"
+                   autocapitalize="words" spellcheck="false" maxlength="80"
+                   placeholder="Postcode, street or place"
+                   role="combobox" aria-autocomplete="list" aria-expanded="false"
+                   aria-controls="results" aria-describedby="pcHelp">
+            <button type="submit" id="pcBtn">Find</button>
+          </div>
+          <p class="sr-only" id="pcHelp">Suggestions appear as you type. Use the up and down arrows to choose one.</p>
+          <ul class="results" id="results" role="listbox" aria-label="Matching streets" hidden></ul>
+        </form>
+      </li>
+      <li class="way-map">
+        <p class="way-label">Or move the map so the pin sits on the problem, or tap the spot</p>
+      </li>
+    </ol>
+
     <details class="why">
       <summary>How we use your location</summary>
       <p>We only save the street, a nearby landmark, the area and the postcode, for this one report. Using your phone's location is optional and we never track you. <a href="/privacy">Read the privacy notice</a>.</p>
     </details>
-    <form class="search" id="pcForm" novalidate>
-      <label class="sr-only" for="pc">Search by postcode, street or place</label>
-      <input id="pc" name="query" type="search" inputmode="search" autocomplete="off"
-             spellcheck="false" maxlength="80" placeholder="Postcode, street or place">
-      <button type="submit" id="pcBtn">Find</button>
-    </form>
-    <ul class="results" id="results" aria-label="Search results" hidden></ul>
   </header>
 
   <div class="map-wrap" id="mapWrap">
     <div class="map" id="map" aria-label="Map of Southampton. The pin stays in the middle. Move the map with the arrow keys or by dragging, or tap a spot to move it under the pin."></div>
+    <div class="pin-shadow" aria-hidden="true"></div>
     <div class="centre-pin" aria-hidden="true"><img src="/static/vendor/leaflet/images/marker-icon-2x.png" alt="" width="25" height="41"></div>
   </div>
 
   <footer class="bottom" id="panel">
     <p class="status" id="status" role="status" aria-live="polite">Loading the map.</p>
     <p class="note" id="note" hidden></p>
-    <button type="button" class="secondary" id="gpsBtn">Use my phone's location (optional)</button>
-    <p class="hint">Your phone will ask permission first. We only use it to place the pin.</p>
     <button type="button" class="primary" id="submitBtn" disabled>Confirm location</button>
     <p class="hint">On a keyboard, select the map and use the arrow keys to move it under the pin.</p>
     <p class="hint">Can't use the map? Reply to our text with the road name instead.</p>

@@ -56,11 +56,11 @@ a { color: var(--accent); }
   min-height: 100dvh;
 }
 
-.top { padding: 12px 16px 8px; }
-.top h1 { font-size: 1.35rem; margin: 0 0 4px; }
-.lede { margin: 0 0 8px; color: var(--muted); }
+.top { padding: 10px 16px 4px; }
+.top h1 { font-size: 1.3rem; margin: 0 0 2px; }
+.lede { margin: 0 0 8px; color: var(--muted); font-size: 0.95rem; }
 
-.why { margin: 0 0 10px; }
+.why { margin: 0 0 4px; }
 .why summary {
   cursor: pointer;
   min-height: 44px;
@@ -70,7 +70,36 @@ a { color: var(--accent); }
 }
 .why p { margin: 4px 0 0; color: var(--muted); font-size: 0.95rem; }
 
-.search { display: flex; gap: 8px; }
+/* Three ways to say where, like the council's own form. */
+.ways { list-style: none; margin: 0 0 2px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ways li { margin: 0; }
+.ways .hint { margin: 3px 0 0; font-size: 0.85rem; }
+.way-label { display: block; margin: 0 0 4px; font-weight: 600; }
+.way-map .way-label { margin: 0; }
+
+.gps {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 16px;
+  font-weight: 700;
+  color: var(--accent-fg);
+  background: var(--accent);
+  border: 0;
+}
+.gps-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-fg);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.35);
+}
+
+.search { display: block; }
+.combo { display: flex; gap: 8px; }
 .search input {
   flex: 1;
   min-width: 0;
@@ -112,12 +141,32 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 .results {
   list-style: none;
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
+  max-height: 44vh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
 }
+.results [role="option"] {
+  min-height: 48px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+}
+.results [role="option"]:last-child { border-bottom: 0; }
+.results [role="option"].active,
+.results [role="option"]:hover { background: var(--panel); }
+.opt-name { font-weight: 600; }
+.opt-area { color: var(--muted); font-size: 0.9rem; }
 .results button {
   width: 100%;
   text-align: left;
@@ -155,7 +204,39 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
   transition: transform 0.15s ease-out;
 }
 .centre-pin img { display: block; width: 25px; height: 41px; }
-.map-wrap.moving .centre-pin { transform: translateY(-8px); }
+.map-wrap.moving .centre-pin { transform: translateY(-14px); }
+
+/* The pin's shadow on the map: small and faint while lifted, firm when it lands. */
+.pin-shadow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 7px;
+  margin-left: -9px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  z-index: 640;
+  transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+}
+.map-wrap.moving .pin-shadow { transform: scale(0.6); opacity: 0.5; }
+
+/* The drop: a short fall and one small bounce when the map stops. */
+@keyframes pin-drop {
+  0% { transform: translateY(-22px); }
+  60% { transform: translateY(0); }
+  78% { transform: translateY(-5px); }
+  100% { transform: translateY(0); }
+}
+@keyframes shadow-drop {
+  0% { transform: scale(0.5); opacity: 0.4; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.map-wrap.dropped .centre-pin { animation: pin-drop 0.38s ease-out; }
+.map-wrap.dropped .pin-shadow { animation: shadow-drop 0.38s ease-out; }
 
 .bottom {
   padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
