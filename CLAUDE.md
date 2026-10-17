@@ -27,6 +27,11 @@ Submissions lock Sunday 18 Oct 2026 13:00.
 - Do not scrape individual FixMyStreet reports. mySociety counts dataset (ODC-BY) is allowed with credit; do not rank areas.
 - Never state anything not in confirmed_with_websites.csv. Show date checked.
 - API keys go in .env, never committed.
+- In plan mode, delegate only to read-only subagents (scout, reviewer, oracle, evidence-auditor).
+  Plannotator's planning write gate only intercepts write/edit in the main session, so a writer
+  child (worker, delegate, claude-code-writer) would edit code behind the gate.
+- Approved plans execute under .pi/plannotator.json, which sets the delegation policy. Restart
+  or /reload for config changes to apply.
 
 ## Open items
 - Council out-of-hours number appears as both 023 8023 3344 and 023 8083 3344. Check before quoting.
