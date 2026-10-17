@@ -47,6 +47,16 @@
     "find_your_council": {
       "label": "Find your local council",
       "url": "https://www.gov.uk/find-local-council"
+    },
+    "council_out_of_hours": {
+      "label": "Southampton City Council emergency out of hours",
+      "contact": "023 8023 3344",
+      "source": "https://www.southampton.gov.uk/contact-us/emergency-out-of-hours/",
+      "date_checked": "2026-10-17"
+    },
+    "council_roads": {
+      "label": "Southampton City Council: report a pothole or road defect",
+      "url": "https://www.southampton.gov.uk/travel-transport/report-issue/potholes/"
     }
   },
   "categories": [
@@ -298,7 +308,7 @@
           "shallow"
         ]
       },
-      "check_ownership": "If the road is a motorway or trunk road, switch to not_council_trunk_road.",
+      "check_ownership": "If the road is a motorway, or a named trunk or main road (A33, A36 or similar) that the facts do not say the council looks after, switch to not_council_trunk_road.",
       "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
       "official_form_url": "https://www.southampton.gov.uk/travel-transport/report-issue/potholes/",
       "form_scope_notes": "One report per pothole. Needs location, depth, photo if possible. Depth bands: road <4cm monitor, 4-7.5cm 6 months, >7.5cm 24h; pavement <2/2-4/>4cm."
@@ -663,9 +673,9 @@
         "streetlight out on the M27"
       ],
       "redirect_to": "national_highways",
-      "note": "Roads in Southampton are the city council's responsibility except motorways and trunk roads, which belong to National Highways. Ask for the road name or number so we can tell. If unsure, log with low confidence for manual review.",
+      "note": "If the resident names a trunk or main road (A33, A36 or similar) and the facts do not say who is responsible, say once that we cannot confirm who looks after that road, point them to the council_roads page or National Highways, and do not save a report.",
       "source_url": "https://newweb.fareham.gov.uk/parking_and_traffic/traffic_management/reportaproblem.aspx",
-      "notes": "A36/A33 status not verified: do not name specific roads. Say motorways and trunk roads are National Highways and point to its contact."
+      "notes": "Decided to leave out: A33/A36 responsibility not confirmed."
     },
     {
       "id": "not_council_utility",

@@ -3,7 +3,7 @@ Checked against Southampton City Council pages on 17 Oct 2026. Public data only.
 
 ## agent/  (give these to the agent)
 - categories.json: the rulebook (22 categories, outcomes, questions to ask, location rule, official form links).
-- confirmed_with_websites.csv: the fact sheet (53 facts, each with source URL and date). The agent may only state facts from here.
+- confirmed_with_websites.csv: the fact sheet (54 facts, each with source URL and date). The agent may only state facts from here.
 - loader.py: joins the two files on category_id (some fact rows list several ids separated by ;).
 Only fully confirmed items are included. Anything else goes to council_service_other (point to the council forms page).
 
@@ -21,8 +21,8 @@ One website, two views: /council (staff dashboard) and /r/<link_token> (the resi
 - confirmed_categories.csv: the 15 confirmed categories with what the council controls and what is out of scope.
 
 ## Still to check by hand
-- Council out-of-hours number appears as 023 8023 3344 and 023 8083 3344. Check before quoting.
-- A36 / A33 National Highways status is not confirmed, so no road names are used.
+- Council out-of-hours emergency number confirmed as 023 8023 3344, adult social care out of hours 0300 555 1373 (https://www.southampton.gov.uk/contact-us/emergency-out-of-hours/, checked 2026-10-17).
+- Decided to leave out: A33/A36 responsibility not confirmed.
 - Most multi-step forms were only read as far as the first steps.
 - Facts can change: show the date checked.
 

@@ -101,6 +101,29 @@ class FindCategoryFactsTest(unittest.TestCase):
         self.assertTrue(result["facts"])
         self.assertNotIn("category", result)
 
+    def test_out_of_hours_numbers_are_confirmed_facts(self):
+        url = "https://www.southampton.gov.uk/contact-us/emergency-out-of-hours/"
+        facts = {f["topic"]: f for f in tools.find_category_facts("general")["facts"]}
+        main = facts["Out-of-hours emergency number"]
+        adult = facts["Out-of-hours adult social care number"]
+        self.assertIn("023 8023 3344", main["fact"])
+        self.assertIn("0300 555 1373", adult["fact"])
+        self.assertNotIn("0300 555 1373", main["fact"])
+        for fact in (main, adult):
+            self.assertEqual((fact["url"], fact["date_checked"]), (url, "2026-10-17"))
+        links = tools.find_category_facts("not_council_trunk_road")["guidance_links"]
+        self.assertEqual(links["council_out_of_hours"]["contact"], "023 8023 3344")
+
+    def test_no_wrong_number_and_no_road_ownership_claims(self):
+        agent_dir = tools.AGENT_DIR
+        for name in ("categories.json", "confirmed_with_websites.csv"):
+            text = (agent_dir / name).read_text(encoding="utf-8")
+            self.assertNotIn("8083 3344", text, name)
+        note = tools.find_category_facts("not_council_trunk_road")["category"]["note"]
+        self.assertIn("do not save a report", note)
+        self.assertFalse(any("A33" in f["fact"] or "A36" in f["fact"]
+                             for facts in tools._rulebook()[1].values() for f in facts))
+
     def test_utf8_survives(self):
         facts = tools.find_category_facts("illegal_parking")["facts"]
         self.assertTrue(any("£70" in f["fact"] for f in facts))
