@@ -294,5 +294,35 @@ class CallToolTest(unittest.TestCase):
                                                          "description": "y", "reporter": "spoof"})["ok"])
 
 
+class LocationAndStatusTest(DbCase):
+    def test_set_location_fills_a_missing_street(self):
+        saved = tools.save_report("pothole", "Not given", "Hole", conn=self.conn)
+        self.assertTrue(reports_db.set_location(self.conn, saved["report_id"], "Alma Road"))
+        self.assertEqual(self.row(saved["report_id"])["location"], "Alma Road")
+
+    def test_set_location_refuses_blank_or_not_given(self):
+        saved = tools.save_report("pothole", "Not given", "Hole", conn=self.conn)
+        self.assertFalse(reports_db.set_location(self.conn, saved["report_id"], "  "))
+        self.assertFalse(reports_db.set_location(self.conn, saved["report_id"], "not given"))
+
+    def test_latest_report_for_returns_the_newest(self):
+        tools.save_report("pothole", "A Road", "Hole", conn=self.conn, reporter="+441")
+        second = tools.save_report("fly_tipping", "B Road", "Sofa", conn=self.conn,
+                                   reporter="+441")
+        row = reports_db.latest_report_for(self.conn, tools.reporter_ref("+441"))
+        self.assertEqual(row["id"], second["report_id"])
+
+    def test_latest_report_for_unknown_is_none(self):
+        self.assertIsNone(reports_db.latest_report_for(self.conn,
+                                                       tools.reporter_ref("+449")))
+
+    def test_link_duplicate_points_at_the_original(self):
+        first = tools.save_report("pothole", "Alma Road", "Hole", conn=self.conn)
+        second = tools.save_report("fly_tipping", "Cranbury Road", "Sofa", conn=self.conn)
+        self.assertTrue(reports_db.link_duplicate(self.conn, second["report_id"],
+                                                  first["report_id"]))
+        self.assertEqual(self.row(second["report_id"])["duplicate_of"], first["report_id"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

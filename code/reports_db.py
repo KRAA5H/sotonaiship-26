@@ -64,6 +64,40 @@ def set_status(conn, report_id, status):
     return cursor.rowcount == 1
 
 
+def set_location(conn, report_id, location):
+    """Fill in a street the resident sent after we had already logged the report."""
+    location = (location or "").strip()
+    if not location or location.lower() == "not given":
+        return False
+    cursor = conn.execute("UPDATE reports SET location = ? WHERE id = ?",
+                          (location, report_id))
+    return cursor.rowcount == 1
+
+
+def link_duplicate(conn, report_id, original_id):
+    """Point a new report at an older one, used when a resolved job comes back."""
+    if not report_id or not original_id or report_id == original_id:
+        return False
+    cursor = conn.execute(
+        "UPDATE reports SET duplicate_of = ? WHERE id = ? AND duplicate_of IS NULL",
+        (original_id, report_id),
+    )
+    return cursor.rowcount == 1
+
+
+def latest_report_for(conn, reporter_ref):
+    """That sender's most recent report, used to answer "any update?"."""
+    if not reporter_ref:
+        return None
+    row = conn.execute(
+        "SELECT id, created_at, category_id, status, severity, location, description, "
+        "has_photo, duplicate_of, link_token FROM reports "
+        "WHERE reporter_ref = ? ORDER BY created_at DESC, id DESC LIMIT 1",
+        (reporter_ref,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
 def init_db(path=None, seed=True):
     """Create the table if missing, then load the synthetic reports if it is empty.
 

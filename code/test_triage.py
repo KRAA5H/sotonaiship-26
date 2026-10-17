@@ -140,22 +140,30 @@ class TriageTest(unittest.TestCase):
             self.assertIn(category_id, system)
 
 
-class GuidanceTest(unittest.TestCase):
-    def test_council_report_gets_no_guidance(self):
-        self.assertIsNone(triage.guidance_for("pothole"))
+class EmergencyTest(unittest.TestCase):
+    def test_a_gas_smell_goes_straight_to_999(self):
+        with patch.object(triage.llm, "chat") as chat:
+            decision = triage.triage("I can smell gas outside my flat")
+        self.assertEqual(decision["reason"], "emergency")
+        self.assertFalse(decision["is_report"])
+        chat.assert_not_called()
 
-    def test_info_only_cites_a_fact(self):
-        guidance = triage.guidance_for("info_student_waste_rules")
-        self.assertTrue(guidance)
-        self.assertIn("southampton.gov.uk", guidance)
+    def test_other_emergencies_are_recognised(self):
+        for text in ("there is a fire in the bin store",
+                     "someone is trapped in the lift",
+                     "a live cable is down on the pavement",
+                     "someone is collapsed outside",
+                     "the flat upstairs is on fire"):
+            self.assertEqual(triage.triage(text)["reason"], "emergency", text)
 
-    def test_not_council_points_somewhere(self):
-        guidance = triage.guidance_for("not_council_trunk_road")
-        self.assertTrue(guidance)
-        self.assertIn("national highways", guidance.lower())
+    def test_a_bonfire_complaint_is_not_an_emergency(self):
+        with patch.object(triage.llm, "chat", return_value=("{}", "model")):
+            decision = triage.triage("smoke from a bonfire next door")
+        self.assertNotEqual(decision["reason"], "emergency")
 
-    def test_unknown_category_still_says_something(self):
-        self.assertTrue(triage.guidance_for("no_such_category"))
+    def test_the_emergency_decision_keeps_the_words_for_the_log(self):
+        decision = triage.triage("smell of gas in the kitchen")
+        self.assertIn("gas", decision["description"].lower())
 
 
 if __name__ == "__main__":

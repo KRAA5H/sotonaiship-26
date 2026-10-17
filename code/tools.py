@@ -94,6 +94,11 @@ def _reporter_ref(reporter):
     return "h-" + digest.hexdigest()[:16]
 
 
+def reporter_ref(reporter):
+    """Public name for the salted sender hash, for the bot's status lookup."""
+    return _reporter_ref(reporter)
+
+
 def _with_conn(conn, work):
     if conn is not None:
         return work(conn)

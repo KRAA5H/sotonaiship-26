@@ -9,6 +9,17 @@ Three places, no more:
 
 ---
 
+## 21:40, Saturday: RAG and the resident voice (phase 1)
+
+- `code/rag.py`: grounded answers. All 53 dated facts go in one prompt and the model cites fact numbers, so there is no vector database and no keyword list. 12 of 12 live questions cite the right fact, and 2 of 2 unanswerable questions are refused cleanly.
+- `code/messages.py`: every resident string in one module. The copy rules are tests: three lines, one link, no markdown, no unconfirmed team names, no search links, no em dashes.
+- Act first: a report with no street is saved as "Not given", and the resident's answer updates that row instead of creating a second report.
+- Status: "any update?" is answered from the database against that sender's latest report, with no model call.
+- Emergency: gas, fire, trapped, live cable and collapse get "Call 999 now" before the model is called, and nothing is saved.
+- Tests: 177 pass (triage 25, tools 43, website 31, bot 33, rag 24, messages 21), plus 18 message-evaluation cases and 12 live RAG cases.
+- Live run: nine texts through the real server and model. Two reports saved, one incomplete waiting for a street, one grounded answer with a source, one status answer, one silence, one greeting, one 999 reply, one National Highways reply.
+- Found and fixed while testing: the bot answered a thank you with a refusal, a missing street threw the report away, and an unanswerable question still got a citation.
+
 ## 19:20, Saturday: v1 joined
 
 Gate G1 met and beaten: one iMessage becomes one row, one card and one link.

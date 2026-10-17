@@ -169,9 +169,24 @@ def normalise(data):
                      confidence=_confidence(data.get("confidence")))
 
 
+EMERGENCY_WORDS = re.compile(
+    r"\b(smell(s)? (of )?gas|gas leak|gas smell|fire|on fire|house fire|"
+    r"trapped|live wire|live cable|electrocuted|not breathing|"
+    r"can'?t breathe|drowning|someone (is )?(hurt|injured|collapsed))\b",
+    re.IGNORECASE,
+)
+
+
+def _emergency_decision(text):
+    return _decision("emergency", description=_text(text, 400), confidence=1.0,
+                     outcome="emergency_redirect")
+
+
 def triage(text=None, image=None):
     """Classify one message. image is (bytes, mime) or None."""
     user = _text(text, MAX_TEXT) or "The resident sent this photo with no words."
+    if text and EMERGENCY_WORDS.search(text):
+        return _emergency_decision(text)
     system = _system()
 
     reply, mode = llm.chat(system, user, image)
@@ -189,27 +204,6 @@ def triage(text=None, image=None):
     if not decision["description"]:
         decision["description"] = user[:400]
     return decision
-
-
-def guidance_for(category_id):
-    """A short resident-facing line for a category we do not save a report for."""
-    category = tools._rulebook()[0].get(category_id) or {}
-    if category.get("outcome") == "council_report":
-        return None
-    facts = (category.get("answer_facts_to_cite") or [])
-    if facts:
-        line = facts[0]
-        source = category.get("answer_source")
-        return line + (f"\n\nMore detail: {source}" if source else "")
-    note = category.get("note") or ""
-    redirect = category.get("redirect_to")
-    if redirect:
-        from urllib.parse import quote_plus
-
-        name = redirect.replace("_", " ")
-        return (note or f"That one is not the council's to fix.") + \
-               f"\n\nReport it to {name}: https://www.google.com/search?q={quote_plus(name)}"
-    return note or "That one is not something the council can act on."
 
 
 def _cli(argv):

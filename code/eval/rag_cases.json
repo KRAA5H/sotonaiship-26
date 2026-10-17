@@ -1,0 +1,50 @@
+[
+ {
+  "question": "how long does a pothole take to be fixed",
+  "expected_topic": "repair"
+ },
+ {
+  "question": "how quickly do the council clear urgent street cleaning",
+  "expected_topic": "Urgent response aim"
+ },
+ {
+  "question": "who is responsible for the bins in a student house",
+  "expected_topic": "Student household waste"
+ },
+ {
+  "question": "how much is the fine for fly tipping",
+  "expected_topic": "Fixed penalty amount"
+ },
+ {
+  "question": "what size pothole actually gets repaired",
+  "expected_topic": "Size thresholds"
+ },
+ {
+  "question": "do I need to check my bin was out before reporting a missed collection",
+  "expected_topic": "Missed collection rules"
+ },
+ {
+  "question": "can the council remove graffiti from my shop",
+  "expected_topic": "Private and commercial property"
+ },
+ {
+  "question": "what number do I call for a gas leak",
+  "expected_topic": "Gas emergency"
+ },
+ {
+  "question": "who do I contact about a power cut",
+  "expected_topic": "Power cuts"
+ },
+ {
+  "question": "who is responsible for a problem on the motorway",
+  "expected_topic": "National Highways"
+ },
+ {
+  "question": "does the council need audio recordings for a noise complaint",
+  "expected_topic": "Evidence rules"
+ },
+ {
+  "question": "how do I report a repair to my council house",
+  "expected_topic": "Repair form"
+ }
+]

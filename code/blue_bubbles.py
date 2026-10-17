@@ -34,6 +34,9 @@ load_dotenv(Path(__file__).with_name(".env"))
 
 import bb
 import llm
+import messages
+import rag
+import reports_db
 import tools
 import triage
 from website import site
@@ -108,31 +111,49 @@ def get_agent():
 
 
 def merge_pending(sender, text):
-    """Join a short follow-up onto the message we just asked a location for."""
+    """Join a short follow-up onto the message we asked a location for."""
     if not sender:
-        return text, False
+        return text, None
     with _pending_lock:
         entry = _pending.pop(sender, None)
     if not entry or not text or len(text) > 140:
-        return text, False
-    original, asked_at = entry
-    if time.time() - asked_at > PENDING_SECONDS:
-        return text, False
-    return f"{original}\n\nThe resident then said where it is: {text}", True
+        return text, None
+    if time.time() - entry["asked_at"] > PENDING_SECONDS:
+        return text, None
+    joined = f"{entry['text']}\n\nThe resident then said where it is: {text}"
+    return joined, entry
 
 
-def remember_location(sender, text):
+def remember_location(sender, text, saved, decision):
+    """Hold the incomplete report, so the answer becomes its street, not a new row."""
     if not sender or not text:
         return
     with _pending_lock:
-        _pending[sender] = (text, time.time())
+        _pending[sender] = {
+            "text": text,
+            "asked_at": time.time(),
+            "report_id": saved["report_id"],
+            "link": saved["link"],
+            "category_id": decision["category_id"],
+        }
         while len(_pending) > PENDING_LIMIT:
             _pending.popitem(last=False)
 
 
-def reply_for(decision, sender, has_photo=False):
+def reply_for(decision, sender, text="", has_photo=False, pending=None,
+              relink_to=None):
     """Save what triage accepted, and return the one text the resident gets back."""
+    decision = dict(decision)
+    decision["has_photo"] = bool(has_photo)
     reason = decision["reason"]
+
+    # The resident answered our question about where it is: fill that report in.
+    if (reason == "ok" and pending and pending.get("report_id")
+            and decision["category_id"] == pending.get("category_id")):
+        if _with_db(lambda c: reports_db.set_location(
+            c, pending["report_id"], decision["location"])):
+            print(f"[located] {pending['report_id']} -> {decision['location']}")
+            return messages.logged(decision, {"link": pending["link"]})
 
     if reason == "ok":
         saved = tools.save_report(
@@ -145,21 +166,36 @@ def reply_for(decision, sender, has_photo=False):
         )
         if not saved.get("ok"):
             print(f"[save] refused: {saved.get('error')}")
-            return ("Sorry, I could not log that just now. Please send it again in "
-                    "a minute.")
-        label = decision["category_label"] or decision["category_id"]
-        if saved.get("duplicate_of"):
-            return (f"That one is already open with the council ({label}).\n\n"
-                    f"Follow it here: {saved['link']}")
+            return messages.need_location(decision)
         print(f"[saved] {saved['report_id']} {decision['category_id']} "
               f"sev={decision['severity']} duplicate_of={saved['duplicate_of']}")
-        return (f"Thanks, that is logged with the council ({label}).\n\n"
-                f"Follow it here: {saved['link']}\n\n"
-                "We will text you when the status changes.")
+        if saved.get("duplicate_of"):
+            return messages.duplicate(decision, saved)
+        if relink_to:
+            _with_db(lambda c: reports_db.link_duplicate(c, saved["report_id"], relink_to))
+            print(f"[relink] {saved['report_id']} -> {relink_to}")
+        return messages.logged(decision, saved)
 
     if reason == "no_location":
-        return ("Thanks. Where exactly is it? A street name with the nearest number "
-                "or landmark is enough for a crew to find it.")
+        # Act first: keep the report, then ask for the one thing only they know.
+        saved = tools.save_report(
+            category_id=decision["category_id"],
+            location="Not given",
+            description=decision["description"],
+            severity=decision["severity"],
+            has_photo=has_photo,
+            reporter=sender,
+        )
+        if saved.get("ok"):
+            remember_location(sender, text, saved, decision)
+            print(f"[saved] {saved['report_id']} {decision['category_id']} "
+                  "incomplete, waiting for the street")
+        else:
+            print(f"[save] refused: {saved.get('error')}")
+        return messages.need_location(decision)
+
+    if reason == "emergency":
+        return messages.emergency()
 
     if reason.startswith("no_report_for_") or reason == "model_says_not_a_report":
         if has_photo and decision["description"]:
@@ -167,14 +203,82 @@ def reply_for(decision, sender, has_photo=False):
                           decision["description"].strip(), flags=re.IGNORECASE).rstrip(".")
             return (f"From your photo: {seen}. That is not something the council "
                     "can act on, so nothing has been logged.")
-        guidance = triage.guidance_for(decision["category_id"])
-        if guidance:
-            return guidance + "\n\nNothing has been logged for this one."
-        return ("That one is not something the council can act on, so nothing has "
-                "been logged. Tell me if there is something else on your street.")
+        is_not_council = (decision.get("outcome") == "not_council" or
+                         str(decision.get("category_id") or "").startswith("not_council"))
+        if is_not_council:
+            return messages.not_council(decision)
+        if is_question(text):
+            grounded, _ = rag.answer(text, decision.get("category_id"))
+            if grounded:
+                return messages.answered(grounded)
+        return messages.no_answer(decision)
 
-    return ("Sorry, I did not catch that. Tell me what the problem is and where it "
-            "is, in a few words.")
+    return messages.unclear()
+
+
+SILENCE_WORDS = re.compile(
+    r"^(thanks|thank you|cheers|ta|ok|okay|cool|got it|perfect|great|nice one)[\s!.,]*$",
+    re.IGNORECASE,
+)
+GREETING_WORDS = re.compile(
+    r"^(hi|hello|hey|hiya|good (morning|afternoon|evening))( there)?[\s!.,]*$",
+    re.IGNORECASE
+)
+QUESTION_WORDS = re.compile(
+    r"^(how|what|when|where|who|why|can|could|do|does|is|are|will|should)\b",
+    re.IGNORECASE,
+)
+
+
+def wants_silence(text):
+    """A thank you or an acknowledgement. Answering it would be noise."""
+    return bool(text) and len(text) <= 25 and bool(SILENCE_WORDS.search(text))
+
+
+def wants_greeting(text):
+    return bool(text) and len(text) <= 25 and bool(GREETING_WORDS.search(text))
+
+
+def is_question(text):
+    text = (text or "").strip()
+    return text.endswith("?") or bool(QUESTION_WORDS.search(text))
+
+
+STATUS_WORDS = re.compile(
+    r"\b(any )?updates?\b|\bstatus\b|\bany news\b|\bwhat'?s happening\b|"
+    r"\bis (it|this) (fixed|done)\b|\bheard (anything|back)\b|\bprogress\b",
+    re.IGNORECASE,
+)
+STILL_WORDS = re.compile(
+    r"still (there|not fixed|not done|broken|a problem)|not (been )?fixed|"
+    r"no ?one (came|fixed)|nobody (came|fixed)",
+    re.IGNORECASE,
+)
+
+
+def _with_db(work):
+    """One short-lived connection, always closed."""
+    conn = reports_db.connect()
+    try:
+        return work(conn)
+    finally:
+        conn.close()
+
+
+def wants_status(text):
+    """True for a short question about the report they already made."""
+    return bool(text) and len(text) <= 120 and bool(STATUS_WORDS.search(text))
+
+
+def status_reply(sender):
+    """Answer from the database, not the model. None when there is nothing to say."""
+    report = _with_db(lambda c: reports_db.latest_report_for(
+        c, tools.reporter_ref(sender)))
+    if not report:
+        return None
+    report["link"] = f"{tools.SITE_URL}/r/{report['link_token']}"
+    report["status_text"] = tools.STATUS_TEXT.get(report["status"], report["status"])
+    return report, messages.status(report)
 
 
 def handle_inbound(inbound):
@@ -215,16 +319,34 @@ def handle_inbound(inbound):
             return
 
         sender = inbound.get("sender") or chat_guid
-        text, merged = merge_pending(sender, text)
-        if merged:
+        if wants_silence(text):
+            print(f"[silent] acknowledgement from {sender}")
+            return
+        if wants_greeting(text):
+            print(f"[greeting] {sender}")
+            bb.send_text(chat_guid, messages.greeting())
+            return
+        relink_to = None
+        if wants_status(text):
+            found = status_reply(sender)
+            if found:
+                report, status_text = found
+                if report["status"] != "resolved" or not STILL_WORDS.search(text):
+                    print(f"[status] {report['id']} -> {report['status']}")
+                    bb.send_text(chat_guid, status_text)
+                    return
+                relink_to = report["id"]
+        text, pending = merge_pending(sender, text)
+        if pending:
             print(f"[pending] joined a follow-up from {sender}")
         decision = triage.triage(text, image)
         print(f"[triage] report={decision['is_report']} {decision['category_id']} "
               f"sev={decision['severity']} conf={decision['confidence']} "
               f"why={decision['reason']} to={chat_guid}")
-        if decision["reason"] == "no_location":
-            remember_location(sender, text)
-        reply = reply_for(decision, sender, bool(image))
+        reply = reply_for(decision, sender, text, bool(image), pending, relink_to)
+        if not reply:
+            print(f"[silent] nothing to send to {chat_guid}")
+            return
         print(f"[reply] to={chat_guid}: {reply[:120]}")
         bb.send_text(chat_guid, reply)
     except Exception as error:  # noqa: BLE001 - a webhook must never die silently
