@@ -60,6 +60,49 @@ The short record of what we decided and what we rejected, so nobody re-opens a s
 | D29 | **Duplicate matching allows extra words at the same place.** "Weston Lane" matches "Weston Lane outside the school". A directional suffix (north, south, east, west, upper, lower) still means a different road | Exact text matching missed a real repeat during the live check; the suffix guard keeps one street from swallowing its neighbours |
 | D30 | **The bot remembers a location question for 10 minutes** and joins a short reply to the earlier message | Without it, "there is a pothole near my house" followed by "Alma Road" lost the report. A proper session store is deferred |
 
+## Proposed: drop-a-pin location link (not wired in yet)
+
+| # | Proposal | Why | Proposed by |
+|---|---|---|---|
+| D35 | **When a report has no street, also offer a map link.** `code/pin_service.py` is built and tested but the bot does not call it yet. The changes below are for the owners of `blue_bubbles.py` (Section 1) and `messages.py` (Section 2) to make | A map pin is faster and more accurate than typing a street, and it works for residents who do not know the road name. Privacy design and legal notes in `COMPLIANCE_LOCATION.md` | Anirudh |
+
+**Where it is called (Section 1, `code/blue_bubbles.py`).** In `reply_for`, in the `reason == "no_location"` branch, after `tools.save_report(...)` succeeds and `remember_location(...)` runs:
+
+```python
+pin_url = None
+if os.getenv("PIN_BASE_URL"):  # off unless the pin service is running behind HTTPS
+    import pin_service
+    pin_url = pin_service.create_location_link(saved["report_id"])  # passes only R-0074, never the sender
+return messages.need_location(decision, pin_url=pin_url)
+```
+
+`create_location_link` reads `BASE_URL`. The bot should set it from `PIN_BASE_URL`, or the two can share one variable.
+
+**The text (Section 2, `code/messages.py`).** `need_location(decision, pin_url=None)` keeps today's reply when `pin_url` is None. With a link, placeholder wording, still three lines and one URL:
+
+> Logged: fly-tipping.
+> Where exactly is it? Drop a pin on this map: <pin_url>
+> Or just reply with the street name.
+
+**How the bot reads the result.** Both processes run on the demo Mac, so the simplest route is a direct call, `pin_service.get_location(report_id)`, with `SOTONFIX_DB` pointing at the same file. From another machine, use `GET /api/location/<report_id>` with header `X-Api-Key: $BOT_API_KEY`. That returns the same dict plus a ready-made `location_text`. Two moments to read it:
+1. **When the next message arrives from someone with a `_pending` entry**, check `get_location` first. If a pin was confirmed, use it and treat the message as normal.
+2. **Optionally**, a background check every 30 seconds over `_pending` entries. When a location appears, call `reports_db.set_location` and send `messages.logged(...)`, so the resident gets a confirmation without texting again.
+
+**How the fields map onto the report.**
+- `reports.location` is `pin_service.as_report_location(loc)`, for example `Windsor Terrace, near The Bargate, SO14 7BQ`, written with the existing `reports_db.set_location`.
+- The street comes first on purpose. `tools._same_place` allows extra words after a street, so duplicate matching against an earlier "Windsor Terrace" report still works.
+- `reports.area` (the new column from f77dd7e) takes `loc["area"]`. That needs a small setter in `reports_db.py`, which Section 3 owns.
+- `coverage == "unverified"` means we could not confirm it is in Southampton. Keep the report and let the officer see a flag (Section 3).
+
+**Coordinates stay off by default.** `STORE_COORDINATES` is unset, so the pin service keeps no latitude or longitude, which matches D26 and the "never store coordinates" rule. Turning it on stores them rounded to about 11 m, only in `code/pin.db` and never in `kerbside.db`.
+
+**Overlap with TODO-SPLIT 1.1 and 1.7, please read.**
+- **1.1 (Apple Maps pins in a text)** also reverse geocodes with Nominatim, in the bot process. Two separate rate limiters could together break Nominatim's one-request-per-second rule. Suggest 1.1 reuses `pin_service.assess(lat, lng)`. That gives one geocoder, one lock and cache, the same Southampton check (bounding box, then postcodes.io council area) and the same sanitising, with no coordinates stored. `code/location.py` currently returns coordinates and has no timeout on its wait, so it is better not to use it for this.
+- **1.7 (maps plugin attachments)**: no code conflict. A shared Apple Maps location and a confirmed pin are two routes to the same location field. Whichever arrives first wins, and the other should not overwrite it without the resident asking.
+- **1.4 (incomplete reports)**: once a pin fills the location, duplicate matching should run again on the real street, never on "Not given".
+
+**To run it:** `python code/pin_service.py` (port 5007) behind an HTTPS tunnel with `TRUST_PROXY=1`, `BASE_URL=https://<host>`, `CONTROLLER_NAME`, `CONTACT_EMAIL` and `SOTONFIX_USER_AGENT` set. Phones refuse location sharing on plain HTTP.
+
 ## How to change something
 
 1. Write the line in this file first: what, why, who.
