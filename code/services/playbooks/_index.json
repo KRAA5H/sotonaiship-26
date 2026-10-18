@@ -206,9 +206,9 @@
         "graffiti_flyposting",
         "glass_spillage_hazard"
       ],
-      "date": "2026-10-17",
-      "fact_key": "dfd6037b52d1",
-      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+      "date": "2026-10-18",
+      "fact_key": "a3276c7334d9",
+      "url": "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/"
     },
     "F004": {
       "categories": [
@@ -369,9 +369,9 @@
       "categories": [
         "lost_damaged_bin"
       ],
-      "date": "2026-10-17",
-      "fact_key": "b8a7204ac23a",
-      "url": "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/my-bin-is-lost-or-stolen"
+      "date": "2026-10-18",
+      "fact_key": "5190ed774377",
+      "url": "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/my-bin-is-lost-or-stolen/"
     },
     "F024": {
       "categories": [
@@ -648,7 +648,7 @@
     "categories": "0.3",
     "category_count": 22,
     "fact_count": 54,
-    "facts_date": "2026-10-17"
+    "facts_date": "2026-10-18"
   },
   "groups": {
     "cleansing": [
@@ -749,13 +749,14 @@
     "https://www.mysociety.org/2024/02/06/statement-from-mysociety-regarding-misuse-of-fixmystreet-data/": "2026-10-17",
     "https://www.nationalgas.com/emergency-contacts": "2026-10-17",
     "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/": "2026-10-17",
-    "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/my-bin-is-lost-or-stolen": "2026-10-17",
+    "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/my-bin-is-lost-or-stolen/": "2026-10-18",
     "https://www.southampton.gov.uk/contact-us/emergency-out-of-hours/": "2026-10-17",
     "https://www.southampton.gov.uk/environment": "2026-10-17",
     "https://www.southampton.gov.uk/environment/emergencies-and-severe-weather/flood-risk-management": "2026-10-17",
     "https://www.southampton.gov.uk/environment/neighbourhood-nuisances-and-property-concerns/concern-about-property/": "2026-10-17",
     "https://www.southampton.gov.uk/environment/neighbourhood-nuisances-and-property-concerns/neighbourhood-nuisances/noise/make-a-complaint/": "2026-10-17",
     "https://www.southampton.gov.uk/environment/street-cleaning": "2026-10-17",
+    "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/": "2026-10-18",
     "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/abandoned-shopping-trolleys/": "2026-10-17",
     "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/dead-animals/": "2026-10-17",
     "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/fly-tipping/": "2026-10-17",
@@ -799,6 +800,7 @@
   ],
   "numbers": [
     "023 8023 3344",
+    "023 8083 3005",
     "0300 123 5000",
     "0300 555 1373",
     "0330 333 0444",
@@ -858,5 +860,5 @@
     "Street cleansing",
     "Waste collection"
   ],
-  "version": "0.3+38f8b56fe45e"
+  "version": "0.3+fcf6c16ba040"
 }

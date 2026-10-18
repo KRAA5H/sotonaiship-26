@@ -27,12 +27,12 @@
     },
     {
       "caveat": "This is an aim, not a guarantee.",
-      "date": "2026-10-17",
-      "fact": "The council aims to deal with at least 75% of urgent street cleaning requests within one working day of being reported.",
-      "fact_key": "dfd6037b52d1",
+      "date": "2026-10-18",
+      "fact": "The council aims to deal with over 75% of urgent street cleaning requests within one working day of report.",
+      "fact_key": "a3276c7334d9",
       "id": "F003",
       "topic": "Urgent response aim",
-      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+      "url": "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/"
     }
   ],
   "fms_categories": [
@@ -42,7 +42,7 @@
   "form_url": null,
   "generated_from": {
     "categories": "0.3",
-    "facts_date": "2026-10-17"
+    "facts_date": "2026-10-18"
   },
   "handoff": false,
   "id": "dog_fouling",
@@ -91,12 +91,12 @@
   },
   "severity_keywords": {},
   "show_guidance": [],
-  "source_date": "2026-10-17",
+  "source_date": "2026-10-18",
   "source_status": "checked",
   "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
   "specialist_group": "cleansing",
   "submission_status": "unverified",
   "team": "Street cleansing",
   "team_confirmed": false,
-  "version": "0.3+38f8b56fe45e"
+  "version": "0.3+fcf6c16ba040"
 }

@@ -42,7 +42,7 @@
   "form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/environmental-health-report-local-nuisance-or-concern",
   "generated_from": {
     "categories": "0.3",
-    "facts_date": "2026-10-17"
+    "facts_date": "2026-10-18"
   },
   "handoff": true,
   "id": "other_nuisance",
@@ -90,12 +90,12 @@
   },
   "severity_keywords": {},
   "show_guidance": [],
-  "source_date": "2026-10-17",
+  "source_date": "2026-10-18",
   "source_status": "checked",
   "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
   "specialist_group": null,
   "submission_status": "unverified",
   "team": "Environmental health",
   "team_confirmed": false,
-  "version": "0.3+38f8b56fe45e"
+  "version": "0.3+fcf6c16ba040"
 }

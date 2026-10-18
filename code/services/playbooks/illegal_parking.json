@@ -34,7 +34,7 @@
   "form_url": "https://www.southampton.gov.uk/travel-transport/report-issue/parking-offence/",
   "generated_from": {
     "categories": "0.3",
-    "facts_date": "2026-10-17"
+    "facts_date": "2026-10-18"
   },
   "handoff": false,
   "id": "illegal_parking",
@@ -95,12 +95,12 @@
     "low": []
   },
   "show_guidance": [],
-  "source_date": "2026-10-17",
+  "source_date": "2026-10-18",
   "source_status": "checked",
   "source_url": "https://www.fixmystreet.com/reports/Southampton",
   "specialist_group": "highways",
   "submission_status": "unverified",
   "team": "Parking enforcement",
   "team_confirmed": false,
-  "version": "0.3+38f8b56fe45e"
+  "version": "0.3+fcf6c16ba040"
 }

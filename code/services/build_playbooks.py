@@ -172,10 +172,9 @@ def build():
     fact_rows = _fact_rows(rows)
     if not fact_rows:
         raise ValueError("the fact sheet is empty")
-    dates = {row["date"] for row in fact_rows}
-    if len(dates) != 1:
-        raise ValueError(f"facts must share one checked date, got {sorted(dates)}")
-    facts_date = next(iter(dates))
+    # Every fact keeps its own checked date; the playbook-level date is the newest,
+    # since facts are re-checked one at a time as council pages change.
+    facts_date = max(row["date"] for row in fact_rows)
     known_facts = _known_facts(fact_rows)
 
     numbers = set()

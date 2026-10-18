@@ -58,7 +58,7 @@
   "form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-missed-bin-collection",
   "generated_from": {
     "categories": "0.3",
-    "facts_date": "2026-10-17"
+    "facts_date": "2026-10-18"
   },
   "handoff": false,
   "id": "missed_bin",
@@ -117,12 +117,12 @@
   },
   "severity_keywords": {},
   "show_guidance": [],
-  "source_date": "2026-10-17",
+  "source_date": "2026-10-18",
   "source_status": "checked",
   "source_url": "https://southampton.gov.uk/bins-recycling/bins/missed-collections",
   "specialist_group": "waste",
   "submission_status": "unverified",
   "team": "Waste collection",
   "team_confirmed": false,
-  "version": "0.3+38f8b56fe45e"
+  "version": "0.3+fcf6c16ba040"
 }

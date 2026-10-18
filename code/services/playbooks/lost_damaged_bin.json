@@ -26,13 +26,13 @@
       "url": "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/"
     },
     {
-      "caveat": "The page does not say whether damaged bins are free.",
-      "date": "2026-10-17",
-      "fact": "A lost or stolen general waste (green-lidded) bin costs 33 pounds for 140 litre, 43 pounds for 240 litre and 54 pounds for 360 litre. Charges are non-refundable. Glass and recycling bins can be replaced free.",
-      "fact_key": "b8a7204ac23a",
+      "caveat": "The charge covers administration and delivery.",
+      "date": "2026-10-18",
+      "fact": "A lost or stolen general waste (green-lidded) bin costs 35 pounds for 140 litre and 45 pounds for 240 litre. Charges are non-refundable. The council no longer provides 360 litre general waste bins; to replace one, call customer services on 023 8083 3005. Glass, food and recycling bins are replaced free.",
+      "fact_key": "5190ed774377",
       "id": "F023",
       "topic": "Replacement charges",
-      "url": "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/my-bin-is-lost-or-stolen"
+      "url": "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/my-bin-is-lost-or-stolen/"
     }
   ],
   "fms_categories": [],
@@ -40,7 +40,7 @@
   "form_url": null,
   "generated_from": {
     "categories": "0.3",
-    "facts_date": "2026-10-17"
+    "facts_date": "2026-10-18"
   },
   "handoff": false,
   "id": "lost_damaged_bin",
@@ -99,12 +99,12 @@
   },
   "severity_keywords": {},
   "show_guidance": [],
-  "source_date": "2026-10-17",
+  "source_date": "2026-10-18",
   "source_status": "checked",
   "source_url": "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/",
   "specialist_group": "waste",
   "submission_status": "unverified",
   "team": "Waste collection",
   "team_confirmed": false,
-  "version": "0.3+38f8b56fe45e"
+  "version": "0.3+fcf6c16ba040"
 }
