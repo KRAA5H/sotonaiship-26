@@ -338,6 +338,16 @@ def _trace_line(outcome):
                       for step in outcome.trace)
 
 
+def _link_label(url):
+    if "/p/" in url:
+        return "share your location here"
+    if "/t/" in url:
+        return "open your task"
+    if "/r/" in url:
+        return "follow your report"
+    return "source"
+
+
 def handle_inbound(inbound):
     chat_guid = inbound["chat_guid"]
     text = inbound.get("text") or ""
@@ -345,7 +355,6 @@ def handle_inbound(inbound):
         image, photo_ref, card = read_attachments(inbound.get("attachments") or [])
 
         if not text and not image and not card:
-            bb.send_text(chat_guid, NO_CONTENT)
             return
 
         if MODE == "agent":

@@ -63,8 +63,10 @@ def _brief(state, outcome):
             "address_known": bool((state.get("profile") or {}).get("address")),
             "phone_known": bool((state.get("profile") or {}).get("phone")),
             "style": (state.get("profile") or {}).get("style"),
-            "missing": [field for field in ("name", "address", "phone")
-                        if not (state.get("profile") or {}).get(field)],
+            "missing": ([field for field in ("name", "address", "phone")
+                         if not (state.get("profile") or {}).get(field)]
+                        if (state.get("task") or (state.get("plan") or {}).get("task_request"))
+                        else []),
         },
         "location_link_available": bool(outcome.get("location_url")),
         "task": state.get("task"),

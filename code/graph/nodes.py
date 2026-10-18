@@ -94,7 +94,8 @@ def make_nodes(deps):
                 "short_circuit": False,
                 "emergency": False,
                 "conversation": history,
-                "recent_messages": history[-MAX_RECENT_MESSAGES:],
+                "recent_messages": [item for item in history
+                                    if item.get("role") == "resident"][-MAX_RECENT_MESSAGES:],
             })
             return base
         entry = {
@@ -105,7 +106,8 @@ def make_nodes(deps):
         conversation = history + [entry]
         base.update({
             "conversation": conversation,
-            "recent_messages": conversation[-MAX_RECENT_MESSAGES:],
+            "recent_messages": [item for item in conversation
+                                if item.get("role") == "resident"][-MAX_RECENT_MESSAGES:],
             "suppressed": False,
             "short_circuit": False,
             "emergency": False,

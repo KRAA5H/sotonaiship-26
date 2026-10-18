@@ -97,8 +97,13 @@ class TurnRuntime:
                                 "duplicate_of": None}
             written = writer.write(state, self.deps, greeting_outcome,
                                    execution.context(self.deps, state))
-            plan = written or {"bubbles": [], "url": None, "source_url": None,
-                               "suppressed": True}
+            if written:
+                plan = written
+            else:
+                plan = {"bubbles": [{"purpose": "question", "text": line}
+                                     for line in messages.greeting().splitlines()
+                                     if line.strip()],
+                        "url": None, "source_url": None, "suppressed": False}
         if not plan.get("bubbles") and kind in ("emergency", "threat"):
             copy = {"emergency": messages.emergency, "threat": messages.threat}[kind]()
             plan = {"bubbles": [{"purpose": "action", "text": line}

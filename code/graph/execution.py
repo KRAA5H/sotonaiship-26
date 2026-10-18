@@ -142,6 +142,9 @@ def execute(state, deps):
     if category not in categories and category != "unclear_other":
         category = "unclear_other"
     clarification = plan.get("clarification") or {}
+    if action == "ask" and _has_text(draft)             and clarification.get("field") in ("location", "address")             and categories.get(category) != "not_council"             and category not in (index.get("never_saved") or ()):
+        # Capture-first: save the described problem before asking where it is.
+        action = "log"
     if action == "log" and (categories.get(category) in ("info_only", "not_council")
                             or category in (index.get("never_saved") or ())):
         category = "unclear_other"
@@ -486,6 +489,11 @@ def compose(state, deps):
             text = messages.unclear()
     elif outcome.get("status"):
         text = messages.status(outcome["status"])
+    elif outcome.get("task_url"):
+        task = state.get("task") or {}
+        reference = task.get("external_ref") or "not created yet"
+        text = (f"i've prepared your {task.get('kind', 'task')} case. "
+                f"reference: {reference}. it has not been submitted to the council.")
     elif outcome.get("action") == "answer":
         if outcome.get("facts"):
             fact = outcome["facts"][0]
@@ -503,6 +511,7 @@ def compose(state, deps):
         text = messages.sorry()
 
     bubbles, url, source_url = _split(text, url)
+    source_url = source_url or outcome.get("task_url") or outcome.get("location_url")
     destination = outcome.get("destination")
     if outcome.get("action") == "escalate" and isinstance(destination, str) \
             and destination.startswith(("http://", "https://")):
