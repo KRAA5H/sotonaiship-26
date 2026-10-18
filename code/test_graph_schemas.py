@@ -389,6 +389,12 @@ class ThreadStateTest(unittest.TestCase):
         _, problems = schemas.validate_thread_state(state)
         self.assertIn("schema.invalid:action", problems)
 
+    def test_a_policy_violation_round_trips(self):
+        state = new_thread_state("h-1", "g-1")
+        state["violations"] = [{"code": "capture.lost", "field": "x",
+                                "message": "y", "hard": True}]
+        self.assertEqual(schemas.validate_thread_state(state)[1], [])
+
 
 class CopyRulesTest(unittest.TestCase):
     def test_copy_rules_match_voice(self):

@@ -67,7 +67,8 @@ STATE_KEYS = {"thread_id", "turn_id", "inbound", "recent_messages", "active_inci
               "last_executed_outcome", "candidate_services", "selected_specialist",
               "specialist_results", "plan", "violations", "executed_outcome",
               "bubble_plan", "review_queued", "repair_count", "specialist_call_count",
-              "delivery_outbox_ids", "degraded", "short_circuit", "suppressed"}
+              "delivery_outbox_ids", "degraded", "short_circuit", "emergency",
+              "suppressed", "model_calls"}
 SPECIALIST_KEYS = {"service_id", "playbook_version", "fit", "observations",
                    "proposed_patch", "missing_requirements", "suggested_question",
                    "recommended_action", "fact_ids", "source_refs", "routing_status",
@@ -80,7 +81,7 @@ SPECIALIST_REQUEST_KEYS = {"group", "reason"}
 ESCALATION_KEYS = {"kind", "destination"}
 EVIDENCE_KEYS = {"kind", "ref", "text", "at", "source"}
 RETRACTED_KEYS = {"claim", "reason", "at"}
-VIOLATION_KEYS = {"code", "field", "message"}
+VIOLATION_KEYS = {"code", "field", "message", "hard"}
 
 COMPATIBLE = {
     "new_report": {"log", "ask"},
@@ -555,9 +556,11 @@ def validate_thread_state(raw, today=None):
     for field in ("repair_count", "specialist_call_count"):
         if not _is_int(raw.get(field, 0)) or raw.get(field, 0) < 0:
             problems.append(_problem("schema.invalid", field))
-    for field in ("review_queued", "short_circuit", "suppressed"):
+    for field in ("review_queued", "short_circuit", "emergency", "suppressed"):
         if not isinstance(raw.get(field, False), bool):
             problems.append(_problem("schema.invalid", field))
+    if not _is_int(raw.get("model_calls", 0)) or raw.get("model_calls", 0) < 0:
+        problems.append(_problem("schema.invalid", "model_calls"))
     plan = raw.get("plan")
     if plan is not None:
         _, plan_problems = validate_turn_plan(plan)
@@ -588,6 +591,9 @@ def validate_thread_state(raw, today=None):
         for violation in violations:
             if not isinstance(violation, dict) or set(violation) - VIOLATION_KEYS:
                 problems.append(_problem("schema.invalid", "violation"))
+                break
+            if not isinstance(violation.get("hard", False), bool):
+                problems.append(_problem("schema.invalid", "violation.hard"))
                 break
     if problems:
         return None, problems

@@ -9,6 +9,10 @@ Three places, no more:
 
 ---
 
+## 02:42, Sunday: graph policy gate
+
+- Step 4: `code/graph/policy.py` and `code/test_graph_policy.py`, plus `emergency`/`model_calls` in `ThreadState` and `hard` in `VIOLATION_KEYS`. The gate applies the plan patch before judging, separates an emergency from a cheap turn, and checks specialist mismatch, routing status, fact dates, repeated questions, substantive corrections, claim text and the four-call budget. Two background audits (oracle and reviewer) blocked the first design; their blocking findings are in. 57 policy tests, 595 total, 4 skips, 31/31.
+
 ## 02:35, Sunday: contract hardening after the adversarial test
 
 - Step 2b after the Step 2 test doctor: guarded a non-dict `set`/`add` that could crash a turn, validated nested location, attachment, evidence and retraction keys, rejected whitespace location values that could erase a street, allowed a no-write outcome for `ask`/`answer`/`escalate` while a `log` still needs a refusal reason, and stopped truncating the resident's description at 400 characters. 39 contract tests, 537 total, 4 skips, 31/31.

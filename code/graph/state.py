@@ -106,7 +106,9 @@ class ThreadState(TypedDict, total=False):
     delivery_outbox_ids: list[str]
     degraded: list[str]
     short_circuit: bool
+    emergency: bool
     suppressed: bool
+    model_calls: int
 
 
 _LOCATION_DEFAULTS = {
@@ -168,7 +170,9 @@ def new_thread_state(thread_id: str, turn_id: str,
         "delivery_outbox_ids": [],
         "degraded": [],
         "short_circuit": False,
+        "emergency": False,
         "suppressed": False,
+        "model_calls": 0,
     }
 
 

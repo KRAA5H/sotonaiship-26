@@ -140,7 +140,9 @@ class ThreadState(TypedDict, total=False):
     delivery_outbox_ids: list[str]
     degraded: list[str]
     short_circuit: bool
+    emergency: bool
     suppressed: bool
+    model_calls: int
 ```
 
 `MAX_RECENT_MESSAGES = 12`.
@@ -177,6 +179,11 @@ The Step 2 test doctor probed the contract with malformed plans. Four fixes foll
 4. `new_executed_outcome("log")` had no representable state when nothing was saved and nothing was refused. A `log` now needs `refused_reason`; `ask`, `answer` and `escalate` may write nothing. The description is no longer truncated to 400 characters, because the resident's words are the audit record.
 
 An explicit `{}` patch is rejected as `patch.unknown_key`, while an omitted patch is valid and `{"set": {}}` is a `patch.no_change`.
+
+A later amendment from the Step 4 audits:
+
+- `ThreadState` gains `emergency` and `model_calls`, so a cheap turn and an emergency are not the same flag, and the four-call budget is representable.
+- `VIOLATION_KEYS` includes `hard`, so `policy.check`'s result can be stored in `ThreadState.violations` and pass `validate_thread_state` on the next turn.
 
 ### schemas.py
 
@@ -229,7 +236,7 @@ Rules:
 - `validate_bubble_plan`: 1 to 3 bubbles, each one line, non-empty, at most 300 characters, no markdown, no em dash, no en dash, no URL-ish text, no report id. `url` is null or `^https?://[^/]+/r/[A-Za-z0-9_-]{16,}$`. The writer emits null; the runtime fills it. A suppressed plan is `{"bubbles": [], "url": null, "suppressed": true}` and is valid only with `allow_suppressed=True`.
 - `validate_executed_outcome`: action from `ACTIONS`, report id `^R-\d{4}$`, token 8 to 64 characters, transport from `TRANSPORT_STATES`, facts with url and date, and `saved` plus `refused_reason`. A saved outcome needs a report id. A `log` that saved nothing needs a refusal reason; an `ask`, `answer` or `escalate` may write nothing.
 - `validate_incident_draft`: enum fields, no `lat` or `lng` anywhere, attachments with `kind` from the enum, evidence keys limited to `kind`, `ref`, `text`, `at`, `source`, so a phone number or coordinate cannot ride along.
-- `validate_thread_state`: every nested field validated, `recent_messages` capped at 12, and `plan`/`specialist_results`/`executed_outcome`/`bubble_plan` validated when present.
+- `validate_thread_state`: every nested field validated, `recent_messages` capped at 12, and `plan`/`specialist_results`/`executed_outcome`/`bubble_plan` validated when present. A violation may carry `hard`, so a policy result round-trips.
 
 ### Patch semantics
 
