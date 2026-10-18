@@ -81,6 +81,14 @@ class GraphWebhookTest(unittest.TestCase):
                                 "https://example.test/p/abc123"])
         self.assertFalse(any("/r/" in text for text in sent))
 
+    def test_the_chat_is_remembered_so_a_pin_or_status_can_text_later(self):
+        from agents import memory
+        import tools
+        sender = "+447700900399"
+        with unittest.mock.patch.object(bot.channel.service, "get_runtime", return_value=FakeRuntime()):
+            bot.channel.turn(sender, "pothole", chat="chat-remember-1", message_guid="G-REM-1")
+        self.assertEqual(memory.chat_for(tools.reporter_ref(sender)), "chat-remember-1")
+
     def test_a_first_message_gets_the_welcome_text_first(self):
         sent = []
         with unittest.mock.patch.object(bot, "MODE", "graph"),              unittest.mock.patch.object(bot.channel.service, "get_runtime", return_value=FakeRuntime()),              unittest.mock.patch.object(bot.channel, "first_contact", return_value=True),              unittest.mock.patch.object(bot, "deliver",

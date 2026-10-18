@@ -20,6 +20,11 @@ def first_contact(sender):
 
 def turn(sender, text="", photo_ref=None, image_ref=None, card=None,
          message_guid=None, chat=None):
+    # Remember where to reach this resident. A confirmed map pin and a council status
+    # change both text them later, and they find the chat here. Without it they have
+    # nowhere to send, and the resident hears nothing after giving the street.
+    from agents import memory
+    memory.remember_contact(tools.reporter_ref(sender or ""), chat or sender)
     inbound = {
         "sender": sender or "",
         "chat": chat or sender or "",
