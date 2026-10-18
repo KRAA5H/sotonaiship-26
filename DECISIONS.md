@@ -153,6 +153,24 @@ URL and claim rules against the executed outcome. A model may rewrite the
 bubbles after the freeze only through the same lint gate. This keeps the demo
 truthful when the model is unavailable and preserves the natural, short register.
 
+## Forecast section (D65)
+
+| # | Decision | Why | Proposed by |
+|---|---|---|---|
+| D65 | **Predictive prevention lives in `code/predict/`, on the dashboard at `/council/forecast`, and is trained on a labelled SYNTHETIC history.** It reads `kerbside.db` read-only and writes only its own `code/predict.db`. Details and honest limits in `PREDICTION.md` | Four weeks of synthetic reports cannot train or test a forecast. A planted two-year history proves the method end to end without claiming a real finding, and the read-only link means the forecast can never block the bot | Anirudh |
+
+**Lines changed in existing files (owners, please check before merging):**
+- `code/website.py` (Section 3): **2 lines** added just before `create_app`, `from predict.web import forecast` and `site.register_blueprint(forecast)`. Nesting on `site` means the bot, the simulator and the tests all serve `/council/forecast` with no edit to `blue_bubbles.py` or `simulator.py`. Nothing else in the file changed. The section reuses `_council_denied()` for the same login.
+- `code/web/templates/council.html` (Section 3): **1 line** in `topbar_extra`, a "Forecast" link.
+- `code/requirements.txt` (shared): **4 pinned lines**, `scikit-learn`, `pandas`, `numpy` and `scipy`. The demo Mac needs `pip install -r code/requirements.txt`.
+- Not touched: `reports_db.py`, `priority.py`, `NUMBERS.md`, `blue_bubbles.py`, the Records agent, and every existing table and function.
+
+**Proposed trigger, not wired in.** After the Records agent saves a report, call `predict.surge_job.check()` in a background thread, so a surge shows within seconds instead of at the next 5-minute check. It must never delay the reply to the resident. For the owner of the Records agent to decide.
+
+**LLM wording for action plans is off by default.** Plans are written from templates. If it is ever switched on, it may send only aggregated fields (street, category, date, counts, driver), never complaint text, and only after confirming that is allowed.
+
+**Before any ranked list of areas is shown:** check the reuse terms of FixMyStreet and mySociety data on ranking areas. The Forecast page deliberately leads with preventive jobs, and its heat view is by area and expected count, not a "worst streets" league table.
+
 ## How to change something
 
 1. Write the line in this file first: what, why, who.

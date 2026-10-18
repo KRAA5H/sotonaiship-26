@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Forecast · Southampton Reports{% endblock %}
+{% block sub %}Forecast · preventive jobs for the week ahead{% endblock %}
+{% block topbar_extra %}
+<nav class="fc-nav"><a class="btn-ghost" href="{{ url_for('website.council') }}">Reports</a><a class="btn-ghost fc-here" href="{{ url_for('website.forecast.page') }}" aria-current="page">Forecast</a></nav>
+<link rel="stylesheet" href="{{ url_for('website.forecast.static', filename='forecast.css') }}">
+{% endblock %}
+{% block main %}
+{% set bt = metrics.get('backtest', {}) %}
+<section class="fc-banner" aria-label="Data sources">
+  {% if run and run.synthetic %}<p class="fc-syn"><strong>SYNTHETIC DEMO DATA.</strong> These forecasts are trained on a made-up two-year history with planted patterns. They show how the method works, not real findings about Southampton.</p>{% endif %}
+  {% if warning %}<p class="fc-warn" role="alert"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg>{{ warning }}</p>{% endif %}
+  {% if run %}
+  <p class="fc-meta">Forecast for the week starting <strong>{{ run.forecast_week|dmy }}</strong>. Last updated {{ run.finished_at[:16].replace('T', ' ') }} UTC{% if age_hours is not none %} ({{ '%.0f'|format(age_hours) }} hours ago){% endif %}{% if surge_run %}. Surge check {{ surge_run.finished_at[11:16] }} UTC{% endif %}.</p>
+  <details class="fc-sources"><summary>Where these numbers come from</summary><ul>
+    {% for s in sources %}<li>{{ s.name }}{% if s.rows is defined %}: {{ s.rows }} rows{% endif %}{% if s.synthetic_rows %} ({{ s.synthetic_rows }} synthetic){% endif %}{% if s.fetched %}, fetched {{ s.fetched[:16].replace('T',' ') }} UTC (cached, not live){% endif %}{% if s.error %}. Last fetch failed, cache used{% endif %}</li>{% endfor %}
+    <li>Street names and areas: OpenStreetMap contributors, ODbL. No resident locations or phone numbers are used.</li>
+  </ul></details>
+  {% endif %}
+</section>
+
+{% if run %}
+<section class="figures fc-tiles" aria-label="Summary">
+  <div class="tile"><span class="glab">Risks next week</span><span class="p-big">{{ risk_count }}</span><span class="muted small">streets with an event, weather or season driver</span></div>
+  <div class="tile"><span class="glab">Preventive jobs open</span><span class="p-big">{{ priority|length }}</span><span class="muted small">{{ priority|selectattr('overdue')|list|length }} overdue</span></div>
+  <div class="tile"><span class="glab">Surge alerts</span><span class="p-big">{{ surges|length }}</span><span class="muted small">last 72 hours</span></div>
+  <div class="tile"><span class="glab">Top {{ bt.top_n or 10 }} capture vs baseline</span><span class="p-big">{{ '%+.1f'|format((bt.lead or {}).get('mean', 0) * 100) }} pts</span><span class="muted small">95% interval {{ '%+.1f'|format((bt.lead or {}).get('low', 0) * 100) }} to {{ '%+.1f'|format((bt.lead or {}).get('high', 0) * 100) }}</span></div>
+</section>
+
+{% if surges %}
+<section class="panel" aria-labelledby="h-surge"><h2 id="h-surge">Surge alerts</h2>
+  <div class="fc-cards">{% for s in surges %}
+    <article class="fc-card fc-surge"><p class="fc-tag">Surge</p><h3>{{ s.street }}</h3>
+      <p>{{ s.count }} distinct {{ s.category|label|lower }} problems in {{ s.window_h }} hours, against a normal {{ s.weekly_rate }} a week (p {{ '< 0.001' if s.p_value < 0.001 else '%.3f'|format(s.p_value) }}).</p>
+      <p class="muted small">Same-day check by the duty officer.{% if s.fixed_rule %} The simple "3 in 24 hours" rule also fires.{% else %} The simple "3 in 24 hours" rule would not fire yet.{% endif %}{% if s.synthetic %} Synthetic.{% endif %}</p>
+      <a class="linkbtn" href="{{ url_for('website.council') }}?q={{ s.street|urlencode }}">See the reports</a></article>
+  {% endfor %}</div>
+</section>
+{% endif %}
+
+<section class="panel" aria-labelledby="h-prio"><h2 id="h-prio">Priority list: what to sort first</h2>
+  <p class="muted small">Sorted by the date each job must be done by, then by score. Score = expected problems x harm x urgency x confidence (x10). Lead times and teams are assumptions to confirm with the council.</p>
+  <div class="tablewrap"><table class="fc-table">
+    <thead><tr><th>Do by</th><th>Action</th><th>Risk and reason</th><th>Score</th><th>Confidence</th><th></th></tr></thead>
+    <tbody>{% for p in priority[:15] %}
+      <tr class="{{ 'fc-over' if p.overdue }}">
+        <td class="mono">{{ p.do_by|dmy }}{% if p.overdue %}<br><span class="fc-overdue">Overdue</span>{% elif p.do_by == today|string %}<br><span class="muted small">Today</span>{% endif %}</td>
+        <td><strong>{{ p.action }}</strong><br>{{ p.streets[:4]|join(', ') }}{% if p.streets|length > 4 %} and {{ p.streets|length - 4 }} more{% endif %}{% if p.area %} <span class="muted">({{ p.area }})</span>{% endif %}<br><span class="muted small">{{ p.team }}</span></td>
+        <td>{{ p.categories|map('label')|join(', ') }} expected from {{ p.expected_date|dmy }}, about {{ p.volume_low }} to {{ p.volume_high }} problems<br><span class="muted small">{{ p.reasons[:3]|join('. ') }}</span></td>
+        <td class="mono" title="volume {{ p.volume }} x harm {{ p.harm }} x urgency {{ p.urgency }} x confidence {{ p.conf_weight }}">{{ '%.0f'|format(p.score) }}<br><span class="muted small">{{ '%.1f'|format(p.volume) }} x {{ p.harm }} x {{ p.urgency }} x {{ p.conf_weight }}</span></td>
+        <td>{{ p.confidence|capitalize }}{% if p.synthetic %}<br><span class="muted small">synthetic</span>{% endif %}</td>
+        <td>{% if p.status == 'proposed' %}<button class="btn" data-plan="{{ p.key }}" data-to="approved">Approve</button>{% else %}<span class="chip">{{ p.status|capitalize }}</span>{% endif %}</td>
+      </tr>{% else %}<tr><td colspan="6" class="muted">No preventive jobs for the week ahead.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% if priority|length > 15 %}<p class="muted small">{{ priority|length - 15 }} more jobs are on the action plan board below.</p>{% endif %}
+</section>
+
+<section class="panel" aria-labelledby="h-risks"><h2 id="h-risks">Risks for the week ahead</h2>
+  <div class="fc-cards">{% for r in risks %}
+    <article class="fc-card"><p class="fc-tag">{{ driver_labels.get(r.drivers[0][0], 'Risk') }}</p><h3>{{ r.street }}</h3>
+      <p><strong>{{ r.category|label }}</strong>: about {{ '%.1f'|format(r.expected) }} problems expected (likely {{ r.low }} to {{ r.high }}). The usual 4-week average is {{ '%.1f'|format(r.baseline) }}.</p>
+      <p class="muted small">{{ r.drivers|map(attribute='2')|join('. ') }}. Confidence {{ r.confidence }}{% if r.synthetic %}, synthetic{% endif %}.</p>
+      <a class="linkbtn" href="{{ url_for('website.council') }}?q={{ r.street|urlencode }}">See the reports</a></article>
+  {% else %}<p class="muted">No risks above the threshold this week.</p>{% endfor %}</div>
+</section>
+
+<section class="panel" aria-labelledby="h-heat"><h2 id="h-heat">Hotspot forecast, next 7 days</h2>
+  <p class="muted small">Expected distinct problems by area. Areas, not individual streets, so no home can be picked out. Darker means more expected.</p>
+  <p class="seg fc-filter"><a class="chip {{ 'factive' if not category }}" href="{{ url_for('website.forecast.page') }}">All</a>{% for c in categories %}<a class="chip {{ 'factive' if category == c }}" href="{{ url_for('website.forecast.page', category=c) }}">{{ c|label }}</a>{% endfor %}</p>
+  <div class="tablewrap"><table class="fc-heat"><thead><tr><th>Area</th>{% for c in heat.cats %}<th>{{ c|label }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for row in heat.rows %}<tr><th scope="row">{{ row.area }}</th>{% for cell in row.cells %}<td class="h{{ cell.level }}">{{ '%.1f'|format(cell.value) if cell.value >= 0.5 else '' }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
+</section>
+
+<section class="panel" aria-labelledby="h-board"><h2 id="h-board">Action plan board</h2>
+  <p class="muted small">Proposed jobs need an officer to approve them. Every change is recorded with the time. <a class="linkbtn" href="{{ url_for('website.forecast.work_order') }}">Download approved jobs as a work order (CSV)</a></p>
+  <div class="fc-board">{% for status in ['proposed', 'approved', 'scheduled', 'done'] %}
+    <div class="fc-col"><h3>{{ status|capitalize }} <span class="count">{{ board[status]|length }}</span></h3>
+      {% for p in board[status][:12] %}<div class="fc-plan{{ ' fc-over' if p.overdue }}"><p><strong>{{ p.action }}</strong></p><p class="small">{{ p.streets[:3]|join(', ') }}{% if p.area %} ({{ p.area }}){% endif %}</p><p class="muted small">Do by {{ p.do_by|dmy }}. {{ driver_labels.get(p.driver, p.driver) }}. Steps: {{ p.steps|join('; ') }}</p>
+        <p class="fc-btns">{% if status == 'proposed' %}<button class="btn" data-plan="{{ p.key }}" data-to="approved">Approve</button><button class="btn-ghost" data-plan="{{ p.key }}" data-to="dismissed">Dismiss</button>{% elif status == 'approved' %}<button class="btn" data-plan="{{ p.key }}" data-to="scheduled">Schedule</button><button class="btn-ghost" data-plan="{{ p.key }}" data-to="done">Mark done</button>{% elif status == 'scheduled' %}<button class="btn" data-plan="{{ p.key }}" data-to="done">Mark done</button>{% endif %}</p></div>
+      {% else %}<p class="muted small">None</p>{% endfor %}
+      {% if board[status]|length > 12 %}<p class="muted small">and {{ board[status]|length - 12 }} more</p>{% endif %}
+    </div>{% endfor %}</div>
+  {% if board['dismissed'] %}<p class="muted small">{{ board['dismissed']|length }} dismissed, each with a reason recorded.</p>{% endif %}
+</section>
+
+<section class="panel" aria-labelledby="h-events"><h2 id="h-events">Events in the next two weeks</h2>
+  <div class="tablewrap"><table class="fc-table"><thead><tr><th>When</th><th>Event</th><th>Where</th><th>Status</th><th>Source</th></tr></thead><tbody>
+    {% for e in events %}<tr><td class="mono">{{ e.start_date|dmy }}</td><td>{{ e.name }}</td>
+      <td>{% if e.coverage == 'outside' %}<strong>Outside Southampton City Council's area</strong> ({{ e.outside_council }}). No job created. <a href="https://www.gov.uk/find-local-council">Find the right council</a>{% else %}{{ e.venue }}{% endif %}</td>
+      <td>{{ e.status|capitalize }}</td><td class="small">{% if e.source_url.startswith('http') %}<a href="{{ e.source_url }}">source</a>, collected {{ e.collected_on }}{% else %}{{ e.source_url }}{% endif %}{% if e.synthetic %}<br><span class="muted">synthetic date</span>{% endif %}</td></tr>
+    {% else %}<tr><td colspan="5" class="muted">No events in the calendar for the next two weeks.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+
+<section class="panel fc-fail" aria-labelledby="h-fail"><h2 id="h-fail">Where the forecast says it does not know</h2>
+  {% if failure %}<article class="fc-card"><p class="fc-tag">Not enough history</p><h3>{{ failure.street }}</h3><p>{{ failure.r13 }} problem{{ '' if failure.r13 == 1 else 's' }} in the last 13 weeks, so the forecast is <strong>low confidence</strong> and no preventive job is created.</p></article>{% endif %}
+  <p class="muted small">{{ low_count }} street and category pairs are low confidence this week and are left out of the risks and the priority list rather than guessed.</p>
+</section>
+
+<section class="panel" aria-labelledby="h-acc"><h2 id="h-acc">How well it works</h2>
+  {% if bt %}
+  <p class="muted small">Tested on {{ bt.weeks }} held-out weeks, {{ bt.test_from|dmy }} to {{ bt.test_to|dmy }}, training only on weeks before each one (no random split).{% if run.synthetic %} <strong>Synthetic data</strong>: this checks the method finds patterns that were planted, not that they exist in Southampton.{% endif %}</p>
+  <div class="tablewrap"><table class="fc-table"><thead><tr><th>Measure</th><th>Model</th><th>Baseline (last 4 weeks)</th><th>Random</th><th>Best possible</th></tr></thead><tbody>
+    <tr><td>Share of next week's problems on our top {{ bt.top_n }} streets</td><td>{{ '%.1f'|format(bt.capture.model * 100) }}%</td><td>{{ '%.1f'|format(bt.capture.baseline * 100) }}%</td><td>{{ '%.1f'|format(bt.capture.random * 100) }}%</td><td>{{ '%.1f'|format(bt.capture.best * 100) }}%</td></tr>
+    <tr><td>Average error per street and week</td><td>{{ bt.mae.model }}</td><td>{{ bt.mae.baseline }}</td><td></td><td></td></tr>
+    <tr><td>Poisson deviance (lower is better)</td><td>{{ bt.deviance.model }}</td><td>{{ bt.deviance.baseline }}</td><td></td><td></td></tr>
+  </tbody></table></div>
+  {% endif %}
+  {% set sb = metrics.get('surge_backtest') %}
+  {% if sb %}<p class="small">Surge check over the last {{ sb.days }} days: the model raised {{ sb.model.alerts }} alerts ({{ sb.model.followed }} followed by another problem within 7 days); the simple "3 in 24 hours" rule raised {{ sb.fixed.alerts }} ({{ sb.fixed.followed }} followed). The model catches quiet streets earlier but raises more alerts.</p>{% endif %}
+  <p class="small">Action plans: {{ outcomes.raised }} raised, {{ outcomes.approved }} approved, {{ outcomes.done }} done. {% if outcomes.ended_weeks %}{{ outcomes.ended_weeks }} forecast results recorded so far.{% else %}No forecast week has ended yet, so there is no evidence yet on whether done jobs prevented problems. This will be shown as an association, not proof.{% endif %}</p>
+  {% if uplift %}<h3>What tends to follow each driver</h3>
+  <div class="tablewrap"><table class="fc-table"><thead><tr><th>Driver</th><th>Category</th><th>Extra problems</th><th>Based on</th><th>Confidence</th></tr></thead><tbody>
+    {% for u in uplift %}<tr><td>{{ u.driver.replace('_', ' ')|capitalize }}</td><td>{{ u.category|label }}</td><td>{{ '%+.1f'|format(u.uplift) }} ({{ u.after }} vs {{ u.normal }})</td><td>{{ u.n_events }} past {{ 'season' if u.driver == 'leaf_fall' else 'event' }}{{ '' if u.n_events == 1 else 's' }}</td><td>{{ u.confidence|capitalize }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  <p class="muted small">Extra problems in the affected areas over the 4 days after an event (or per week in leaf-fall season), against comparable days without one. Fewer than 5 past events means low confidence. These tend to follow the driver; they are not proof it causes them.</p>{% endif %}
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-plan]");
+  if (!b) return;
+  let note = "";
+  if (b.dataset.to === "dismissed") { note = prompt("Why dismiss this job?") || ""; if (!note.trim()) return; }
+  b.disabled = true;
+  const r = await fetch({{ url_for('website.forecast.page')|tojson }} + "/plans/" + encodeURIComponent(b.dataset.plan) + "/status",
+    {method: "POST", headers: {"Content-Type": "application/json", "X-Requested-With": "kerbside"},
+     body: JSON.stringify({status: b.dataset.to, note})});
+  if (r.ok) location.reload(); else { b.disabled = false; alert((await r.json()).error || "That did not save."); }
+});
+</script>
+{% endblock %}
