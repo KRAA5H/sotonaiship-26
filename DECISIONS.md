@@ -180,6 +180,14 @@ report is filled in. This supersedes D26 and the no-name/no-phone rule for this 
 
 **Before any ranked list of areas is shown:** check the reuse terms of FixMyStreet and mySociety data on ranking areas. The Forecast page deliberately leads with preventive jobs, and its heat view is by area and expected count, not a "worst streets" league table.
 
+## Where is it first, tracking link second (D67)
+
+| # | Decision | Why | Proposed by |
+|---|---|---|---|
+| D67 | **While a report has no street, the resident gets the question and the drop-a-pin link together, and no tracking link.** The "Follow it" link goes out only once the street is known. In `compose()` in `code/graph/execution.py`: `url` is `None` while the location is missing, the templates pass the map link to `messages.need_location` and `messages.captured`, and only categories with `location_mode` `pin` are ever given a map link (bins and housing ask for a house address, neighbour problems go to the council's form) | A resident with a half-finished report was told to "Follow it" before we knew where the problem was, and bins were handed a map pin. A report with no street cannot be acted on, so the one thing to ask for is the street, with the easiest way to give it | Anirudh |
+
+**Not changed:** the wording "It hasn't gone to the council yet" on a complete report. The code never sends a report anywhere and `graph/policy.py` forbids claiming council receipt, so changing it needs a decision from the owners of `policy.py` and `messages.py`.
+
 ## How to change something
 
 1. Write the line in this file first: what, why, who.

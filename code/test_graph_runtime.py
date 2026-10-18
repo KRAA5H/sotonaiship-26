@@ -357,6 +357,68 @@ class CaptureTest(RuntimeCase):
         self.assertIn("unclear_other", index["categories"])
 
 
+class MapLinkTest(RuntimeCase):
+    """No street yet: ask where and send the map link at once, with no tracking link.
+    The checked templates speak here (writer off), the same words the real bot sends."""
+
+    def row(self):
+        conn = reports_db.connect(self.db)
+        try:
+            return conn.execute("SELECT * FROM reports").fetchone()
+        finally:
+            conn.close()
+
+    def assertMapOnly(self, result):
+        self.assertEqual(result["kind"], "saved")
+        self.assertIn("/p/", result["source_url"] or "", "the drop-a-pin link is sent right away")
+        self.assertEqual(result["source_url"], result["state"]["executed_outcome"]["location_url"])
+        self.assertIsNone(result["url"], "no tracking link until the street is known")
+        for bubble in result["bubbles"]:
+            self.assertNotIn("http", bubble, "links travel separately, never inside a bubble")
+            self.assertNotIn("Follow it", bubble)
+
+    def test_a_street_less_report_gets_the_map_link_and_no_tracking_link(self):
+        result = self.turn("theres a pothole near my house", "g-pin")
+        self.assertMapOnly(result)
+        self.assertEqual(" ".join(result["bubbles"]).count("?"), 1)
+
+    def test_a_photo_with_no_words_gets_the_map_link(self):
+        self.assertMapOnly(self.turn("", "g-photo", photo_ref=("G-1", "image/jpeg")))
+
+    def test_an_uncategorised_report_gets_the_map_link(self):
+        self.assertMapOnly(self.turn("there is a tree fallen on the road", "g-tree"))
+
+    def test_a_follow_up_that_is_still_not_a_street_gets_a_fresh_map_link(self):
+        first = self.turn("theres a pothole near my house", "g-1")
+        again = self.turn("it is really bad", "g-2")
+        self.assertIn("/p/", again["source_url"] or "")
+        self.assertNotEqual(again["source_url"], first["source_url"], "a fresh, working link")
+        self.assertIsNone(again["url"])
+
+    def test_the_street_arrives_and_the_tracking_link_follows(self):
+        self.turn("theres a pothole near my house", "g-1")
+        result = self.turn("weston lane", "g-2")
+        self.assertIn("/r/", result["url"] or "", "the Follow it link goes out once the street is known")
+        self.assertNotIn("/p/", result["source_url"] or "")
+        self.assertEqual(self.count_reports(), 1)
+
+    def test_a_bin_asks_for_a_house_and_never_a_pin(self):
+        self.runtime = self.make_runtime(llm=FakeLLM([model_plan(
+            action="log", service_candidates=["missed_bin"],
+            incident_patch={"set": {"category_id": "missed_bin"}})]))
+        result = self.turn("my bin was missed on tuesday", "g-bin")
+        self.assertEqual(result["kind"], "saved")
+        self.assertEqual(self.row()["category_id"], "missed_bin")
+        self.assertNotIn("/p/", result["source_url"] or "")
+        self.assertIn("house", " ".join(result["bubbles"]).lower())
+
+    def test_a_report_with_a_street_gets_the_tracking_link_and_no_map(self):
+        result = self.turn("theres a pothole on weston lane", "g-street")
+        self.assertEqual(result["kind"], "saved")
+        self.assertIn("/r/", result["url"] or "")
+        self.assertNotIn("/p/", result["source_url"] or "")
+
+
 class CheckpointerTest(RuntimeCase):
     def test_sqlite_saver_resumes_the_thread(self):
         with SqliteSaver.from_conn_string(str(self.db)) as saver:
