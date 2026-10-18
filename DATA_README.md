@@ -19,6 +19,10 @@ One website, two views: /council (staff dashboard) and /r/<link_token> (the resi
 - scope_checks.csv: verified council-scope checks.
 - council_forms.csv: the council's own forms and the questions we could read (many only partly).
 - confirmed_categories.csv: the 15 confirmed categories with what the council controls and what is out of scope.
+- council_pages.csv: 43 council service pages for issues residents report (read 2026-10-18): who handles it, form link, form vs phone or emergency, phone numbers.
+- council_form_fields.csv: the fields on each online form's first step with fields, read in a headless browser. Read-only: nothing typed, nothing submitted. Later steps are marked unverified.
+- proposed_additions.csv: facts confirmed from those pages that are not in agent/confirmed_with_websites.csv yet, same columns. For review; not merged.
+- fetch_pages.py, extract_pages.py, read_forms.py, forms_to_csv.py, write_council_csvs.py: how the three files were made (cached, one request a second, stops on 403/429).
 
 ## Still to check by hand
 - Council out-of-hours emergency number confirmed as 023 8023 3344, adult social care out of hours 0300 555 1373 (https://www.southampton.gov.uk/contact-us/emergency-out-of-hours/, checked 2026-10-17).

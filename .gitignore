@@ -23,3 +23,6 @@ code/eval/fms/*.local.*
 # local; only the synthetic placeholders are committed.
 code/photos/*
 !code/photos/synthetic/
+
+# Council page cache (reference/fetch_pages.py)
+reference/.page_cache/
