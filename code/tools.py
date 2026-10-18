@@ -34,9 +34,9 @@ import loader  # noqa: E402  (agent/loader.py)
 SITE_URL = (os.getenv("SITE_URL") or "http://localhost:5005").rstrip("/")
 SEVERITIES = ("high", "medium", "low")
 STATUS_TEXT = {
-    "new": "received, not looked at yet",
-    "in_review": "being looked at by the council",
-    "resolved": "marked as resolved",
+    "new": "logged here, not looked at yet",
+    "in_review": "in review on this dashboard",
+    "resolved": "marked as resolved here",
 }
 # Our own labels and synthetic phrases: never shown to a resident as fact.
 _HIDDEN_CATEGORY_FIELDS = {"team", "team_confirmed", "example_phrases", "fms_categories"}

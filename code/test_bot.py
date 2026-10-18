@@ -219,12 +219,12 @@ class StatusTest(unittest.TestCase):
 
     def test_status_reply_uses_the_latest_report(self):
         report = {"id": "R-0070", "category_id": "pothole", "status": "in_review",
-                  "status_text": "being looked at by the council",
+                  "status_text": "in review on this dashboard",
                   "location": "Weston Lane", "link_token": "tok"}
         with unittest.mock.patch.object(bot.reports_db, "connect"),              unittest.mock.patch.object(bot.reports_db, "latest_report_for",
                                         return_value=report):
             got = bot.status_reply("+441")
-        self.assertIn("being looked at by the council", got[1])
+        self.assertIn("in review on this dashboard", got[1])
         self.assertIn("/r/tok", got[1])
 
     def test_no_report_means_no_status_reply(self):

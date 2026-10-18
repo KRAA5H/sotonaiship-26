@@ -222,20 +222,20 @@ def run():
                   expect=["I can help with that", "southampton.gov.uk"])
 
         report = {"id": "R-0070", "category_id": "pothole", "status": "in_review",
-                  "status_text": "being looked at by the council",
+                  "status_text": "in review on this dashboard",
                   "location": "Weston Lane", "link_token": "tok"}
         with mock.patch.object(bot.reports_db, "connect"), \
              mock.patch.object(bot.reports_db, "latest_report_for", return_value=report):
             found = bot.status_reply("+441")
         check("12 an update question is answered from the database",
-              found[1], expect=["being looked at by the council", "Weston Lane", "/r/tok"])
+              found[1], expect=["in review on this dashboard", "Weston Lane", "/r/tok"])
 
-        report = {**report, "status": "resolved", "status_text": "marked as resolved"}
+        report = {**report, "status": "resolved", "status_text": "marked as resolved here"}
         with mock.patch.object(bot.reports_db, "connect"), \
              mock.patch.object(bot.reports_db, "latest_report_for", return_value=report):
             found = bot.status_reply("+441")
         check("13 a resolved report says so",
-              found[1], expect=["marked as resolved"])
+              found[1], expect=["marked as resolved here"])
 
         check("14 an unreadable message gives an example",
               bot.reply_for(decision(reason="unparseable", category_id=None), "+441"),

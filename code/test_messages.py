@@ -52,7 +52,7 @@ def all_copy():
         "status": messages.status({
             "category_id": "pothole",
             "location": "Weston Lane",
-            "status_text": "being looked at by the council",
+            "status_text": "in review on this dashboard",
             "link": SAVED["link"],
         }),
     }
@@ -169,12 +169,12 @@ class PathTest(unittest.TestCase):
         text = messages.status({
             "category_id": "pothole",
             "location": "Weston Lane",
-            "status_text": "being looked at by the council",
+            "status_text": "in review on this dashboard",
             "link": SAVED["link"],
         })
         self.assertIn("pothole", text.lower())
         self.assertIn("Weston Lane", text)
-        self.assertIn("being looked at by the council", text)
+        self.assertIn("in review on this dashboard", text)
         self.assertIn(SAVED["link"], text)
 
     def test_labels_read_naturally(self):

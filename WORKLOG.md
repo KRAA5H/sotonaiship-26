@@ -9,6 +9,10 @@ Three places, no more:
 
 ---
 
+## 03:55, Sunday: truth pass
+
+- D55: the resident page, `website.STEPS`, `tools.STATUS_TEXT`, the greeting and the photo ask now say a report is saved here and has not gone to the council. `messages` no longer asserts trunk-road ownership. The status copy is local, not council action. 625 tests, 4 skips, 31/31.
+
 ## 03:51, Sunday: playbook goal gaps closed
 
 - Second Step 5 audit: `playbook_version` on `ExecutedOutcome`; `save: false` and no actionability for the nine non-savable categories; curated `forbidden_team_names`; `send_ready: false` on questions; `source_status` and `guidance_checked`, with the inherited trunk-road source marked unverified. 25 playbook tests, 625 total, 4 skips, 31/31.

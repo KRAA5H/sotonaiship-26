@@ -5,11 +5,11 @@
 {% block main_class %} narrow{% endblock %}
 {% block main %}
 {% if report %}
-{% set headline = {"new": "We have your report", "in_review": "A council officer is looking at your report", "resolved": "The council has resolved your report"} %}
+{% set headline = {"new": "We've logged your report", "in_review": "In review here", "resolved": "Marked as resolved here"} %}
 {% set next_text = {
-  "new": "Your report is waiting for a council officer to look at it. When they do, this page will change to “In review”. You don't need to do anything else.",
-  "in_review": "A council officer is dealing with it. When the council closes the report, this page will change to “Resolved”. You don't need to do anything else.",
-  "resolved": "The council has closed this report. If the problem comes back, send us a new message and we will make a new report.",
+  "new": "Your report is saved here and has not gone to the council yet. It is waiting to be picked up from this dashboard.",
+  "in_review": "It is being looked at on this dashboard. This page will change when it is marked resolved.",
+  "resolved": "It is marked as resolved here. If the problem comes back, send us a new message and we will make a new report.",
 } %}
 {% set status_icon = {"new": "dot", "in_review": "clock", "resolved": "circle-check"} %}
 {% set current = (steps | selectattr("done") | list | length) - 1 %}

@@ -276,7 +276,8 @@ class ResidentViewTest(SiteCase):
         response = self.client.get("/" + path)
         self.assertEqual(response.status_code, 200)
         self.assertIn("Dead fox", response.get_data(as_text=True))
-        self.assertIn("Received", response.get_data(as_text=True))
+        self.assertIn("Logged", response.get_data(as_text=True))
+        self.assertNotIn("council officer", response.get_data(as_text=True))
 
     def test_private_headers(self):
         for path, headers in ((f"/r/{FAKE[0]['link_token']}", {}), ("/council", AUTH), ("/r/nope12345", {})):

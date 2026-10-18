@@ -270,7 +270,7 @@ class GetReportStatusTest(DbCase):
         result = tools.get_report_status(fake["link_token"], conn=self.conn)
         self.assertTrue(result["ok"])
         self.assertEqual(result["status"], "resolved")
-        self.assertEqual(result["status_text"], "marked as resolved")
+        self.assertEqual(result["status_text"], "marked as resolved here")
         self.assertEqual(result["location"], fake["location"])
 
     def test_repeat_says_others_reported_it(self):

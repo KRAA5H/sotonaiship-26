@@ -23,7 +23,7 @@ COUNCIL_CONTACT = "https://www.southampton.gov.uk/contact-us/online-forms"
 # The four cases where it is not the council's job. Written out rather than
 # assembled from labels, because "Contact: Find your local council" reads badly.
 NOT_COUNCIL_COPY = {
-    "national_highways": "Motorways and trunk roads are National Highways, not the council.",
+    "national_highways": "I can't confirm who owns that road. Try the council's roads page or National Highways.",
     "find_your_council": "That one is not Southampton City Council's to fix.",
     "flood_warnings": "Flood warnings come from the Environment Agency.",
     "emergency": "That is an emergency, not a report.",
@@ -63,7 +63,7 @@ def _join(*lines):
     return "\n".join(line.strip() for line in lines if line and line.strip())
 
 
-PHOTO_ASK = "If you can send a photo, it will help."
+PHOTO_ASK = "If you can send a photo, I'll add it to the report."
 
 
 def logged(decision, saved):
@@ -214,7 +214,7 @@ def unclear():
 
 def greeting():
     return _join(
-        "Hello. Send a street problem and I will log it with the council.",
+        "Hello. Send a street problem and I'll log it here.",
         "Pothole, dumped rubbish, missed bin, broken glass.",
     )
 

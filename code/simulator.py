@@ -204,7 +204,7 @@ PAGE = """<!doctype html>
     <span class="sub">simulator</span>
   </header>
   <div id="chat">
-    <div class="row bot"><div class="bubble">Hi. Send a street problem and I will log it with the council.
+    <div class="row bot"><div class="bubble">Hi. Send a street problem and I'll log it here.
 Pothole, dumped rubbish, missed bin, broken glass.</div></div>
   </div>
   <div class="tools">

@@ -50,9 +50,9 @@ PHOTO_DIR = Path(__file__).with_name("photos")
 IMAGE_MIMES = ("image/jpeg", "image/png")
 PHOTO_WIDTH = 1024
 STEPS = (
-    ("new", "Received", "We have your report."),
-    ("in_review", "In review", "A council officer is looking at it."),
-    ("resolved", "Resolved", "The council has closed this report."),
+    ("new", "Logged", "We have your report here. It has not gone to the council yet."),
+    ("in_review", "In review", "It is being looked at on this dashboard."),
+    ("resolved", "Resolved", "It is marked as resolved here."),
 )
 SYNTHETIC_PREFIX = "Synthetic example: "
 
