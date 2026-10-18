@@ -264,6 +264,12 @@ def photo_added(link):
     return _join("Photo added to your report.", f"Follow it: {link}")
 
 
+def photo_coming(link=None):
+    """They said a photo is on the way. Acknowledge it, never open a second report."""
+    return _join("No worries, send it over when you can and I'll add it to the report.",
+                 f"Follow it: {link}" if link else "")
+
+
 def which_report(rows):
     """Two open reports, one photo. Ask, never guess."""
     names = [(row.get("location") or "").strip() or "one with no street yet"

@@ -336,6 +336,21 @@ class CaptureTest(RuntimeCase):
         finally:
             conn.close()
 
+    def test_a_photo_announcement_does_not_open_a_second_report(self):
+        self.turn("pothole on Alma Road", "g-1")
+        result = self.turn("yh ill send a photo of the pothole", "g-2")
+        self.assertEqual(result["kind"], "saved")
+        self.assertEqual(self.count_reports(), 1)
+        joined = " ".join(result["bubbles"]).lower()
+        self.assertIn("send it over", joined)
+        self.assertNotIn("which road", joined)
+        self.assertEqual(self.row()["location"], "Alma Road")
+
+    def test_cheers_mate_is_silence(self):
+        result = self.turn("cheers mate", "g-1")
+        self.assertEqual(result["kind"], "silence")
+        self.assertEqual(self.count_reports(), 0)
+
     def test_the_playbook_index_is_available_to_the_runtime(self):
         index = graph_runtime.load_playbooks()
         self.assertEqual(index["generated_from"]["category_count"], 22)

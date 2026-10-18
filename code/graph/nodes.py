@@ -12,7 +12,8 @@ from . import execution, policy, prompts
 from .state import MAX_RECENT_MESSAGES, new_incident_draft, new_thread_state
 
 SILENCE_WORDS = re.compile(
-    r"^(thanks|thank you|cheers|ta|ok|okay|cool|got it|perfect|great|nice one)[\s!.,]*$",
+    r"^(thanks|thank you|cheers|cheers mate|thanks mate|ta|ok|okay|cool|got it|"
+    r"perfect|great|nice one)[\s!.,]*$",
     re.IGNORECASE,
 )
 GREETING_WORDS = re.compile(

@@ -387,6 +387,8 @@ def compose(state, deps):
     if challenge:
         text = messages.challenge(decision, url,
                                   "flooding" if "flooding" in inbound_text else None)
+    elif outcome.get("saved") and prompts.is_photo_announcement(inbound_text):
+        text = messages.photo_coming(url)
     elif outcome.get("saved"):
         if outcome.get("duplicate_of"):
             text = messages.duplicate(decision, {"link": url})

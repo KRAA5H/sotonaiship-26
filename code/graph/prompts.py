@@ -100,6 +100,9 @@ _UTILITY_TEXT = re.compile(r"\b(power cut|electricity|water leak|gas leak)\b", r
 _PROBLEM_EXTRA = re.compile(
     r"\b(power cut|dead (fox|cat|dog|bird|animal)|parking|wasp|nest|pest|vermin|"
     r"damp|mould|sewage|drain|infestation|smell|odour|noise)\b", re.I)
+_PHOTO_ANNOUNCEMENT = re.compile(
+    r"\b(send|sending|take|taking|got)\s+(you\s+)?(a\s+)?(photo|pic|picture)|"
+    r"photo\s+(of|coming)|i'?ll\s+send|ill\s+send|i\s+will\s+send", re.I)
 _POSTCODE = re.compile(r"\bSO\d{1,2}\s?\d[A-Z]{2}\b", re.I)
 _SUFFIX = r"(?:Road|Street|Lane|Avenue|Close|Drive|Way|Crescent|Gardens|Hill|Park|Terrace|Place|Grove|Court|Walk|Mews|Rise|Row)"
 _PREP_STREET = re.compile(r"\b(?:on|at|outside|near|by|in)\s+([A-Z][\w']*(?:\s+[A-Z][\w']*){0,4}\s+" + _SUFFIX + r")\b", re.I)
@@ -188,6 +191,10 @@ def is_status(text):
     return bool(_STATUS_TEXT.search(text or ""))
 
 
+def is_photo_announcement(text):
+    return bool(_PHOTO_ANNOUNCEMENT.search(text or ""))
+
+
 _STOPWORDS = {"a", "an", "and", "at", "by", "for", "from", "here", "in", "is",
               "it", "its", "near", "of", "on", "or", "that", "the", "there", "this",
               "to", "was", "with"}
@@ -210,6 +217,8 @@ def is_detail(text, state):
     text = (text or "").strip()
     if is_challenge(text) or is_question(text):
         return False
+    if is_photo_announcement(text):
+        return True
     if not text:
         return bool(draft.get("attachments")) or bool(state.get("pending_question"))
     if text.lower() in ("it is still there", "still there", "it's still there", "same problem"):
@@ -299,6 +308,9 @@ def deterministic_plan(state, deps):
         if hard in handoff:
             return _handoff_plan(index, hard)
         return _escalation_plan(index, hard)
+
+    if is_photo_announcement(text):
+        return _plan("detail", "log", [category], reasons=["photo_announcement"])
 
     if not text and (draft.get("attachments") or inbound.get("card")):
         return _plan("detail", "log", [category], reasons=["photo_detail"])
