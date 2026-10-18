@@ -327,5 +327,132 @@
       "reply_contains": [],
       "reply_forbids": []
     }
+  },
+  {
+    "name": "info_question",
+    "layer": "graph",
+    "legacy": "unverified",
+    "note": "A question is answered from checked facts, not turned into a report.",
+    "turns": [
+      {
+        "text": "what do I do about a missed bin?",
+        "model": {
+          "is_report": false,
+          "category_id": "missed_bin",
+          "location": "",
+          "description": "what do I do about a missed bin?",
+          "severity": null,
+          "confidence": 0.9
+        }
+      }
+    ],
+    "expect": {
+      "rows": 0,
+      "categories": [],
+      "locations": [],
+      "reply_contains": [
+        "Before reporting"
+      ],
+      "reply_forbids": [
+        "hasn't gone to the council"
+      ],
+      "max_questions": 0
+    }
+  },
+  {
+    "name": "emergency_safe",
+    "layer": "graph",
+    "legacy": "unverified",
+    "note": "A gas leak stops before any model call or write.",
+    "turns": [
+      {
+        "text": "there is a gas leak in the kitchen",
+        "model": {
+          "is_report": true,
+          "category_id": "not_council_utility",
+          "location": "",
+          "description": "gas leak",
+          "severity": null,
+          "confidence": 0.9
+        }
+      }
+    ],
+    "expect": {
+      "rows": 0,
+      "categories": [],
+      "locations": [],
+      "reply_contains": [
+        "Call 999 now."
+      ],
+      "reply_forbids": [
+        "hasn't gone to the council",
+        "logged"
+      ],
+      "max_questions": 0
+    }
+  },
+  {
+    "name": "utility_safe",
+    "layer": "graph",
+    "legacy": "unverified",
+    "note": "A utility problem is not saved as a council report.",
+    "turns": [
+      {
+        "text": "there is a power cut on Alma Road",
+        "model": {
+          "is_report": true,
+          "category_id": "not_council_utility",
+          "location": "Alma Road",
+          "description": "power cut",
+          "severity": null,
+          "confidence": 0.9
+        }
+      }
+    ],
+    "expect": {
+      "rows": 0,
+      "categories": [],
+      "locations": [],
+      "reply_contains": [
+        "not southampton city council"
+      ],
+      "reply_forbids": [
+        "hasn't gone to the council",
+        "logged"
+      ],
+      "max_questions": 0
+    }
+  },
+  {
+    "name": "outside_safe",
+    "layer": "graph",
+    "legacy": "unverified",
+    "note": "A report outside Southampton is pointed to the right council, not saved.",
+    "turns": [
+      {
+        "text": "pothole on the high street in Winchester",
+        "model": {
+          "is_report": true,
+          "category_id": "outside_southampton",
+          "location": "High Street",
+          "description": "pothole",
+          "severity": null,
+          "confidence": 0.9
+        }
+      }
+    ],
+    "expect": {
+      "rows": 0,
+      "categories": [],
+      "locations": [],
+      "reply_contains": [
+        "not southampton city council"
+      ],
+      "reply_forbids": [
+        "hasn't gone to the council",
+        "logged"
+      ],
+      "max_questions": 0
+    }
   }
 ]

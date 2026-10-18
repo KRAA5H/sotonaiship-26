@@ -58,10 +58,10 @@ class FakeGeocoder:
 
 
 class FixtureTest(unittest.TestCase):
-    def test_eight_cases_with_unique_names(self):
+    def test_twelve_cases_with_unique_names(self):
         cases = load_cases()
-        self.assertEqual(len(cases), 8)
-        self.assertEqual(len({case["name"] for case in cases}), 8)
+        self.assertEqual(len(cases), 12)
+        self.assertEqual(len({case["name"] for case in cases}), 12)
 
     def test_every_case_has_the_required_shape(self):
         for case in load_cases():
@@ -95,8 +95,9 @@ class FixtureTest(unittest.TestCase):
             self.assertEqual(overlap, set(), case["name"])
 
     def test_graph_cases_declare_a_state_expectation(self):
+        safety = {"info_question", "emergency_safe", "utility_safe", "outside_safe"}
         for case in load_cases():
-            if case["layer"] == "graph":
+            if case["layer"] == "graph" and case["name"] not in safety:
                 with self.subTest(case=case["name"]):
                     self.assertTrue(
                         {"draft_preserved", "reroutes", "patch_preserved", "pending_resumed"}
@@ -232,33 +233,44 @@ class LegacyStatusTest(unittest.TestCase):
                 else:
                     self.assertTrue(found, f"{case['name']} was expected to fail the legacy path")
 
-    def test_graph_and_channel_cases_wait_for_their_runtime(self):
-        for case in load_cases():
-            if case["layer"] in ("graph", "channel"):
-                with self.subTest(case=case["name"]):
-                    self.skipTest(f"{case['name']}: {case['layer']} runtime not built yet")
+    def test_the_graph_cases_are_listed_for_the_graph_runner(self):
+        names = {case["name"] for case in load_cases()}
+        for name in ("restart", "null_patch", "info_question", "emergency_safe",
+                     "utility_safe", "outside_safe", "duplicate_webhook"):
+            self.assertIn(name, names)
 
 
 class GraphScaffoldTest(unittest.TestCase):
-    def test_the_tree_case_reaches_a_capture_draft(self):
+    def test_the_tree_case_saves_one_unclear_other_row(self):
         case = next(item for item in load_cases() if item["name"] == "tree_capture")
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / "kerbside.db"
             store.migrate(db)
-            runtime = TurnRuntime(Deps(threads=store.ThreadStore(db), playbooks={}),
-                                  MemorySaver())
+            runtime = TurnRuntime(Deps(
+                threads=store.ThreadStore(db), playbooks={}, reports=db,
+                ops=store.TurnOperations(db), outbox=store.Outbox(db),
+                claims=store.Claims(db)), MemorySaver())
             result = runtime.turn({"sender": "+447700900002",
                                    "text": case["turns"][0]["text"],
                                    "message_guid": "g-tree"})
-        self.assertEqual(result["kind"], "captured")
-        self.assertIn("tree", result["state"]["incident_draft"]["description"])
-        self.assertEqual(result["state"]["incident_draft"]["capture_state"], "captured")
+            self.assertEqual(result["kind"], "saved")
+            self.assertIn("tree", result["state"]["incident_draft"]["description"])
+            self.assertEqual(result["state"]["incident_draft"]["category_id"], "unclear_other")
+            self.assertEqual(result["state"]["incident_draft"]["capture_state"], "captured")
+            self.assertIn("hasn't gone to the council", " ".join(result["bubbles"]))
+            conn = reports_db.connect(db)
+            try:
+                row = conn.execute("SELECT category_id, location FROM reports").fetchone()
+            finally:
+                conn.close()
+            self.assertEqual(row["category_id"], "unclear_other")
+            self.assertEqual(row["location"], "Not given")
 
     def test_the_remaining_graph_cases_are_named_not_skipped(self):
-        pending = {"wrong_specialist": "Step 12", "null_patch": "Step 10",
-                   "restart": "Step 10"}
+        covered = {"null_patch", "restart", "info_question", "emergency_safe",
+                   "utility_safe", "outside_safe"}
         found = {item["name"] for item in load_cases() if item["layer"] == "graph"}
-        self.assertEqual(found, set(pending))
+        self.assertEqual(found - covered, {"wrong_specialist"})
 
 
 if __name__ == "__main__":

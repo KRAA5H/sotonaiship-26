@@ -74,7 +74,7 @@ SPECIALIST_KEYS = {"service_id", "playbook_version", "fit", "observations",
                    "proposed_patch", "missing_requirements", "suggested_question",
                    "recommended_action", "fact_ids", "source_refs", "routing_status",
                    "reason_codes"}
-BUBBLE_PLAN_KEYS = {"bubbles", "url", "suppressed"}
+BUBBLE_PLAN_KEYS = {"bubbles", "url", "source_url", "suppressed"}
 BUBBLE_KEYS = {"purpose", "text"}
 CLARIFICATION_KEYS = {"field", "reason"}
 FACT_REQUEST_KEYS = {"question", "category_id"}
@@ -354,6 +354,11 @@ def validate_bubble_plan(raw, allow_suppressed=False):
     url = raw.get("url")
     if url is not None and not (isinstance(url, str) and _LINK.match(url)):
         problems.append(_problem("schema.invalid", "url"))
+    source_url = raw.get("source_url")
+    if source_url is not None and not (
+            isinstance(source_url, str) and source_url.startswith(("http://", "https://"))
+            and " " not in source_url):
+        problems.append(_problem("schema.invalid", "source_url"))
     suppressed = raw.get("suppressed", False)
     bubbles = raw.get("bubbles")
     if suppressed:
@@ -394,7 +399,8 @@ def validate_bubble_plan(raw, allow_suppressed=False):
                     problems.append(_problem("copy.banned", "report_id"))
     if problems:
         return None, problems
-    return {"bubbles": bubbles or [], "url": url, "suppressed": bool(suppressed)}, []
+    return {"bubbles": bubbles or [], "url": url, "source_url": source_url,
+            "suppressed": bool(suppressed)}, []
 
 
 def validate_incident_draft(raw):

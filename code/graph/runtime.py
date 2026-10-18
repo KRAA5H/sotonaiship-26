@@ -19,7 +19,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from langgraph.checkpoint.memory import MemorySaver  # noqa: E402
 from langgraph.checkpoint.sqlite import SqliteSaver  # noqa: E402
 
+import messages  # noqa: E402
 import tools  # noqa: E402
+import llm as llm_module  # noqa: E402
 from graph import store  # noqa: E402
 from graph.build import build_graph  # noqa: E402
 from graph.nodes import danger, wants_greeting  # noqa: E402
@@ -38,6 +40,8 @@ class Deps:
     notifier: object | None = None
     reports: object | None = None
     outbox: object | None = None
+    ops: object | None = None
+    claims: object | None = None
 
 
 def load_playbooks(path=None):
@@ -65,14 +69,26 @@ class TurnRuntime:
             self.deps.threads.save(
                 thread_id,
                 last_turn_id=turn_id,
+                active_incident_id=state.get("active_incident_id"),
                 incident_draft=state.get("incident_draft"),
                 pending_question=state.get("pending_question"),
                 last_claims=state.get("last_claims_sent"),
+                last_action=(state.get("executed_outcome") or {}).get("action"),
             )
+        plan = state.get("bubble_plan") or {}
+        if not plan.get("bubbles") and kind in ("emergency", "threat", "greeting"):
+            copy = {"emergency": messages.emergency, "threat": messages.threat,
+                    "greeting": messages.greeting}[kind]()
+            plan = {"bubbles": [{"purpose": "action", "text": line}
+                                for line in copy.splitlines() if line.strip()],
+                    "url": None, "source_url": None, "suppressed": False}
         return {
             "thread_id": thread_id,
             "turn_id": turn_id,
             "kind": kind,
+            "bubbles": [item.get("text") for item in plan.get("bubbles") or []],
+            "url": plan.get("url"),
+            "source_url": plan.get("source_url"),
             "state": state,
         }
 
@@ -90,7 +106,11 @@ class TurnRuntime:
         if state.get("suppressed"):
             ref = inbound.get("photo_ref") or inbound.get("image_ref")
             return "empty" if not text.strip() and not ref else "silence"
-        return "captured"
+        outcome = state.get("executed_outcome") or {}
+        if outcome.get("saved"):
+            return "saved"
+        return {"ask": "asked", "answer": "answered", "escalate": "escalated"}.get(
+            outcome.get("action"), "handled")
 
 
 def selftest():
@@ -98,7 +118,9 @@ def selftest():
     with tempfile.TemporaryDirectory() as tmp:
         db = Path(tmp) / "kerbside.db"
         store.migrate(db)
-        deps = Deps(threads=store.ThreadStore(db), playbooks={})
+        deps = Deps(threads=store.ThreadStore(db), playbooks=load_playbooks(),
+                    reports=db, ops=store.TurnOperations(db), outbox=store.Outbox(db),
+                    claims=store.Claims(db))
         runtime = TurnRuntime(deps, MemorySaver())
 
         def turn(text, guid):
@@ -132,7 +154,9 @@ def main(argv=None):
 
     db = Path(args.db) if args.db else Path(__file__).resolve().parents[1] / "graph.db"
     store.migrate(db)
-    deps = Deps(threads=store.ThreadStore(db), playbooks=load_playbooks())
+    deps = Deps(threads=store.ThreadStore(db), playbooks=load_playbooks(), llm=llm_module,
+                reports=db, ops=store.TurnOperations(db), outbox=store.Outbox(db),
+                claims=store.Claims(db))
     with SqliteSaver.from_conn_string(str(db)) as saver:
         runtime = TurnRuntime(deps, saver)
         result = runtime.turn({"sender": "+447700900000", "text": args.turn,

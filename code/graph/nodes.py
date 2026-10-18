@@ -8,6 +8,7 @@ import re
 
 import tools
 import triage
+from . import execution, policy, prompts
 from .state import MAX_RECENT_MESSAGES, new_incident_draft, new_thread_state
 
 SILENCE_WORDS = re.compile(
@@ -123,16 +124,105 @@ def make_nodes(deps):
 
     def capture(state):
         inbound = _inbound(state)
-        draft = new_incident_draft(_text(state))
+        text = _text(state)
         ref = inbound.get("photo_ref") or inbound.get("image_ref")
+        previous = state.get("incident_draft") or {}
+        previous_text = (previous.get("description") or "").strip()
+        place = prompts.extract_location(text)
+        detail_only = bool(previous_text) and (
+            (place and not prompts._REPORT_WORDS.search(text))
+            or (text.lower() in ("it is still there", "still there", "it's still there"))
+            or (not text and ref)
+            or prompts.is_challenge(text)
+            or prompts.is_question(text)
+            or (bool(state.get("pending_question"))
+                and not prompts._REPORT_WORDS.search(text))
+        )
+        if detail_only:
+            draft = dict(previous)
+            draft["version"] = int(draft.get("version") or 0) + 1
+            if place:
+                draft["location"] = {"text": place, "street": place,
+                                     "area": None, "postcode": None,
+                                     "provenance": "text", "ambiguous": False}
+        else:
+            draft = new_incident_draft(text)
+            if place:
+                draft["location"] = {"text": place, "street": place,
+                                     "area": None, "postcode": None,
+                                     "provenance": "text", "ambiguous": False}
         if isinstance(ref, (tuple, list)) and ref:
             guid = str(ref[0])
             ref = guid if guid.startswith("guid:") else f"guid:{guid}"
         if ref:
-            draft["attachments"] = [{"kind": "photo", "ref": str(ref)}]
+            existing = list(draft.get("attachments") or [])
+            if not any(item.get("ref") == str(ref) for item in existing):
+                existing.append({"kind": "photo", "ref": str(ref)})
+            draft["attachments"] = existing
         return {"incident_draft": draft, "candidate_services": []}
 
-    return {"hydrate": hydrate, "precheck": precheck, "cheap": cheap, "capture": capture}
+    def decide(state):
+        repairing = state.get("repair_count", 0) >= 1
+        calls = 0
+        degraded = []
+        plan = None
+        if not repairing and deps.llm is not None and hasattr(deps.llm, "chat"):
+            try:
+                reply, mode = deps.llm.chat(
+                    prompts.SYSTEM, prompts.brief(state, deps),
+                    max_tokens=700, temperature=0.1, timeout=8, purpose="decide")
+                calls = 1
+                if mode == "model":
+                    plan, problems = prompts.parse(reply)
+                    if plan is None:
+                        degraded.append("plan_invalid")
+                else:
+                    degraded.append("llm_offline")
+            except Exception as error:  # noqa: BLE001 - a model failure must not lose the report
+                calls = 1
+                degraded.append("llm_error")
+                print(f"[decide] model failed: {error}")
+        if plan is None:
+            plan = (prompts.repair_plan(state, deps) if repairing
+                    else prompts.deterministic_plan(state, deps))
+        return {"plan": plan, "violations": [],
+                "model_calls": state.get("model_calls", 0) + calls,
+                "degraded": list(dict.fromkeys((state.get("degraded") or []) + degraded))}
+
+    def validate(state):
+        found = policy.check(state, execution.context(deps, state))
+        merged = (state.get("violations") or []) + found
+        unique = []
+        seen = set()
+        for item in merged:
+            key = (item.get("code"), item.get("field"))
+            if key in seen:
+                continue
+            seen.add(key)
+            unique.append(item)
+        return {"violations": unique}
+
+    def repair(state):
+        return {"repair_count": min(2, state.get("repair_count", 0) + 1)}
+
+    def fallback(state):
+        return {"plan": prompts.fallback_plan(state, deps), "violations": []}
+
+    def execute(state):
+        return execution.execute(state, deps)
+
+    def compose(state):
+        return execution.compose(state, deps)
+
+    def lint(state):
+        return execution.lint(state, deps)
+
+    def enqueue(state):
+        return execution.enqueue(state, deps)
+
+    return {"hydrate": hydrate, "precheck": precheck, "cheap": cheap, "capture": capture,
+            "decide": decide, "validate": validate, "repair": repair, "fallback": fallback,
+            "execute": execute, "compose": compose, "lint": lint, "enqueue": enqueue}
 
 
 def route_precheck(state):
@@ -141,3 +231,7 @@ def route_precheck(state):
 
 def route_cheap(state):
     return "end" if state.get("suppressed") or state.get("short_circuit") else "capture"
+
+
+def route_validate(state):
+    return policy.decide(state.get("violations") or [], state.get("repair_count", 0))

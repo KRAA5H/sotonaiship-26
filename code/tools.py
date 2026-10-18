@@ -233,10 +233,15 @@ def local_area(location):
 
 
 def save_report(category_id, location, description, severity=None, has_photo=False,
-                reporter=None, conn=None, area=None):
+                reporter=None, conn=None, area=None, capture_state="captured",
+                routing_status="needs_review"):
     categories = _rulebook()[0]
     if category_id not in categories:
         return {"ok": False, "error": f"unknown category_id: {category_id}"}
+    if capture_state not in ("captured", "locally_actionable", "submission_ready", "submitted"):
+        return {"ok": False, "error": f"bad capture_state: {capture_state}"}
+    if routing_status not in ("needs_review", "verified"):
+        return {"ok": False, "error": f"bad routing_status: {routing_status}"}
     if category_id in NEVER_SAVED:
         return {"ok": False, "error": f"{category_id} is never saved: point the resident to "
                                       "official guidance instead"}
@@ -288,8 +293,9 @@ def save_report(category_id, location, description, severity=None, has_photo=Fal
             link_token = secrets.token_urlsafe(12)
             c.execute(
                 "INSERT INTO reports (id, created_at, category_id, status, severity, location, "
-                "area, description, has_photo, duplicate_of, reporter_ref, link_token) "
-                "VALUES (?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?)",
+                "area, description, has_photo, duplicate_of, reporter_ref, link_token, "
+                "capture_state, routing_status) "
+                "VALUES (?, ?, ?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     report_id,
                     _now().isoformat(timespec="seconds"),
@@ -302,6 +308,8 @@ def save_report(category_id, location, description, severity=None, has_photo=Fal
                     duplicate["duplicate_of"],
                     _reporter_ref(reporter),
                     link_token,
+                    capture_state,
+                    routing_status,
                 ),
             )
             c.execute("COMMIT")
@@ -318,6 +326,49 @@ def save_report(category_id, location, description, severity=None, has_photo=Fal
             "matching_reports": duplicate["matching_reports"],
         }
 
+    return _with_conn(conn, work)
+
+
+def report_link(report_id, conn=None):
+    """The private link for an existing report, without exposing the id."""
+    def work(c):
+        row = c.execute("SELECT link_token, location FROM reports WHERE id = ?",
+                        (report_id,)).fetchone()
+        if row is None:
+            return {"ok": False, "error": "no report found"}
+        return {"ok": True, "report_id": report_id, "link_token": row["link_token"],
+                "location": row["location"], "link": f"{SITE_URL}/r/{row['link_token']}"}
+    return _with_conn(conn, work)
+
+
+def update_report_location(report_id, location, area=None, conn=None):
+    """Add a street or pin to an open report. No new row."""
+    place = (location or "").strip()
+    if not place:
+        return {"ok": False, "error": "location is required"}
+    def work(c):
+        row = c.execute("SELECT id FROM reports WHERE id = ?", (report_id,)).fetchone()
+        if row is None:
+            return {"ok": False, "error": "no report found"}
+        c.execute("UPDATE reports SET location = ?, area = COALESCE(?, area) WHERE id = ?",
+                  (place, area, report_id))
+        return report_link(report_id, conn=c)
+    return _with_conn(conn, work)
+
+
+def attach_photo_to_report(report_id, ref, mime="image/jpeg", conn=None):
+    """Attach a photo to the open report and keep one row."""
+    guid = str(ref or "")
+    if guid.startswith("guid:"):
+        guid = guid[5:]
+    if not guid:
+        return {"ok": False, "error": "photo reference is required"}
+    def work(c):
+        row = c.execute("SELECT id FROM reports WHERE id = ?", (report_id,)).fetchone()
+        if row is None:
+            return {"ok": False, "error": "no report found"}
+        reports_db.set_photo(c, report_id, guid, mime)
+        return report_link(report_id, conn=c)
     return _with_conn(conn, work)
 
 

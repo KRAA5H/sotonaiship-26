@@ -158,6 +158,28 @@ def handoff(decision, form_url):
     )
 
 
+def challenge(decision, link=None, wrong=None):
+    """A correction of our own earlier label. Keep the incident and ask once."""
+    head = f"You're right, that wasn't {wrong}." if wrong else "You're right, I got that wrong."
+    where = _where(decision)
+    label = _label(decision)
+    lines = [head]
+    if where:
+        if label == "your report":
+            lines.append(f"I've kept your report at {where}.")
+        else:
+            lines.append(f"I've kept the {label} report at {where}.")
+    else:
+        lines.append("I've kept your report here." if label == "your report"
+                     else f"I've kept the {label} report here.")
+    lines.append("It hasn't gone to the council yet.")
+    if not where:
+        lines.append("Where is it?")
+    if link:
+        lines.append(f"Follow it: {link}")
+    return _join(*lines)
+
+
 def threat():
     """Fixed wording, never model-written."""
     return _join("I can only help with street problems here.",

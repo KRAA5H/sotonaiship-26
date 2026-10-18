@@ -1,6 +1,7 @@
 # Step 7: finish the graph (one combined plan)
 
-Status: single execution plan for all remaining work. Supersedes Steps 7 to 13 in `plans/BUILD-STEPS.md`. One approval, five internal phases, one combined doctor per checkpoint.
+Status: implemented through P5. Template copy is the writer through the freeze; Step 12 specialist is cut; the model rewriter is post-demo. One approval, five internal phases, one combined doctor per checkpoint.
+Supersedes Steps 7 to 13 in `plans/BUILD-STEPS.md`.
 
 Current state, 18 Oct 04:20:
 - HEAD `51d6e7c`. 645 tests, 4 skips, 31/31 message evaluation. Tree clean.

@@ -30,9 +30,11 @@ import pin_service
 import triage  # noqa: F401  patched by tests; the orchestrator calls it
 import voice  # noqa: F401
 from agents import ORCHESTRATOR, Turn
+from graph import prompts, service
 from website import site
 
 PORT = int(os.getenv("SIM_PORT") or "5007")
+MODE = (os.getenv("SIM_MODE") or "graph").lower()
 
 app = Flask(__name__)
 app.register_blueprint(site)      # /r/<token>, the resident's own page
@@ -58,8 +60,32 @@ def _sender(req):
 
 
 def run_turn(sender, text, image=None, link_base=None):
-    """The same path as the webhook, minus the phone: the triage agent orchestrates."""
+    """The same path as the webhook, minus the phone: one graph owns the turn."""
     started = time.time()
+    if MODE == "graph":
+        inbound = {"sender": sender, "chat": sender, "text": text,
+                   "message_guid": uuid.uuid4().hex}
+        if image:
+            inbound["photo_ref"] = (f"sim-{uuid.uuid4().hex[:12]}", "image/jpeg")
+        result = service.get_runtime().turn(inbound)
+        draft = result["state"].get("incident_draft") or {}
+        outcome = result["state"].get("executed_outcome") or {}
+        label = (prompts.playbook(draft.get("category_id") or "") or {}).get("label")
+        debug = {
+            "category": draft.get("category_id"),
+            "label": label,
+            "severity": draft.get("severity"),
+            "confidence": None,
+            "reason": outcome.get("action"),
+            "is_report": bool(outcome.get("saved")),
+            "location": (draft.get("location") or {}).get("text"),
+            "photo": bool(image),
+            "agents": ["graph"],
+            "category_agent": "graph",
+        }
+        body = "\n".join(result.get("bubbles") or [])
+        link = result.get("url") or result.get("source_url") or ""
+        return body, link, debug, started
     outcome = orchestrator.handle(Turn(sender=sender, text=text, chat=sender, image=image,
                                        link_base=link_base))
     body, link = bot.split_reply(outcome.reply or "")

@@ -9,6 +9,10 @@ Three places, no more:
 
 ---
 
+## 06:05, Sunday: the graph finishes the job
+
+- P1 to P5 landed in one line. `decide`/`validate`/`repair`/`fallback` now sit between capture and the single write. The model proposes, the schema and policy judge; a wrong info-only label repairs to `unclear_other`; no model answer falls back to a deterministic capture. `execute` saves through `tools.save_report` with `turn_operations` idempotency. A follow-up place, photo or "still there" updates the open row through `tools.update_report_location` / `attach_photo_to_report`, never a twin. `compose` emits template copy, `lint` gates it, `enqueue` writes ordered outbox rows, and a checked source URL goes as a separate link. The simulator defaults to graph; the webhook is `MODE=graph`; `MODE=legacy` remains for rollback. 12 trajectory fixtures run through the graph (specialist cut, named), 657 tests, 31/31, no skips. Live model probes: tree saved as `unclear_other` at "Not given", pothole saved at Alma Road, no receipt claim.
+
 ## 04:15, Sunday: Step 6 doctor fixes
 
 - Closed the doctor's blockers before P1. A duplicate replay is a no-op and hydrate overlays the stored draft, pending question and claims, so a replay cannot wipe thread memory. `photo_ref` tuples become `guid:<id>` and `image_ref` is accepted. `hydrate` starts from `new_thread_state`, so `model_calls`, `degraded` and `repair_count` exist for P1. `fire` and `trapped` need hazard or person context; a pothole outside a fire station is captured, not sent to 999. `kind` now distinguishes empty, silence, threat and spam. 18 runtime tests; 645 total, 4 skips, 31/31.

@@ -128,6 +128,31 @@ return messages.need_location(decision, pin_url=pin_url)
 
 **To run it:** `python code/pin_service.py` (port 5007) behind an HTTPS tunnel with `TRUST_PROXY=1`, `BASE_URL=https://<host>`, `CONTROLLER_NAME`, `CONTACT_EMAIL` and `SOTONFIX_USER_AGENT` set. Phones refuse location sharing on plain HTTP.
 
+## Graph runtime decisions (D61 to D64)
+
+**D61. One write path, and it is `tools.save_report`.** The graph calls it with
+`capture_state` and `routing_status`; `turn_operations (turn_id, "commit")`
+makes a replay safe. A detail calls `tools.update_report_location` or
+`tools.attach_photo_to_report` against the open report id, never a second insert.
+
+**D62. A follow-up is not a new incident when the open report already has a
+description and the message is a place, a photo or "still there".** `capture`
+preserves the description; `execute` updates the active row. A different problem
+noun or category still creates a new row. This is what makes the restart fixture
+show one row at Weston Lane, not two.
+
+**D63. The channel is cut over by `MODE=graph`, and the simulator defaults to
+graph.** `MODE=legacy` keeps the old `TriageAgent` path for the 96 legacy tests
+and for a rollback. The webhook sends the bubbles, then the private report link,
+then a checked source link. The checkpoint holds no raw phone in the process
+runtime; the thread store holds only the salted reporter reference.
+
+**D64. Copy is template-first through the freeze.** `messages` supplies the
+wording, `compose` splits it into at most three bubbles, `lint` checks schema,
+URL and claim rules against the executed outcome. A model may rewrite the
+bubbles after the freeze only through the same lint gate. This keeps the demo
+truthful when the model is unavailable and preserves the natural, short register.
+
 ## How to change something
 
 1. Write the line in this file first: what, why, who.

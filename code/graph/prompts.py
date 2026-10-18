@@ -1,0 +1,424 @@
+"""Decision prompt, deterministic plans and the captured fallback.
+
+The model proposes one plan. Nothing it says is trusted until the schema and the
+policy have checked it. When the model is absent or wrong, the deterministic
+plans below still keep the incident and still act.
+"""
+
+import json
+import re
+from functools import lru_cache
+from pathlib import Path
+
+from . import schemas
+
+PLAYBOOK_DIR = Path(__file__).resolve().parents[1] / "services" / "playbooks"
+
+SYSTEM = """You are Kerbside, a Southampton council text assistant. Read one resident
+message and the incident draft, then return ONE JSON object and nothing else.
+
+Actions: log, ask, answer, escalate.
+- log: keep a physical problem. A physical problem is never dropped because the category
+  is uncertain. If no category fits, use "unclear_other".
+- ask: ask ONE question for a missing field. Never ask for a field that is already known.
+- answer: answer a question using only the checked facts supplied. Never invent a fact,
+  a team, a number, a timescale or council receipt.
+- escalate: point to an official service only when the playbook says not_council or the
+  facts do not settle a question.
+
+Capture-first: a report about a real-world problem gets action log, even when the
+category is unclear or the model's best category is info_only. Use "unclear_other".
+If the only missing field is the location, still choose log: the reply asks for the
+location after saving. Use ask only when there is no description or photo at all.
+Never choose not_council for a physical problem. Never say the council has the report:
+a local save has not gone to the council yet.
+
+JSON shape:
+{"dialogue_act": "new_report|detail|correction|challenge_previous_claim|question|status|greeting|other",
+ "action": "log|ask|answer|escalate",
+ "incident_patch": {"set": {"description": "...", "category_id": "pothole",
+   "location": {"text": "12 Alma Road", "street": "Alma Road", "provenance": "text"}},
+   "clear": [...], "add": {...}},
+ "service_candidates": ["category_id"],
+ "specialist_request": null,
+ "clarification": {"field": "location|description|address|detail|photo", "reason": "..."} or null,
+ "fact_request": {"question": "...", "category_id": "..."} or null,
+ "escalation": {"kind": "...", "destination": "..."} or null,
+ "retracted_claims": [],
+ "reason_codes": []}
+
+Use no markdown and no extra keys. Keep one question at most."""
+
+_KEYWORDS = (
+    ("pothole", ("pothole", "hole in the road", "road surface", "crater", "sunken drain")),
+    ("fly_tipping", ("fly tip", "fly-tip", "dumped rubbish", "dumped waste", "mattress",
+                     "fridge", "sofa dumped", "rubbish dumped")),
+    ("graffiti_flyposting", ("graffiti", "flypost", "fly poster", "fly-poster")),
+    ("dog_fouling", ("dog foul", "dog poo", "dog mess")),
+    ("glass_spillage_hazard", ("broken glass", "glass on", "smashed bottle")),
+    ("dead_animal", ("dead animal", "dead fox", "dead bird", "dead cat", "dead dog")),
+    ("abandoned_vehicle", ("abandoned car", "abandoned van", "untaxed car")),
+    ("illegal_parking", ("parked on", "double parked", "blocking my drive", "illegal parking")),
+    ("missed_bin", ("missed bin", "bin not collected", "bins not collected",
+                    "bin wasn't collected", "bin was not collected")),
+    ("lost_damaged_bin", ("missing bin", "broken bin", "damaged bin", "bin lid")),
+    ("litter_street_cleaning", ("litter", "street cleaning", "street needs sweeping")),
+    ("noise_nuisance", ("noise", "loud music", "barking", "shouting")),
+    ("council_housing_repair", ("housing repair", "council house", "leak in my flat", "damp")),
+    ("flooding_severe_weather", ("flood", "flooding", "storm")),
+    ("not_council_trunk_road", ("motorway", "a33", "a36", "trunk road")),
+    ("not_council_utility", ("power cut", "electricity", "water leak", "gas leak")),
+    ("outside_southampton", ("winchester", "eastleigh", "fareham", "portsmouth",
+                             "outside southampton")),
+)
+
+_REPORT_WORDS = re.compile(
+    r"\b(tree|fallen|blocking|blocked|broken|dumped|leak|spill|fly.?tip|graffiti|"
+    r"litter|pothole|hole|crater|flood|noise|smell|damp|damaged|missing|abandoned|"
+    r"parked|fouling|glass|rubbish|bin)\b", re.I)
+_QUESTION_START = re.compile(
+    r"^(what|how|where|when|why|who|can|could|do|does|is|are|will|should|may)\b", re.I)
+_CHALLENGE = re.compile(
+    r"(what has that got to do|that'?s wrong|that is wrong|you said|"
+    r"wasn'?t|was not|nothing to do with|why did you say|got that wrong)", re.I)
+_POSTCODE = re.compile(r"\bSO\d{1,2}\s?\d[A-Z]{2}\b", re.I)
+_SUFFIX = r"(?:Road|Street|Lane|Avenue|Close|Drive|Way|Crescent|Gardens|Hill|Park|Terrace|Place|Grove|Court|Walk|Mews|Rise|Row)"
+_PREP_STREET = re.compile(r"\b(?:on|at|outside|near|by|in)\s+([A-Z][\w']*(?:\s+[A-Z][\w']*){0,4}\s+" + _SUFFIX + r")\b", re.I)
+_ANY_STREET = re.compile(r"\b([A-Z][\w']*(?:\s+[A-Z][\w']*){0,4}\s+" + _SUFFIX + r")\b", re.I)
+_SHORT_STREET = re.compile(r"^[A-Za-z0-9' .-]{2,40}\b" + _SUFFIX + r"[\s.,!]*$", re.I)
+
+
+@lru_cache(maxsize=None)
+def playbook(category):
+    """Load one generated playbook. Unknown or unsafe ids get an empty book."""
+    if not isinstance(category, str) or "/" in category or "\\" in category:
+        return {}
+    path = PLAYBOOK_DIR / f"{category}.json"
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def candidates_for(text, index=None):
+    """Ordered category guesses. `unclear_other` is always the fallback, never a veto."""
+    lowered = (text or "").lower()
+    found = []
+    for category, words in _KEYWORDS:
+        if any(word in lowered for word in words) and category not in found:
+            found.append(category)
+    known = set((index or {}).get("categories") or {})
+    found = [item for item in found if not known or item in known]
+    if "unclear_other" in known:
+        found.append("unclear_other")
+    return found or ["unclear_other"]
+
+
+def extract_location(text):
+    """A place we can act on. A district name alone is not enough."""
+    text = (text or "").strip()
+    if not text:
+        return None
+    postcode = _POSTCODE.search(text)
+    if postcode:
+        return postcode.group(0).upper()
+    match = _PREP_STREET.search(text)
+    if not match:
+        match = _ANY_STREET.search(text)
+    if match and match.group(1).strip().lower() in {
+            "the road", "road", "the street", "street", "the pavement"}:
+        return None
+    if match and not _REPORT_WORDS.search(match.group(1)):
+        place = match.group(1).strip(" .,")
+        for separator in (" at ", " on ", " near ", " outside ", " in "):
+            if separator in place.lower():
+                place = re.split(separator, place, flags=re.I)[-1].strip()
+        place = re.sub(r"^(the|a|an)\s+", "", place, flags=re.I).strip(" .,")
+        if place and place.islower():
+            place = place.title()
+        return place or None
+    if _SHORT_STREET.match(text) and not _REPORT_WORDS.search(text):
+        place = text.strip(" .,")
+        return place.title() if place.islower() else place
+    return None
+
+
+def is_question(text):
+    text = (text or "").strip()
+    return bool(text) and (text.endswith("?") or bool(_QUESTION_START.match(text)))
+
+
+def is_challenge(text):
+    return bool(_CHALLENGE.search(text or ""))
+
+
+def is_detail(text, state):
+    """A message that adds to the open incident rather than starting a new one."""
+    draft = state.get("incident_draft") or {}
+    if not state.get("active_incident_id") or not draft.get("description"):
+        return False
+    text = (text or "").strip()
+    if is_challenge(text) or is_question(text):
+        return False
+    if not text:
+        return bool(draft.get("attachments")) or bool(state.get("pending_question"))
+    if text.lower() in ("it is still there", "still there", "it's still there", "same problem"):
+        return True
+    place = extract_location(text)
+    if place and not _REPORT_WORDS.search(text):
+        return True
+    pending = state.get("pending_question") or {}
+    if pending.get("field") in ("location", "detail") and not _REPORT_WORDS.search(text):
+        return True
+    return False
+
+
+def _reportish(text, category):
+    if category != "unclear_other":
+        return True
+    return bool(_REPORT_WORDS.search(text or ""))
+
+
+def _plan(dialogue_act, action, candidates, patch=None, clarification=None,
+          fact_request=None, escalation=None, retracted=None, reasons=None):
+    return {
+        "dialogue_act": dialogue_act,
+        "action": action,
+        "incident_patch": patch or {},
+        "service_candidates": candidates or [],
+        "specialist_request": None,
+        "clarification": clarification,
+        "fact_request": fact_request,
+        "escalation": escalation,
+        "retracted_claims": retracted or [],
+        "reason_codes": reasons or [],
+    }
+
+
+def _location_patch(place):
+    if not place:
+        return {}
+    return {"set": {"location": {"text": place, "street": place, "provenance": "text"}}}
+
+
+def likely_duplicate(text, state):
+    """A detail about the open incident is not a new report."""
+    draft = state.get("incident_draft") or {}
+    if not state.get("active_incident_id") or not draft.get("description"):
+        return False
+    if _CHALLENGE.search(text or ""):
+        return False
+    if is_challenge(text):
+        return False
+    if _REPORT_WORDS.search(text or "") and not _SHORT_STREET.match(text or ""):
+        # A new problem word can still be detail ("it is still there"), so only
+        # treat a different category word as a new incident.
+        current = draft.get("category_id") or ""
+        guesses = candidates_for(text, None)
+        return bool(guesses and guesses[0] in ("unclear_other", current))
+    return True
+
+
+def deterministic_plan(state, deps):
+    """The plan we trust when no model answered, and the floor under every repair."""
+    inbound = state.get("inbound") or {}
+    text = (inbound.get("text") or "").strip()
+    draft = state.get("incident_draft") or {}
+    index = deps.playbooks or {}
+    categories = index.get("categories") or {}
+    guesses = candidates_for(text, index)
+    category = (draft.get("category_id") or guesses[0] or "unclear_other")
+    place = extract_location(text)
+    patch = _location_patch(place)
+    never = set(index.get("never_saved") or ())
+    handoff = set(index.get("handoff_categories") or ())
+    info_only = {key for key, value in categories.items() if value == "info_only"}
+
+    if is_challenge(text) and state.get("last_claims_sent"):
+        wrong = "flooding" if "flooding" in text.lower() else None
+        return _plan("other", "answer", [category],
+                     fact_request={"question": text, "category_id": "general"},
+                     retracted=[wrong] if wrong else [],
+                     reasons=["challenge"])
+
+    if not text and draft.get("attachments"):
+        return _plan("detail", "log", [category], reasons=["photo_detail"])
+
+    if is_detail(text, state):
+        return _plan("detail", "log", [category], patch=patch, reasons=["detail"])
+
+    if is_question(text):
+        fact_category = category if category != "unclear_other" else "general"
+        return _plan("question", "answer", [category],
+                     fact_request={"question": text, "category_id": fact_category})
+
+    if category in never or categories.get(category) == "not_council":
+        return _escalation_plan(index, category)
+
+    if category in handoff:
+        form = playbook(category).get("form_url")
+        if form:
+            return _plan("other", "escalate", [category],
+                         escalation={"kind": "council_form", "destination": form},
+                         reasons=["handoff"])
+
+    if category in info_only:
+        category = "unclear_other"
+
+    if category == "unclear_other" and not _reportish(text, category):
+        return _plan("other", "ask", [category],
+                     clarification={"field": "description",
+                                    "reason": "Tell me what the problem is."})
+
+    return _plan("new_report", "log", [category], patch=patch, reasons=["decided"])
+
+
+def _escalation_plan(index, category):
+    book = playbook(category)
+    redirect = book.get("redirect_to") or ""
+    guidance = (index.get("guidance") or {}).get(redirect) or {}
+    destination = guidance.get("url") or guidance.get("contact")
+    kind = "council_finder"
+    if redirect == "national_highways":
+        kind = "national_highways"
+    elif redirect == "council_out_of_hours":
+        kind = "council_out_of_hours"
+    elif category == "not_council_utility":
+        kind = "utility"
+        facts = book.get("facts") or []
+        destination = destination or (facts[0].get("url") if facts else None) \
+            or ((index.get("guidance") or {}).get("find_your_council") or {}).get("url")
+    if not destination:
+        destination = ((index.get("guidance") or {}).get("find_your_council") or {}).get("url")
+    return _plan("other", "escalate", [category],
+                 escalation={"kind": kind, "destination": destination},
+                 reasons=["not_council"])
+
+
+def _proposed_category(state):
+    draft = state.get("incident_draft") or {}
+    plan = state.get("plan") or {}
+    patch = ((plan.get("incident_patch") or {}).get("set") or {})
+    candidates = plan.get("service_candidates") or state.get("candidate_services") or []
+    return draft.get("category_id") or patch.get("category_id") \
+        or (candidates[0] if candidates else None)
+
+
+def repair_plan(state, deps):
+    """One deterministic correction, never another model call."""
+    draft = state.get("incident_draft") or {}
+    violations = state.get("violations") or []
+    codes = {item.get("code") for item in violations}
+    if "retraction.missing" in codes:
+        return _plan("other", "ask", [draft.get("category_id") or "unclear_other"],
+                     clarification={"field": "location", "reason": "Where is it?"},
+                     reasons=["challenge_repair"])
+    if "ask.known_field" in codes or "policy.question_repeated" in codes:
+        target = "description" if not ((draft.get("description") or "").strip()
+                                       or draft.get("attachments")) else "location"
+        return _plan("other", "ask", [draft.get("category_id") or "unclear_other"],
+                     clarification={"field": target, "reason": "Tell me a bit more."})
+    category = _proposed_category(state)
+    if category in set((deps.playbooks or {}).get("never_saved") or ()) \
+            or ((deps.playbooks or {}).get("categories") or {}).get(category) == "not_council":
+        return _escalation_plan(deps.playbooks or {}, category)
+    return _plan("new_report", "log", ["unclear_other"],
+                 patch={"set": {"category_id": "unclear_other"}},
+                 reasons=["category_repair"])
+
+
+def fallback_plan(state, deps):
+    """The last honest action after a hard policy failure."""
+    index = deps.playbooks or {}
+    category = _proposed_category(state)
+    if category in set(index.get("never_saved") or ()) \
+            or (index.get("categories") or {}).get(category) == "not_council":
+        return _escalation_plan(index, category)
+    if "capture.lost" in {item.get("code") for item in state.get("violations") or []}:
+        return _plan("other", "ask", ["unclear_other"],
+                     clarification={"field": "description",
+                                    "reason": "Tell me what the problem is."})
+    if "policy.answer_ungrounded" in {item.get("code") for item in state.get("violations") or []}:
+        destination = ((index.get("guidance") or {}).get("find_your_council") or {}).get("url")
+        return _plan("question", "escalate", [category or "general"],
+                     escalation={"kind": "council_finder", "destination": destination},
+                     reasons=["ungrounded"])
+    return _plan("new_report", "log", ["unclear_other"],
+                 patch={"set": {"category_id": "unclear_other"}},
+                 reasons=["fallback"])
+
+
+def brief(state, deps):
+    """The compact JSON brief the decision model may read. No raw phone, no chat id."""
+    draft = state.get("incident_draft") or {}
+    index = deps.playbooks or {}
+    inbound = state.get("inbound") or {}
+    text = (inbound.get("text") or "").strip()
+    guesses = candidates_for(text, index)
+    compact_books = []
+    for category in dict.fromkeys(guesses + [draft.get("category_id") or "unclear_other"]):
+        book = playbook(category)
+        if not book:
+            continue
+        compact_books.append({
+            "id": category,
+            "label": book.get("label"),
+            "outcome": book.get("outcome"),
+            "save": book.get("save"),
+            "allowed_questions": book.get("allowed_question_fields") or [],
+            "required_local": book.get("required_local") or [],
+            "location_mode": book.get("location_mode"),
+            "form_url": book.get("form_url"),
+            "redirect_to": book.get("redirect_to"),
+            "facts": [{key: fact.get(key) for key in ("id", "fact", "url", "date")}
+                      for fact in (book.get("facts") or [])[:4]],
+        })
+    payload = {
+        "message": text,
+        "photo": bool(draft.get("attachments")),
+        "recent": [item.get("text") for item in (state.get("recent_messages") or [])[-6:]],
+        "draft": {
+            "description": draft.get("description"),
+            "category_id": draft.get("category_id"),
+            "location": (draft.get("location") or {}).get("text"),
+            "capture_state": draft.get("capture_state"),
+            "routing_status": draft.get("routing_status"),
+        },
+        "pending_question": state.get("pending_question"),
+        "last_claims": state.get("last_claims_sent") or [],
+        "candidates": guesses,
+        "categories": [{"id": key, "outcome": value}
+                       for key, value in (index.get("categories") or {}).items()],
+        "playbooks": compact_books,
+        "violations": [f"{item.get('code')}:{item.get('field') or ''} {item.get('message') or ''}".strip()
+                       for item in (state.get("violations") or [])],
+    }
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+
+
+def parse(reply):
+    """Parse one model reply, tolerating a fenced block. Returns (plan, problems)."""
+    body = (reply or "").strip()
+    if body.startswith("```"):
+        body = re.sub(r"^```(?:json)?\s*", "", body)
+        body = re.sub(r"\s*```$", "", body)
+    start, end = body.find("{"), body.rfind("}")
+    if start >= 0 and end > start:
+        body = body[start:end + 1]
+    try:
+        raw = json.loads(body)
+    except (ValueError, TypeError):
+        return None, ["schema.invalid"]
+    if isinstance(raw, dict):
+        action = raw.get("action")
+        if action != "ask":
+            raw["clarification"] = None
+        if action != "answer":
+            raw["fact_request"] = None
+        if action != "escalate":
+            raw["escalation"] = None
+    patch = raw.get("incident_patch") if isinstance(raw, dict) else None
+    sets = patch.get("set") if isinstance(patch, dict) else None
+    if isinstance(sets, dict) and isinstance(sets.get("location"), str)             and sets["location"].strip():
+        place = sets["location"].strip()
+        sets["location"] = {"text": place, "street": place, "provenance": "text"}
+    return schemas.validate_turn_plan(raw)

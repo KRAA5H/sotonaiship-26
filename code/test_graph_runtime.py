@@ -5,6 +5,7 @@ Run: python code/test_graph_runtime.py
 
 import contextlib
 import io
+import json
 import sys
 import tempfile
 import unittest
@@ -32,9 +33,12 @@ class RuntimeCase(unittest.TestCase):
         self.threads = store.ThreadStore(self.db)
         self.runtime = self.make_runtime()
 
-    def make_runtime(self, checkpointer=None):
-        deps = graph_runtime.Deps(threads=self.threads, playbooks={},
-                                  now=lambda: FIXED)
+    def make_runtime(self, checkpointer=None, llm=None):
+        deps = graph_runtime.Deps(threads=self.threads, playbooks=graph_runtime.load_playbooks(), llm=llm,
+                                  reports=self.db, now=lambda: FIXED,
+                                  ops=store.TurnOperations(self.db),
+                                  outbox=store.Outbox(self.db),
+                                  claims=store.Claims(self.db))
         return graph_runtime.TurnRuntime(deps, checkpointer or MemorySaver())
 
     def turn(self, text, guid, sender="+447700900001", photo_ref=None, image_ref=None):
@@ -57,14 +61,14 @@ class HydrateTest(RuntimeCase):
     def test_a_new_thread_is_created_with_one_message(self):
         result = self.turn("there is a tree fallen on the road", "g-1")
         state = result["state"]
-        self.assertEqual(result["kind"], "captured")
+        self.assertEqual(result["kind"], "saved")
         self.assertTrue(result["thread_id"].startswith("h-"))
         self.assertEqual(state["turn_id"], "g-1")
         self.assertEqual(len(state["recent_messages"]), 1)
         self.assertIn("tree", state["incident_draft"]["description"])
         self.assertEqual(state["incident_draft"]["capture_state"], "captured")
         self.assertEqual(state["incident_draft"]["routing_status"], "needs_review")
-        self.assertIsNone(state["incident_draft"]["category_id"])
+        self.assertEqual(state["incident_draft"]["category_id"], "unclear_other")
 
     def test_a_second_turn_reuses_the_thread_and_appends(self):
         first = self.turn("there is a tree fallen on the road", "g-1")
@@ -120,7 +124,7 @@ class PrecheckTest(RuntimeCase):
 
     def test_a_fire_station_is_not_an_emergency(self):
         result = self.turn("pothole outside the fire station on Winchester Road", "g-fire-station")
-        self.assertEqual(result["kind"], "captured")
+        self.assertEqual(result["kind"], "saved")
         self.assertFalse(result["state"]["emergency"])
 
     def test_a_house_fire_is_an_emergency(self):
@@ -139,28 +143,138 @@ class PrecheckTest(RuntimeCase):
         self.assertTrue(result["state"]["suppressed"])
 
 
-class CaptureTest(RuntimeCase):
-    def test_capture_does_not_write_a_report_row(self):
-        self.turn("there is a tree fallen on the road", "g-1")
+class FakeLLM:
+    def __init__(self, replies):
+        self.replies = list(replies)
+        self.calls = 0
+
+    def chat(self, system, user, **kwargs):
+        self.calls += 1
+        reply = self.replies.pop(0) if self.replies else "{}"
+        if isinstance(reply, tuple):
+            return reply
+        return reply, "model"
+
+
+def model_plan(**changes):
+    base = {
+        "dialogue_act": "new_report", "action": "log",
+        "incident_patch": {}, "service_candidates": ["unclear_other"],
+        "specialist_request": None, "clarification": None,
+        "fact_request": None, "escalation": None,
+        "retracted_claims": [], "reason_codes": [],
+    }
+    base.update(changes)
+    return json.dumps(base)
+
+
+class DecideTest(RuntimeCase):
+    def use(self, replies):
+        fake = FakeLLM(replies)
+        self.runtime = self.make_runtime(llm=fake)
+        return fake
+
+    def test_a_wrong_info_only_plan_is_repaired_to_unclear_other(self):
+        fake = self.use([model_plan(
+            service_candidates=["flooding_severe_weather"],
+            incident_patch={"set": {"category_id": "flooding_severe_weather"}})])
+        result = self.turn("there is a tree fallen on the road", "g-1")
+        self.assertEqual(result["kind"], "saved")
+        self.assertEqual(result["state"]["repair_count"], 1)
+        self.assertEqual(fake.calls, 1)
+        row = self.row()
+        self.assertEqual(row["category_id"], "unclear_other")
+        self.assertIn("hasn't gone to the council", " ".join(result["bubbles"]))
+
+    def test_a_model_ask_for_location_still_saves_first(self):
+        self.use([model_plan(
+            action="ask", service_candidates=["unclear_other"],
+            clarification={"field": "location", "reason": "Where is it?"},
+            incident_patch={"set": {"category_id": "unclear_other"}})])
+        result = self.turn("there is a tree fallen on the road", "g-1")
+        self.assertEqual(result["kind"], "saved")
+        self.assertEqual(self.count_reports(), 1)
+        self.assertEqual(result["state"]["pending_question"]["field"], "location")
+        self.assertEqual(" ".join(result["bubbles"]).count("?"), 1)
+
+    def test_an_invalid_model_reply_falls_back_to_capture(self):
+        fake = self.use([("this is not json", "model")])
+        result = self.turn("there is a tree fallen on the road", "g-1")
+        self.assertEqual(result["kind"], "saved")
+        self.assertIn("plan_invalid", result["state"]["degraded"])
+        self.assertEqual(fake.calls, 1)
+        self.assertEqual(self.count_reports(), 1)
+
+    def test_a_not_council_plan_is_not_saved(self):
+        self.use([model_plan(
+            service_candidates=["not_council_utility"],
+            incident_patch={"set": {"category_id": "not_council_utility"}})])
+        result = self.turn("there is a power cut on Alma Road", "g-1")
+        self.assertEqual(result["kind"], "escalated")
         self.assertEqual(self.count_reports(), 0)
+        self.assertIn("not southampton city council", " ".join(result["bubbles"]).lower())
+
+    def test_an_answer_uses_a_checked_fact(self):
+        self.use([model_plan(
+            dialogue_act="question", action="answer", service_candidates=["missed_bin"],
+            fact_request={"question": "what do I do about a missed bin?",
+                          "category_id": "missed_bin"})])
+        result = self.turn("what do I do about a missed bin?", "g-1")
+        self.assertEqual(result["kind"], "answered")
+        self.assertEqual(self.count_reports(), 0)
+        facts = result["state"]["executed_outcome"]["facts"]
+        self.assertTrue(facts)
+        self.assertTrue(facts[0]["url"].startswith("https://"))
+        self.assertEqual(facts[0]["date"], "2026-10-17")
+
+    def test_an_emergency_never_calls_the_model(self):
+        fake = self.use([model_plan()])
+        result = self.turn("there is a gas leak in the kitchen", "g-1")
+        self.assertEqual(result["kind"], "emergency")
+        self.assertEqual(fake.calls, 0)
+        self.assertEqual(self.count_reports(), 0)
+
+    def row(self):
+        conn = reports_db.connect(self.db)
+        try:
+            return conn.execute("SELECT * FROM reports").fetchone()
+        finally:
+            conn.close()
+
+
+class CaptureTest(RuntimeCase):
+    def test_a_tree_writes_one_unclear_other_row(self):
+        result = self.turn("there is a tree fallen on the road", "g-1")
+        self.assertEqual(self.count_reports(), 1)
+        conn = reports_db.connect(self.db)
+        try:
+            row = conn.execute("SELECT category_id, location, capture_state, routing_status "
+                               "FROM reports").fetchone()
+        finally:
+            conn.close()
+        self.assertEqual(row["category_id"], "unclear_other")
+        self.assertEqual(row["location"], "Not given")
+        self.assertEqual(row["capture_state"], "captured")
+        self.assertEqual(row["routing_status"], "needs_review")
+        self.assertIn("hasn't gone to the council", " ".join(result["bubbles"]))
 
     def test_a_photo_only_message_captures_a_reference(self):
         result = self.turn("", "g-photo", photo_ref="guid:1")
         draft = result["state"]["incident_draft"]
-        self.assertEqual(result["kind"], "captured")
-        self.assertEqual(draft["description"], "")
+        self.assertEqual(result["kind"], "saved")
+        self.assertEqual(draft["description"], "Photo of a problem")
         self.assertEqual(draft["attachments"], [{"kind": "photo", "ref": "guid:1"}])
 
     def test_a_photo_tuple_is_stored_as_a_guid(self):
         result = self.turn("", "g-photo-t", photo_ref=("G-ABC", "image/jpeg"))
         draft = result["state"]["incident_draft"]
-        self.assertEqual(result["kind"], "captured")
+        self.assertEqual(result["kind"], "saved")
         self.assertEqual(draft["attachments"], [{"kind": "photo", "ref": "guid:G-ABC"}])
 
     def test_an_image_ref_is_a_photo(self):
         result = self.turn("", "g-image", image_ref="guid:2")
         draft = result["state"]["incident_draft"]
-        self.assertEqual(result["kind"], "captured")
+        self.assertEqual(result["kind"], "saved")
         self.assertEqual(draft["attachments"], [{"kind": "photo", "ref": "guid:2"}])
 
     def test_the_playbook_index_is_available_to_the_runtime(self):
@@ -189,7 +303,7 @@ class CliTest(RuntimeCase):
             code = graph_runtime.main(["--turn", "there is a tree fallen on the road",
                                        "--db", str(self.db)])
         self.assertEqual(code, 0)
-        self.assertIn("captured", out.getvalue())
+        self.assertIn("saved", out.getvalue())
         self.assertIn("tree", out.getvalue())
 
 

@@ -37,6 +37,9 @@ class PageTest(unittest.TestCase):
 class TurnTest(unittest.TestCase):
     def setUp(self):
         self.client = simulator.app.test_client()
+        self._mode = simulator.MODE
+        simulator.MODE = "legacy"
+        self.addCleanup(setattr, simulator, "MODE", self._mode)
         # The photo agent would call a model in the background; these tests check the turn.
         patch = unittest.mock.patch.object(simulator.orchestrator.photo, "start", return_value=None)
         patch.start()
@@ -86,6 +89,37 @@ class TurnTest(unittest.TestCase):
         self.assertTrue(data["ok"])
         self.assertEqual(seen["image"][0], b"png-bytes")
         self.assertTrue(data["debug"]["photo"])
+
+
+class GraphTurnTest(unittest.TestCase):
+    def test_graph_mode_returns_bubbles_and_the_report_link(self):
+        class FakeRuntime:
+            def __init__(self):
+                self.inbound = None
+
+            def turn(self, inbound):
+                self.inbound = inbound
+                return {
+                    "kind": "saved",
+                    "bubbles": ["Logged it here.", "Where is it?"],
+                    "url": "https://example.test/r/" + "a" * 16,
+                    "source_url": None,
+                    "state": {
+                        "incident_draft": {"category_id": "unclear_other",
+                                           "location": {"text": ""}},
+                        "executed_outcome": {"action": "log", "saved": True},
+                    },
+                }
+
+        fake = FakeRuntime()
+        with unittest.mock.patch.object(simulator, "MODE", "graph"),              unittest.mock.patch.object(simulator.service, "get_runtime", return_value=fake):
+            body, link, debug, started = simulator.run_turn(
+                "sim:1", "there is a tree fallen on the road")
+        self.assertEqual(body, "Logged it here.\nWhere is it?")
+        self.assertEqual(link, "https://example.test/r/" + "a" * 16)
+        self.assertEqual(debug["category"], "unclear_other")
+        self.assertTrue(debug["is_report"])
+        self.assertEqual(fake.inbound["sender"], "sim:1")
 
 
 class LaterTextsTest(unittest.TestCase):
