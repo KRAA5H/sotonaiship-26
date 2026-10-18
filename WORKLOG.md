@@ -9,6 +9,10 @@ Three places, no more:
 
 ---
 
+## 02:07, Sunday: baseline frozen for the graph build
+
+- Baseline commit `40b2ee5` (`40b2ee59e48356cf6b6bcebe78445b58a9491fda`): the three capture and truth fixes plus the documentation. 475 unit tests pass, 31/31 message evaluation cases pass. Step 0 only; the graph build starts from this tree after Step 1 is approved.
+
 ## 01:33, Sunday: the three capture and truth fixes
 
 - `code/triage.py`: `is_report` now governs capture. An `info_only` or unknown category on a real report returns `reason="needs_capture"` with `category_id="unclear_other"`, and records `requested_category_id`. `not_council` still refuses. The prompt no longer tells the model that `info_only` means nothing is saved.
