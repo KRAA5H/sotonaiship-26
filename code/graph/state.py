@@ -81,6 +81,7 @@ class ExecutedOutcome(TypedDict, total=False):
     degraded: list[str]
     saved: bool
     refused_reason: str | None
+    playbook_version: str | None
 
 
 class ThreadState(TypedDict, total=False):
@@ -192,4 +193,5 @@ def new_executed_outcome(action: str, saved: bool = False,
         "degraded": [],
         "saved": saved,
         "refused_reason": refused_reason,
+        "playbook_version": None,
     }

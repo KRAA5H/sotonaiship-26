@@ -30,23 +30,19 @@
   "outcome": "not_council",
   "questions": [],
   "redirect_to": "national_highways",
-  "required_capture_any": [
-    "description",
-    "photo"
-  ],
+  "required_capture_any": [],
   "required_detail": [],
-  "required_local": [
-    "description",
-    "location"
-  ],
+  "required_local": [],
   "required_submission": [],
   "rulebook_group": "not_council",
   "rulebook_required_fields": [],
+  "save": false,
   "service_id": "not_council_trunk_road",
   "severity": {},
   "severity_keywords": {},
   "show_guidance": [],
   "source_date": "2026-10-17",
+  "source_status": "unverified",
   "source_url": "https://newweb.fareham.gov.uk/parking_and_traffic/traffic_management/reportaproblem.aspx",
   "specialist_group": null,
   "submission_status": "unverified",

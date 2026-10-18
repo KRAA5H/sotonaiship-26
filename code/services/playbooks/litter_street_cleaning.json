@@ -76,10 +76,12 @@
   "questions": [
     {
       "field": "location",
+      "send_ready": false,
       "text": "Which street and which stretch?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "Is it litter, leaves, or something else?"
     }
   ],
@@ -99,6 +101,7 @@
     "location",
     "description"
   ],
+  "save": true,
   "service_id": "litter_street_cleaning",
   "severity": {
     "high": [],
@@ -109,6 +112,7 @@
   "severity_keywords": {},
   "show_guidance": [],
   "source_date": "2026-10-17",
+  "source_status": "checked",
   "source_url": "https://www.southampton.gov.uk/environment/street-cleaning",
   "specialist_group": "cleansing",
   "submission_status": "unverified",

@@ -54,14 +54,17 @@
   "questions": [
     {
       "field": "location",
+      "send_ready": false,
       "text": "Where is it?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "How long has it been there?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "Can you see a registration plate, and is it burnt out or damaged?"
     }
   ],
@@ -84,6 +87,7 @@
     "description",
     "vehicle_registration_if_visible"
   ],
+  "save": true,
   "service_id": "abandoned_vehicle",
   "severity": {
     "high": [
@@ -95,6 +99,7 @@
   "severity_keywords": {},
   "show_guidance": [],
   "source_date": "2026-10-17",
+  "source_status": "checked",
   "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
   "specialist_group": "highways",
   "submission_status": "unverified",

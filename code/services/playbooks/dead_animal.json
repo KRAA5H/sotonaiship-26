@@ -63,14 +63,17 @@
   "questions": [
     {
       "field": "location",
+      "send_ready": false,
       "text": "Where exactly is it?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "What kind of animal is it (roughly)?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "Is it in the road or on the pavement?"
     }
   ],
@@ -90,6 +93,7 @@
     "location",
     "description"
   ],
+  "save": true,
   "service_id": "dead_animal",
   "severity": {
     "high": [
@@ -110,6 +114,7 @@
   },
   "show_guidance": [],
   "source_date": "2026-10-17",
+  "source_status": "checked",
   "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
   "specialist_group": "cleansing",
   "submission_status": "unverified",

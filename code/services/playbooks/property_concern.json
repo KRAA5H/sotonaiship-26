@@ -54,22 +54,22 @@
   "questions": [
     {
       "field": "detail",
+      "send_ready": false,
       "text": "What is the address or nearest address?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "What can you see or smell from outside?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "Have you seen rats or other pests?"
     }
   ],
   "redirect_to": null,
-  "required_capture_any": [
-    "description",
-    "photo"
-  ],
+  "required_capture_any": [],
   "required_detail": [],
   "required_local": [],
   "required_submission": [],
@@ -78,6 +78,7 @@
     "address",
     "description"
   ],
+  "save": false,
   "service_id": "property_concern",
   "severity": {
     "high": [
@@ -89,6 +90,7 @@
   "severity_keywords": {},
   "show_guidance": [],
   "source_date": "2026-10-17",
+  "source_status": "checked",
   "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
   "specialist_group": null,
   "submission_status": "unverified",

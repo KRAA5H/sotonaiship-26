@@ -61,7 +61,8 @@ MESSAGE_KEYS = {"role", "text", "at"}
 PENDING_KEYS = {"field", "text", "asked_at", "turn_id"}
 OUTCOME_KEYS = {"action", "report_id", "link_token", "submitted", "duplicate_of",
                 "locally_actionable", "missing", "facts", "review_queued",
-                "transport", "degraded", "saved", "refused_reason"}
+                "transport", "degraded", "saved", "refused_reason",
+                "playbook_version"}
 STATE_KEYS = {"thread_id", "turn_id", "inbound", "recent_messages", "active_incident_id",
               "incident_draft", "pending_question", "last_claims_sent",
               "last_executed_outcome", "candidate_services", "selected_specialist",
@@ -501,6 +502,8 @@ def validate_executed_outcome(raw):
                     or not _is_http(fact.get("url")) or not _is_date(fact.get("date")):
                 problems.append(_problem("schema.invalid", "fact"))
                 break
+    if raw.get("playbook_version") is not None and not _text(raw.get("playbook_version")):
+        problems.append(_problem("schema.invalid", "playbook_version"))
     saved = raw.get("saved")
     if saved is True and report_id is None:
         problems.append(_problem("schema.invalid", "report_id"))

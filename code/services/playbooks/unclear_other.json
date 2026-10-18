@@ -31,6 +31,7 @@
   "questions": [
     {
       "field": "location",
+      "send_ready": false,
       "text": "Can you tell me a bit more about what is happening and where?"
     }
   ],
@@ -49,11 +50,13 @@
   "rulebook_required_fields": [
     "description"
   ],
+  "save": true,
   "service_id": "unclear_other",
   "severity": {},
   "severity_keywords": {},
   "show_guidance": [],
   "source_date": "2026-10-17",
+  "source_status": "none",
   "source_url": null,
   "specialist_group": null,
   "submission_status": "unverified",

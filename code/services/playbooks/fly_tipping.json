@@ -115,18 +115,22 @@
   "questions": [
     {
       "field": "location",
+      "send_ready": false,
       "text": "Where exactly is it (street name or nearest house number)?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "What has been dumped, and roughly how much?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "Can you send a photo?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "Is it blocking a path or road?"
     }
   ],
@@ -147,6 +151,7 @@
     "description",
     "photo_recommended"
   ],
+  "save": true,
   "service_id": "fly_tipping",
   "severity": {
     "high": [
@@ -186,6 +191,7 @@
   },
   "show_guidance": [],
   "source_date": "2026-10-17",
+  "source_status": "checked",
   "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
   "specialist_group": "cleansing",
   "submission_status": "unverified",

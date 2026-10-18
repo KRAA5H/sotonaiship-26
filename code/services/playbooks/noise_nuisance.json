@@ -99,26 +99,27 @@
   "questions": [
     {
       "field": "detail",
+      "send_ready": false,
       "text": "What kind of noise is it?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "What times does it happen, and how often?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "How long has it been going on?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "Is it a house, flat or HMO?"
     }
   ],
   "redirect_to": null,
-  "required_capture_any": [
-    "description",
-    "photo"
-  ],
+  "required_capture_any": [],
   "required_detail": [
     "address_of_noise_source_or_nearest",
     "times_and_frequency"
@@ -131,6 +132,7 @@
     "description",
     "times_and_frequency"
   ],
+  "save": false,
   "service_id": "noise_nuisance",
   "severity": {
     "high": [
@@ -144,6 +146,7 @@
   "severity_keywords": {},
   "show_guidance": [],
   "source_date": "2026-10-17",
+  "source_status": "checked",
   "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
   "specialist_group": null,
   "submission_status": "unverified",

@@ -76,8 +76,28 @@ class PlaybookContractTest(unittest.TestCase):
             for field in item["required_local"]:
                 self.assertIn(field, {"description", "location", "address"}, name)
 
+    def test_non_savable_playbooks_do_not_advertise_actionability(self):
+        for name, item in playbooks().items():
+            if not item["save"]:
+                self.assertEqual(item["required_local"], [], name)
+                self.assertEqual(item["required_capture_any"], [], name)
+
+    def test_thirteen_playbooks_are_savable(self):
+        self.assertEqual(sum(1 for item in playbooks().values() if item["save"]), 13)
+        self.assertEqual(len(index()["savable_categories"]), 13)
+        self.assertIn("unclear_other", index()["savable_categories"])
+        self.assertNotIn("not_council_utility", index()["savable_categories"])
+        self.assertNotIn("noise_nuisance", index()["savable_categories"])
+
+    def test_questions_are_intent_not_copy(self):
+        for name, item in playbooks().items():
+            for question in item["questions"]:
+                self.assertFalse(question["send_ready"], name)
+
     def test_capture_is_photo_or_description(self):
         for name, item in playbooks().items():
+            if not item["save"]:
+                continue
             self.assertEqual(set(item["required_capture_any"]),
                              {"description", "photo"}, name)
 
@@ -160,7 +180,17 @@ class DataIntegrityTest(unittest.TestCase):
         numbers = set(index()["numbers"])
         for number in ("023 8023 3344", "0300 555 1373", "0300 123 5000"):
             self.assertIn(number, numbers)
-        self.assertTrue(index()["teams"])
+        forbidden = set(index()["forbidden_team_names"])
+        self.assertTrue(forbidden)
+        self.assertNotIn("Southampton City Council", forbidden)
+        self.assertNotIn("Manual review", forbidden)
+
+    def test_source_and_guidance_status_are_honest(self):
+        self.assertEqual(playbooks()["not_council_trunk_road"]["source_status"],
+                         "unverified")
+        checked = set(index()["guidance_checked"])
+        self.assertIn("council_out_of_hours", checked)
+        self.assertNotIn("national_highways", checked)
 
     def test_guidance_is_present(self):
         guidance = index()["guidance"]

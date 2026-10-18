@@ -70,18 +70,22 @@
   "questions": [
     {
       "field": "address",
+      "send_ready": false,
       "text": "What is your address or postcode?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "Which bin was missed (general waste, recycling, glass)?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "What was the scheduled collection day?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "Was the bin out the right day and clearly visible?"
     }
   ],
@@ -105,6 +109,7 @@
     "which_bin",
     "scheduled_collection_day"
   ],
+  "save": true,
   "service_id": "missed_bin",
   "severity": {
     "high": [],
@@ -113,6 +118,7 @@
   "severity_keywords": {},
   "show_guidance": [],
   "source_date": "2026-10-17",
+  "source_status": "checked",
   "source_url": "https://southampton.gov.uk/bins-recycling/bins/missed-collections",
   "specialist_group": "waste",
   "submission_status": "unverified",

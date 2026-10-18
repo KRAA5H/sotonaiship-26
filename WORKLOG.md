@@ -9,6 +9,10 @@ Three places, no more:
 
 ---
 
+## 03:51, Sunday: playbook goal gaps closed
+
+- Second Step 5 audit: `playbook_version` on `ExecutedOutcome`; `save: false` and no actionability for the nine non-savable categories; curated `forbidden_team_names`; `send_ready: false` on questions; `source_status` and `guidance_checked`, with the inherited trunk-road source marked unverified. 25 playbook tests, 625 total, 4 skips, 31/31.
+
 ## 03:38, Sunday: verified playbooks
 
 - Step 5: `code/services/build_playbooks.py`, 22 playbooks and `_index.json`, `code/test_playbooks.py`. Generated from `agent/` with a byte-exact `--check`. The index carries categories, the handoff and never-saved sets, specialist groups, teams, numbers, guidance, per-category questions, location modes, duplicate windows, all 54 fact URLs and the nine general fact ids. The goal audit blocked the first design; its fixes are in. 21 playbook tests, 621 total, 4 skips, 31/31. JSON replaces YAML; the parent plans are amended.

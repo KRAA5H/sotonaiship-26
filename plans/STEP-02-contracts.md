@@ -116,6 +116,7 @@ class ExecutedOutcome(TypedDict, total=False):
     degraded: list[str]
     saved: bool
     refused_reason: str | None
+    playbook_version: str | None
 
 class ThreadState(TypedDict, total=False):
     thread_id: str

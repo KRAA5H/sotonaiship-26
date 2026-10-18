@@ -46,10 +46,12 @@
   "questions": [
     {
       "field": "location",
+      "send_ready": false,
       "text": "Where exactly, and what is being blocked (driveway, pavement, junction, crossing)?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "What time was it, and does it happen regularly?"
     }
   ],
@@ -72,6 +74,7 @@
     "description",
     "time_observed"
   ],
+  "save": true,
   "service_id": "illegal_parking",
   "severity": {
     "high": [
@@ -93,6 +96,7 @@
   },
   "show_guidance": [],
   "source_date": "2026-10-17",
+  "source_status": "checked",
   "source_url": "https://www.fixmystreet.com/reports/Southampton",
   "specialist_group": "highways",
   "submission_status": "unverified",

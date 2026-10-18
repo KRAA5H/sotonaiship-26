@@ -52,18 +52,22 @@
   "questions": [
     {
       "field": "address",
+      "send_ready": false,
       "text": "What is your address?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "Which bin is it?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "Is it missing or damaged?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "Have you checked neighbours and nearby streets?"
     }
   ],
@@ -87,6 +91,7 @@
     "which_bin",
     "problem"
   ],
+  "save": true,
   "service_id": "lost_damaged_bin",
   "severity": {
     "high": [],
@@ -95,6 +100,7 @@
   "severity_keywords": {},
   "show_guidance": [],
   "source_date": "2026-10-17",
+  "source_status": "checked",
   "source_url": "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/",
   "specialist_group": "waste",
   "submission_status": "unverified",

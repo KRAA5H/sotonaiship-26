@@ -82,7 +82,8 @@ def _question_field(category, index):
 
 
 def _questions(category):
-    return [{"field": _question_field(category, index), "text": text}
+    return [{"field": _question_field(category, index), "text": text,
+             "send_ready": False}
             for index, text in enumerate(category.get("follow_up_questions") or [])]
 
 
@@ -104,9 +105,13 @@ def _required_detail(category):
             if field not in DETAIL_SKIP]
 
 
-def _playbook(category, facts, version, facts_date, default_window):
+def _playbook(category, facts, version, facts_date, default_window, known_facts):
     mode = _location_mode(category)
     group = category.get("group")
+    savable = category["outcome"] == "council_report" and mode != "handoff"
+    source_url = category.get("source_url") or category.get("answer_source")
+    source_status = ("checked" if source_url in known_facts
+                     else "unverified" if source_url else "none")
     questions = _questions(category)
     allowed = sorted({"description", "photo"} | {item["field"] for item in questions})
     return {
@@ -121,13 +126,14 @@ def _playbook(category, facts, version, facts_date, default_window):
         "outcome": category["outcome"],
         "location_mode": mode,
         "handoff": mode == "handoff",
+        "save": savable,
         "emergency": group == "emergency",
         "team": category.get("team"),
         "team_confirmed": bool(category.get("team_confirmed")),
         "duplicate_window_days": (category.get("agent") or {}).get(
             "dup_window_days", default_window),
-        "required_capture_any": ["description", "photo"],
-        "required_local": _required_local(category),
+        "required_capture_any": ["description", "photo"] if savable else [],
+        "required_local": _required_local(category) if savable else [],
         "required_detail": _required_detail(category),
         "rulebook_required_fields": list(category.get("required_fields") or []),
         "required_submission": [],
@@ -135,7 +141,8 @@ def _playbook(category, facts, version, facts_date, default_window):
         "questions": questions,
         "allowed_question_fields": allowed,
         "form_url": category.get("official_form_url"),
-        "source_url": category.get("source_url") or category.get("answer_source"),
+        "source_url": source_url,
+        "source_status": source_status,
         "form_notes": category.get("form_scope_notes") or "",
         "severity": category.get("severity_hints") or {},
         "severity_keywords": (category.get("agent") or {}).get("severity_keywords") or {},
@@ -186,7 +193,7 @@ def build():
             for row in fact_rows if category_id in row["category_ids"]
         ]
         playbooks[category_id] = _playbook(
-            category, facts, version, facts_date, default_window)
+            category, facts, version, facts_date, default_window, known_facts)
 
     groups = {group: sorted(category_id for category_id, item in playbooks.items()
                             if item["specialist_group"] == group)
@@ -209,9 +216,17 @@ def build():
         "emergency_categories": sorted(
             category_id for category_id, item in playbooks.items() if item["emergency"]),
         "groups": groups,
+        "savable_categories": sorted(
+            category_id for category_id, item in playbooks.items() if item["save"]),
         "teams": sorted({item["team"] for item in playbooks.values() if item["team"]}),
+        "forbidden_team_names": sorted(
+            {item["team"] for item in playbooks.values() if item["team"]}
+            - {"Southampton City Council", "Manual review"}),
         "numbers": sorted(numbers),
         "guidance": data.get("guidance_links") or {},
+        "guidance_checked": sorted(
+            key for key, value in (data.get("guidance_links") or {}).items()
+            if value.get("date_checked")),
         "guidance_by_category": {
             category_id: {"redirect_to": item["redirect_to"],
                           "show_guidance": item["show_guidance"]}

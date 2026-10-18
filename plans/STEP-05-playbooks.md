@@ -21,7 +21,8 @@ That data is split across `agent/categories.json` (22 categories), `agent/confir
 The Step 5 goal audit found the first design would have made five categories permanently non-actionable and would have left Step 6 reaching back into `categories.json`.
 
 - `required_local` now uses the draft's vocabulary only: `description`, `location`, `address`. The rulebook fields that the draft cannot hold (`road_name`, `which_bin`, `time_observed`, `vehicle_registration_if_visible`) are kept in `required_detail` for the specialist and the officer view.
-- `required_capture_any` is `["description", "photo"]`. A photo-only iMessage is the most likely messy input, and it now captures.
+- `required_capture_any` is `["description", "photo"]` for savable categories. A photo-only iMessage is the most likely messy input, and it now captures. Non-savable categories (`info_only`, `not_council`, the three handoffs) carry `save: false`, empty `required_local` and empty `required_capture_any`, so a consumer cannot mistake them for actionable.
+- The version travels on `SpecialistResult` and on `ExecutedOutcome.playbook_version`, so a deterministic save records the playbook that produced it.
 - `required_submission` stays empty, with `submission_status: "unverified"`. An empty list must never be read as "satisfied".
 - The index carries the fields Step 6 and Step 12 would otherwise re-read: `groups`, `teams`, `numbers`, `guidance`, `guidance_by_category`, `allowed_questions_by_category`, `location_modes`, `duplicate_windows`, `fact_ids` and `general_fact_ids`.
 - `specialist_group` is one of the four specialist groups; `rulebook_group` keeps the finer label. Pothole is `highways` for the specialist and `roads_and_parking` in the rulebook.
@@ -30,6 +31,14 @@ The Step 5 goal audit found the first design would have made five categories per
 - `info_student_waste_rules` falls back to `answer_source` when `source_url` is absent.
 - `duplicate_window_days` falls back to `meta.duplicate_rule.default.window_days` (30) for the nine categories without an `agent` block.
 - JSON, not YAML: no YAML parser is installed, and `--check` needs an exact byte compare. `BUILD-STEPS.md` and `IMPLEMENTATION_PLAN.md` are amended in the same commit.
+
+A second goal audit checked the generated files. Its fixes:
+
+- `ExecutedOutcome.playbook_version` carries the version on the ordinary save, not only on `SpecialistResult`.
+- Non-savable categories carry `save: false` and no actionability, so a consumer cannot mistake `not_council_utility` for a report.
+- `forbidden_team_names` is curated; the organisation name and process labels are safe to say.
+- Questions carry `send_ready: false`; they are intent, not SMS copy.
+- `source_status` and `guidance_checked` mark inherited sources honestly. The trunk-road source is unverified and must not be cited until `agent/` carries a checked page.
 
 ---
 
@@ -65,6 +74,7 @@ One file per category. Fields are copied or derived, never invented.
   "outcome": "council_report",
   "location_mode": "pin",
   "handoff": false,
+  "save": true,
   "emergency": false,
   "team": "Highways",
   "team_confirmed": false,
@@ -76,12 +86,13 @@ One file per category. Fields are copied or derived, never invented.
   "required_submission": [],
   "submission_status": "unverified",
   "questions": [
-    {"field": "location", "text": "Which road, and nearest house number or junction?"},
-    {"field": "detail", "text": "Roughly how big and how deep?"}
+    {"field": "location", "text": "Which road, and nearest house number or junction?", "send_ready": false},
+    {"field": "detail", "text": "Roughly how big and how deep?", "send_ready": false}
   ],
   "allowed_question_fields": ["description", "detail", "location", "photo"],
   "form_url": "https://...",
   "source_url": "https://...",
+  "source_status": "checked",
   "form_notes": "...",
   "severity": {"high": ["..."], "low": ["..."]},
   "severity_keywords": {"high": ["..."], "low": ["..."]},
@@ -104,7 +115,8 @@ One file per category. Fields are copied or derived, never invented.
 
 Rules:
 
-- `required_capture_any` is an any-of list. `description` or `photo` is enough to capture.
+- `required_capture_any` is an any-of list for savable categories. `description` or `photo` is enough to capture.
+- `save` is true only for a `council_report` category that is not a handoff. The three handoffs and all `info_only`/`not_council` categories have `save: false`, no local requirements and no capture requirement.
 - `required_local` is `["description", "location"]` for pin mode and `["description", "address"]` for address mode. It decides `locally_actionable`, not capture. Every entry is a field the draft can hold.
 - `required_detail` is the rulebook's extra fields, for the specialist and the officer view. It never blocks capture or actionability on its own.
 - `required_submission` is `[]` and `submission_status` is `"unverified"` for every category. A consumer must require a non-empty, satisfied list before `submission_ready`.
@@ -112,8 +124,9 @@ Rules:
 - `questions` copies `follow_up_questions` verbatim. The first question is `location` for pin mode, `address` for address mode; the rest are `detail`, because the rulebook does not attach a field name to a prose question. `required_detail` carries the real extra fields.
 - `allowed_question_fields` is per category, and the index also exposes the union.
 - `facts` are the CSV rows whose `category_id` contains the id, in CSV order. `id` is positional `F001` to `F054`; `fact_key` is a content hash so an insertion is detectable.
-- `team` is carried but never spoken: `team_confirmed` is false on all 22. The index's `teams` feeds the policy's `forbidden_team_names`.
-- `source_url` falls back to `answer_source` for the one info category that has no `source_url`.
+- `team` is carried but never spoken: `team_confirmed` is false on all 22. The index's `forbidden_team_names` is the curated set of unconfirmed team labels, excluding the organisation name and process labels that are safe to say.
+- `source_url` falls back to `answer_source` for the one info category that has no `source_url`. `source_status` is `checked` only when the URL appears in the fact sheet, `unverified` when it is inherited but not checked, and `none` when absent. The trunk-road source is currently `unverified`; it must not be cited until `agent/` carries a verified National Highways or council page.
+- `questions[].send_ready` is false. The rulebook prose is intent, not SMS copy; the writer composes the sentence.
 
 ---
 
@@ -132,9 +145,12 @@ Rules:
   "emergency_categories": ["..."],
   "groups": {"cleansing": ["dog_fouling", "..."], "highways": ["..."],
              "waste": ["..."], "housing": ["..."]},
+  "savable_categories": ["...13 ids..."],
   "teams": ["..."],
+  "forbidden_team_names": ["...unconfirmed labels..."],
   "numbers": ["023 8023 3344", "0300 555 1373", "0300 123 5000", "..."],
   "guidance": {"emergency": {"contact": "999"}, "council_out_of_hours": {"..."}},
+  "guidance_checked": ["council_out_of_hours"],
   "guidance_by_category": {"flooding_severe_weather": {"show_guidance": ["emergency"]}},
   "allowed_questions": ["address", "description", "detail", "location", "photo"],
   "allowed_questions_by_category": {"pothole": ["description", "detail", "location", "photo"]},
@@ -151,7 +167,7 @@ Rules:
 - `handoff_categories` comes from `location_mode == "handoff"`.
 - `known_facts` is URL to `date_checked` for all 54 rows, including `general`.
 - `numbers` is the guidance contacts plus every phone-shaped number in the fact text. It feeds the policy's `allowed_numbers`.
-- `teams` is every non-null team name, since all are unconfirmed. It feeds `forbidden_team_names`.
+- `teams` is every non-null team name. `forbidden_team_names` is the curated subset that may never be spoken, excluding `Southampton City Council` and `Manual review`.
 - `groups` maps the four specialist groups to category ids; categories with no specialist group are absent.
 - `duplicate_windows` and `location_modes` let Step 6 avoid opening 22 files per turn.
 
@@ -174,13 +190,17 @@ python code/services/build_playbooks.py --check    # exit 0 if identical, 1 with
 
 ## Tests
 
-`code/test_playbooks.py`, 21 tests, offline.
+`code/test_playbooks.py`, 25 tests, offline.
 
 - 22 playbooks plus `_index.json`; no extras.
 - `--check` exits 0; two builds are identical; a mutated file is `stale`, an extra file is `extra`.
 - Source files are unchanged by a build.
 - Every `required_local` entry is `description`, `location` or `address`.
-- Every `required_capture_any` contains description and photo.
+- Every `required_capture_any` for a savable category contains description and photo; non-savable playbooks carry neither.
+- Exactly 13 categories are savable; the handoffs and the six info/not-council categories are not.
+- Questions are marked `send_ready: false`.
+- `forbidden_team_names` excludes the organisation and process labels.
+- `source_status` marks the trunk-road source unverified; `guidance_checked` lists only the dated guidance.
 - `required_submission` is empty and `submission_status` is unverified everywhere.
 - `team_confirmed` is false everywhere.
 - `specialist_group` is one of the four or null; the groups index covers 12 categories.
@@ -234,7 +254,7 @@ Acceptance:
 
 - `--check` exits 0.
 - 21 playbook tests and 62 policy tests pass.
-- The full suite is **621 tests, 4 skips**, all green.
+- The full suite is **625 tests, 4 skips**, all green.
 - `python code/eval/messages.py` stays 31/31.
 - The changed files are `code/services/`, `code/test_playbooks.py`, this plan, and the JSON notes in `BUILD-STEPS.md` and `IMPLEMENTATION_PLAN.md`.
 - One commit: `Generate verified playbooks`.

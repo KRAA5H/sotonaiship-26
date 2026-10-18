@@ -52,14 +52,17 @@
   "questions": [
     {
       "field": "address",
+      "send_ready": false,
       "text": "Is your landlord Southampton City Council?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "What is broken and where in the home?"
     },
     {
       "field": "detail",
+      "send_ready": false,
       "text": "Is it urgent (no heating, water leak, safety)?"
     }
   ],
@@ -79,6 +82,7 @@
     "address",
     "description"
   ],
+  "save": true,
   "service_id": "council_housing_repair",
   "severity": {
     "high": [
@@ -91,6 +95,7 @@
   "severity_keywords": {},
   "show_guidance": [],
   "source_date": "2026-10-17",
+  "source_status": "checked",
   "source_url": "https://southampton.gov.uk/contact-us/online-forms",
   "specialist_group": "housing",
   "submission_status": "unverified",

@@ -623,6 +623,16 @@
       "url": "https://www.southampton.gov.uk/environment/neighbourhood-nuisances-and-property-concerns/concern-about-property/"
     }
   },
+  "forbidden_team_names": [
+    "Emergency planning / highways (our label)",
+    "Environmental health",
+    "Highways",
+    "Highways / parking enforcement",
+    "Housing repairs",
+    "Parking enforcement",
+    "Street cleansing",
+    "Waste collection"
+  ],
   "general_fact_ids": [
     "F001",
     "F008",
@@ -712,6 +722,9 @@
       "show_guidance": []
     }
   },
+  "guidance_checked": [
+    "council_out_of_hours"
+  ],
   "handoff_categories": [
     "noise_nuisance",
     "other_nuisance",
@@ -818,6 +831,21 @@
     "property_concern": "property_concern.json",
     "unclear_other": "unclear_other.json"
   },
+  "savable_categories": [
+    "abandoned_vehicle",
+    "council_housing_repair",
+    "dead_animal",
+    "dog_fouling",
+    "fly_tipping",
+    "glass_spillage_hazard",
+    "graffiti_flyposting",
+    "illegal_parking",
+    "litter_street_cleaning",
+    "lost_damaged_bin",
+    "missed_bin",
+    "pothole",
+    "unclear_other"
+  ],
   "teams": [
     "Emergency planning / highways (our label)",
     "Environmental health",
