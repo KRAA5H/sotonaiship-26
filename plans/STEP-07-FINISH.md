@@ -2,9 +2,10 @@
 
 Status: single execution plan for all remaining work. Supersedes Steps 7 to 13 in `plans/BUILD-STEPS.md`. One approval, five internal phases, one combined doctor per checkpoint.
 
-Current state, 18 Oct 03:58:
-- HEAD `76ffc9c`. 640 tests, 4 skips, 31/31 message evaluation. Tree clean.
+Current state, 18 Oct 04:20:
+- HEAD `51d6e7c`. 645 tests, 4 skips, 31/31 message evaluation. Tree clean.
 - Steps 0 to 6 done: capture and truth fixes, trajectory fixtures, contracts, storage, policy, playbooks, graph shell.
+- The Step 6 doctor found and closed two blocking shell bugs: a duplicate replay no longer wipes thread memory, and the live `photo_ref` tuple is stored as `guid:<id>`. `hydrate` now starts from `new_thread_state`, so P1's counters exist. The inherited 999 false positive on `fire station` is fixed; `fire` and `trapped` need hazard or person context.
 - `code/graph/` has `state, schemas, store, policy, copy_rules, nodes, build, runtime`.
 - The shell hydrates, prechecks danger and empty input, handles silence and greetings, and captures a provisional draft. `--turn` writes no report row. `--selftest` passes.
 - `blue_bubbles.py` and `simulator.py` still call the legacy `ORCHESTRATOR`. No decide, write, writer, outbox drain, corrections or channel cutover yet.
@@ -90,6 +91,8 @@ Files: `code/services/reports.py`, `code/graph/nodes.py` (execute, brief), `code
 - `brief` builds `ExecutedOutcome` from what actually happened, including `saved`, `report_id`, `link_token`, `missing`, `facts`, `review_queued`, `transport`, `degraded` and `playbook_version`.
 - `simulator.py` gets `MODE=graph` and calls `TurnRuntime` for the tree and a pothole, while the webhook stays on `MODE=legacy`. This is the early graph demo checkpoint.
 - Tests: one row per turn; replay does not duplicate; token once; local save never `submitted`; captured `unclear_other` at `"Not given"`; a pothole with a street; duplicate link; simulator graph turn.
+- A replay older than `last_turn_id` is not caught by the shell; `turn_operations (turn_id, commit)` is the write guard. Keep it in this phase.
+- The normalized `photo_ref` (`guid:<id>`) feeds `has_photo`; do not re-parse the raw tuple.
 
 Done when: the simulator creates one row and returns a private link for the tree and a pothole, and `SELECT COUNT(*)` proves no duplicate on replay.
 
@@ -133,6 +136,7 @@ Files: `code/blue_bubbles.py`, `code/simulator.py`, `code/test_bot.py`, `code/te
 
 - `blue_bubbles.handle_inbound` calls `TurnRuntime` under `MODE=graph`; `MODE=legacy` keeps the old path. Keep the self-ignore, stale skip, GUID dedupe, burst coalescing and one-turn-per-sender.
 - Delivery drains the outbox: words, then the link, mark `sent`, `failed` or `ambiguous`.
+- D56 caveat: the LangGraph checkpoint contains the raw sender. A deletion request must clear the checkpoint as well as the thread row; note it in the delete path even if the demo never exercises it.
 - The trajectory suite is the gate: every `layer: graph` case runs, no silent skips.
 - The message evaluation runs against the graph only if time allows; otherwise it stays on templates and is migrated after 13:00.
 - Keep `test_agents.py` and the legacy path green through the demo. Do not delete the old orchestrator before the freeze.
