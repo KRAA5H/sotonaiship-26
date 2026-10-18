@@ -22,7 +22,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver  # noqa: E402
 import messages  # noqa: E402
 import tools  # noqa: E402
 import llm as llm_module  # noqa: E402
-from graph import store  # noqa: E402
+from graph import execution, store, writer  # noqa: E402
 from graph.build import build_graph  # noqa: E402
 from graph.nodes import danger, wants_greeting  # noqa: E402
 
@@ -42,6 +42,7 @@ class Deps:
     outbox: object | None = None
     ops: object | None = None
     claims: object | None = None
+    writer: bool = True
 
 
 def load_playbooks(path=None):
@@ -76,9 +77,16 @@ class TurnRuntime:
                 last_action=(state.get("executed_outcome") or {}).get("action"),
             )
         plan = state.get("bubble_plan") or {}
-        if not plan.get("bubbles") and kind in ("emergency", "threat", "greeting"):
-            copy = {"emergency": messages.emergency, "threat": messages.threat,
-                    "greeting": messages.greeting}[kind]()
+        if kind == "greeting" and self.deps.writer and self.deps.llm is not None:
+            greeting_outcome = {"action": "answer", "saved": False, "facts": [],
+                                "missing": [], "destination": None, "status": None,
+                                "duplicate_of": None}
+            written = writer.write(state, self.deps, greeting_outcome,
+                                   execution.context(self.deps, state))
+            plan = written or {"bubbles": [], "url": None, "source_url": None,
+                               "suppressed": True}
+        if not plan.get("bubbles") and kind in ("emergency", "threat"):
+            copy = {"emergency": messages.emergency, "threat": messages.threat}[kind]()
             plan = {"bubbles": [{"purpose": "action", "text": line}
                                 for line in copy.splitlines() if line.strip()],
                     "url": None, "source_url": None, "suppressed": False}

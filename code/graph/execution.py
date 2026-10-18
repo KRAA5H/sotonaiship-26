@@ -1,8 +1,8 @@
 """Execute one checked plan, then say what actually happened.
 
-One write path (`tools.save_report`), one token, no invented receipt. The copy is
-deterministic templates here; a model writer can rephrase later only through the
-same lint gate.
+One write path (`tools.save_report`), one token, no invented receipt. The reply
+is written by the model from the executed outcome. Templates remain only for the
+test harness and for the 999 instruction, never as the live answer to a resident.
 """
 
 import copy
@@ -12,7 +12,7 @@ import messages
 import reports_db
 import tools
 
-from . import policy, prompts, schemas
+from . import policy, prompts, schemas, writer
 
 
 def _place(draft):
@@ -96,6 +96,16 @@ def _apply_patch(draft, plan):
 def _link(outcome):
     token = outcome.get("link_token")
     return f"{tools.SITE_URL}/r/{token}" if token else None
+
+
+def _source_url(outcome):
+    facts = outcome.get("facts") or []
+    if facts and isinstance(facts[0].get("url"), str):
+        return facts[0]["url"]
+    destination = outcome.get("destination")
+    if isinstance(destination, str) and destination.startswith(("http://", "https://")):
+        return destination
+    return None
 
 
 def _now(state, deps):
@@ -377,6 +387,17 @@ def compose(state, deps):
     draft = state.get("incident_draft") or {}
     decision = _decision(draft, state)
     url = _link(outcome)
+    ctx = context(deps, state)
+    if deps.writer:
+        written = writer.write(state, deps, outcome, ctx)
+        if written:
+            written["url"] = url
+            written["source_url"] = _source_url(outcome)
+            return {"bubble_plan": written}
+        # The model answered nothing usable. Do not replace its voice with a template;
+        # send no automated copy. Only the runtime's 999 instruction is hardcoded.
+        return {"bubble_plan": {"bubbles": [], "url": None,
+                                "source_url": None, "suppressed": True}}
     text = ""
     inbound_text = ((state.get("inbound") or {}).get("text") or "").lower()
     challenge = (bool(plan.get("retracted_claims"))
@@ -450,6 +471,8 @@ def compose(state, deps):
 def lint(state, deps):
     plan = state.get("bubble_plan") or {}
     outcome = state.get("executed_outcome") or {}
+    if plan.get("suppressed"):
+        return {"bubble_plan": plan, "degraded": state.get("degraded") or []}
     ctx = context(deps, state)
     checked, problems = schemas.validate_bubble_plan(plan)
     if checked and checked.get("source_url") \

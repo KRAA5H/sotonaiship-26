@@ -250,7 +250,7 @@ class GraphScaffoldTest(unittest.TestCase):
             runtime = TurnRuntime(Deps(
                 threads=store.ThreadStore(db), playbooks={}, reports=db,
                 ops=store.TurnOperations(db), outbox=store.Outbox(db),
-                claims=store.Claims(db)), MemorySaver())
+                claims=store.Claims(db), writer=False), MemorySaver())
             result = runtime.turn({"sender": "+447700900002",
                                    "text": case["turns"][0]["text"],
                                    "message_guid": "g-tree"})

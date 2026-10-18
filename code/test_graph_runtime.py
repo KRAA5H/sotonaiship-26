@@ -35,11 +35,11 @@ class RuntimeCase(unittest.TestCase):
         self.runtime = self.make_runtime()
 
     def make_runtime(self, checkpointer=None, llm=None):
-        deps = graph_runtime.Deps(threads=self.threads, playbooks=graph_runtime.load_playbooks(), llm=llm,
-                                  reports=self.db, now=lambda: FIXED,
+        deps = graph_runtime.Deps(threads=self.threads, playbooks=graph_runtime.load_playbooks(),
+                                  llm=llm, reports=self.db, now=lambda: FIXED,
                                   ops=store.TurnOperations(self.db),
                                   outbox=store.Outbox(self.db),
-                                  claims=store.Claims(self.db))
+                                  claims=store.Claims(self.db), writer=False)
         return graph_runtime.TurnRuntime(deps, checkpointer or MemorySaver())
 
     def turn(self, text, guid, sender="+447700900001", photo_ref=None, image_ref=None,

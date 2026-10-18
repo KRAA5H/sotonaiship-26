@@ -95,7 +95,8 @@ _HANDOFF_TEXT = re.compile(
     r"barking dog|noise from (next door|the neighbours?)|noise nuisance)\b", re.I)
 _STATUS_TEXT = re.compile(
     r"\b(any update|update on (my|the) report|what'?s (the )?status|status of (my|the) report|"
-    r"has (it|my report) been|is it fixed|still open|any progress)\b", re.I)
+    r"has (it|my report) been|is it fixed|still open|any progress)\b|"
+    r"\b(what|wht)\b.*\b(logged|report|draft)\b", re.I)
 _UTILITY_TEXT = re.compile(r"\b(power cut|electricity|water leak|gas leak)\b", re.I)
 _PROBLEM_EXTRA = re.compile(
     r"\b(power cut|dead (fox|cat|dog|bird|animal)|parking|wasp|nest|pest|vermin|"
@@ -241,6 +242,23 @@ def _reportish(text, category):
     return bool(_REPORT_WORDS.search(text or ""))
 
 
+def likely_report(text, state=None):
+    """True when the message looks like a real-world problem, not a greeting or query."""
+    text = (text or "").strip()
+    inbound = (state or {}).get("inbound") or {}
+    if not text:
+        return bool(inbound.get("photo_ref") or inbound.get("image_ref")
+                    or inbound.get("card"))
+    if hard_route(text) or _REPORT_WORDS.search(text) or _PROBLEM_EXTRA.search(text):
+        return True
+    guesses = candidates_for(text)
+    if guesses and guesses[0] != "unclear_other":
+        return True
+    if extract_location(text):
+        return True
+    return bool(inbound.get("photo_ref") or inbound.get("image_ref") or inbound.get("card"))
+
+
 def _plan(dialogue_act, action, candidates, patch=None, clarification=None,
           fact_request=None, escalation=None, retracted=None, reasons=None):
     return {
@@ -318,11 +336,16 @@ def deterministic_plan(state, deps):
     if is_detail(text, state):
         return _plan("detail", "log", [category], patch=patch, reasons=["detail"])
 
-    if is_status(text) and state.get("active_incident_id"):
-        return _plan("status", "answer", [category],
-                     fact_request={"question": text,
-                                   "category_id": category if category in categories else "general"},
-                     reasons=["status"])
+    if is_status(text):
+        if state.get("active_incident_id"):
+            return _plan("status", "answer", [category],
+                         fact_request={"question": text,
+                                       "category_id": category if category in categories else "general"},
+                         reasons=["status"])
+        return _plan("other", "ask", [category],
+                     clarification={"field": "description",
+                                    "reason": "Nothing is logged yet. What's the problem and where?"},
+                     reasons=["no_report"])
 
     if is_question(text):
         fact_category = category if category != "unclear_other" else "general"

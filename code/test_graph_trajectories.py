@@ -95,7 +95,7 @@ class GraphTrajectoryTest(unittest.TestCase):
             deps = Deps(
                 threads=store.ThreadStore(db), playbooks=load_playbooks(), llm=llm,
                 reports=db, ops=store.TurnOperations(db), outbox=store.Outbox(db),
-                claims=store.Claims(db),
+                claims=store.Claims(db), writer=False,
             )
             runtime = TurnRuntime(deps, MemorySaver())
             results = []

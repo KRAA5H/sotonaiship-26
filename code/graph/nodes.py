@@ -17,7 +17,8 @@ SILENCE_WORDS = re.compile(
     re.IGNORECASE,
 )
 GREETING_WORDS = re.compile(
-    r"^(hi|hello|hey|hiya|good (morning|afternoon|evening))( there)?[\s!.,]*$",
+    r"^(hi|hello|hey|hiya|yo+|sup|wassup|what'?s up|good (morning|afternoon|evening)|"
+    r"morning|evening)( there)?[\s!.,]*$",
     re.IGNORECASE,
 )
 # The same boundary as agents/safety.py, copied so the graph does not import the
@@ -188,7 +189,17 @@ def make_nodes(deps):
         calls = 0
         degraded = []
         plan = None
-        if not repairing and deps.llm is not None and hasattr(deps.llm, "chat"):
+        text = (state.get("inbound") or {}).get("text") or ""
+        if not repairing:
+            if prompts.is_status(text):
+                plan = prompts.deterministic_plan(state, deps)
+            elif (not prompts.likely_report(text, state)
+                  and not prompts.is_question(text)
+                  and not prompts.is_detail(text, state)
+                  and not prompts.is_challenge(text)
+                  and not prompts.is_photo_announcement(text)):
+                plan = prompts.deterministic_plan(state, deps)
+        if plan is None and not repairing and deps.llm is not None and hasattr(deps.llm, "chat"):
             try:
                 reply, mode = deps.llm.chat(
                     prompts.SYSTEM, prompts.brief(state, deps),

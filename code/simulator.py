@@ -229,10 +229,7 @@ PAGE = """<!doctype html>
     <h1>Southampton street line</h1>
     <span class="sub">simulator</span>
   </header>
-  <div id="chat">
-    <div class="row bot"><div class="bubble">Hi. Send a street problem and I'll log it here.
-Pothole, dumped rubbish, missed bin, broken glass.</div></div>
-  </div>
+  <div id="chat"></div>
   <div class="tools">
     <label><input type="checkbox" id="simulate" checked> simulate typing</label>
     <label><input type="checkbox" id="showdebug"> debug</label>
