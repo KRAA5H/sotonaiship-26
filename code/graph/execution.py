@@ -183,6 +183,7 @@ def execute(state, deps):
     pending = None
     active = state.get("active_incident_id")
     task_request = plan.get("task_request")
+    specialist = (state.get("specialist_results") or [None])[-1]
     if task_request:
         tasks = getattr(deps, "tasks", None)
         if tasks is not None:
@@ -209,6 +210,7 @@ def execute(state, deps):
                 task_url = f"{tools.SITE_URL}/t/{task['link_token']}"
                 outcome.update({"action": "answer", "task_url": task_url,
                                 "missing": []})
+            outcome["specialist"] = specialist
             outcome.update({"saved": False, "locally_actionable": False,
                             "review_queued": False})
             return {"incident_draft": draft, "executed_outcome": outcome,

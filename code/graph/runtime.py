@@ -44,6 +44,7 @@ class Deps:
     claims: object | None = None
     profiles: object | None = None
     tasks: object | None = None
+    council: object | None = None
     writer: bool = True
 
 
@@ -51,6 +52,11 @@ def load_playbooks(path=None):
     target = (Path(path) if path else
               Path(__file__).resolve().parents[1] / "services" / "playbooks" / "_index.json")
     return json.loads(target.read_text(encoding="utf-8"))
+
+
+def _council_store(db):
+    from council.store import CouncilStore
+    return CouncilStore(db)
 
 
 class TurnRuntime:
@@ -147,7 +153,7 @@ def selftest():
         deps = Deps(threads=store.ThreadStore(db), playbooks=load_playbooks(),
                     reports=db, ops=store.TurnOperations(db), outbox=store.Outbox(db),
                     claims=store.Claims(db), profiles=store.ProfileStore(db),
-                    tasks=store.TaskStore(db))
+                    tasks=store.TaskStore(db), council=_council_store(db))
         runtime = TurnRuntime(deps, MemorySaver())
 
         def turn(text, guid):
@@ -184,7 +190,7 @@ def main(argv=None):
     deps = Deps(threads=store.ThreadStore(db), playbooks=load_playbooks(), llm=llm_module,
                 reports=db, ops=store.TurnOperations(db), outbox=store.Outbox(db),
                 claims=store.Claims(db), profiles=store.ProfileStore(db),
-                tasks=store.TaskStore(db))
+                tasks=store.TaskStore(db), council=_council_store(db))
     with SqliteSaver.from_conn_string(str(db)) as saver:
         runtime = TurnRuntime(deps, saver)
         result = runtime.turn({"sender": "+447700900000", "text": args.turn,

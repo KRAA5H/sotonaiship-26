@@ -71,6 +71,7 @@ def _brief(state, outcome):
         "location_link_available": bool(outcome.get("location_url")),
         "task": state.get("task"),
         "task_url": outcome.get("task_url"),
+        "specialist": outcome.get("specialist"),
         "recent": [item.get("text") for item in (state.get("recent_messages") or [])[-6:]],
         "draft": {
             "category_id": draft.get("category_id"),

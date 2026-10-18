@@ -16,6 +16,11 @@ from .runtime import Deps, TurnRuntime, load_playbooks
 _RUNTIME = None
 
 
+def _council_store(db):
+    from council.store import CouncilStore
+    return CouncilStore(db)
+
+
 def get_runtime():
     global _RUNTIME
     if _RUNTIME is None:
@@ -31,6 +36,7 @@ def get_runtime():
             claims=store.Claims(db),
             profiles=store.ProfileStore(db),
             tasks=store.TaskStore(db),
+            council=_council_store(db),
         )
         _RUNTIME = TurnRuntime(deps, MemorySaver())
     return _RUNTIME
