@@ -9,6 +9,10 @@ Three places, no more:
 
 ---
 
+## 04:00, Sunday: combined finish plan approved
+
+- `plans/STEP-07-FINISH.md` is the single plan for the rest: P1 decide/validate/repair, P2 execute/write plus simulator graph, P3 writer/outbox, P4 corrections/restart/safety, P5 channels/demo. Step 12 is cut; the legacy tests and the message evaluation are deferred until after the demo. One combined doctor per checkpoint. Current: 640 tests, 4 skips, 31/31; graph shell at `76ffc9c`. Resume by reading the plan, then P1.
+
 ## 03:58, Sunday: graph shell
 
 - Step 6: `code/graph/{nodes,build,runtime}.py`, 13 runtime tests and a graph runner scaffold. `langgraph==1.2.16`, `langgraph-checkpoint-sqlite==3.1.2`. `--turn` prints a capture draft and writes no report; `--selftest` runs tree, duplicate, greeting, silence, emergency and empty. D53 recorded. 640 tests, 4 skips, 31/31.
