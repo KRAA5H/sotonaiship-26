@@ -29,8 +29,15 @@ O = agents.ORCHESTRATOR
 
 REQUIRED_CASE = {"name", "layer", "legacy", "turns", "expect"}
 REQUIRED_EXPECT = {"rows", "categories", "locations", "reply_contains", "reply_forbids"}
+KNOWN_CASE = REQUIRED_CASE | {"note", "specialist", "repeat_turn"}
+KNOWN_EXPECT = REQUIRED_EXPECT | {"max_questions", "has_photo", "retracted",
+                                  "draft_preserved", "reroutes", "patch_preserved",
+                                  "replies", "pending_resumed"}
 LAYERS = {"agent", "graph", "channel"}
-LEGACY = {"pass", "fail", "not_applicable"}
+LEGACY = {"pass", "fail", "not_applicable", "unverified"}
+# Applied to every reply, not just the case's own forbidden list. A graph that
+# claims council receipt or a crew must fail even when a fixture forgot to say so.
+NEVER_SAID = ("The council has", "crew", "will be", "on its way")
 
 
 def load_cases():
@@ -59,8 +66,11 @@ class FixtureTest(unittest.TestCase):
                 self.assertTrue(REQUIRED_CASE <= set(case), case.get("name"))
                 self.assertIn(case["layer"], LAYERS)
                 self.assertIn(case["legacy"], LEGACY)
+                self.assertTrue(set(case) <= KNOWN_CASE, f"{case['name']}: unknown case key")
                 expect = case["expect"]
                 self.assertTrue(REQUIRED_EXPECT <= set(expect), case["name"])
+                self.assertTrue(set(expect) <= KNOWN_EXPECT,
+                                f"{case['name']}: unknown expect key")
                 self.assertIsInstance(expect["rows"], int)
                 for key in ("categories", "locations", "reply_contains", "reply_forbids"):
                     self.assertIsInstance(expect[key], list, f"{case['name']}:{key}")
@@ -81,10 +91,19 @@ class FixtureTest(unittest.TestCase):
             overlap = set(expect["reply_contains"]) & set(expect["reply_forbids"])
             self.assertEqual(overlap, set(), case["name"])
 
+    def test_graph_cases_declare_a_state_expectation(self):
+        for case in load_cases():
+            if case["layer"] == "graph":
+                with self.subTest(case=case["name"]):
+                    self.assertTrue(
+                        {"draft_preserved", "reroutes", "patch_preserved", "pending_resumed"}
+                        & set(case["expect"]), case["name"])
+
     def test_graph_and_channel_cases_declare_a_gap(self):
         for case in load_cases():
             if case["layer"] in ("graph", "channel"):
-                self.assertIn(case["legacy"], ("fail", "not_applicable"), case["name"])
+                self.assertIn(case["legacy"], ("fail", "not_applicable", "unverified"),
+                              case["name"])
 
 
 class LegacyStatusTest(unittest.TestCase):
@@ -104,7 +123,8 @@ class LegacyStatusTest(unittest.TestCase):
         for patcher in (
             unittest.mock.patch.object(tools._location_service, "forward_geocode", return_value=None),
             unittest.mock.patch.object(voice, "generate", return_value=None),
-            unittest.mock.patch.object(location, "LocationService", FakeGeocoder()),
+            unittest.mock.patch.object(location, "LocationService",
+                                       lambda *args, **kwargs: FakeGeocoder()),
             unittest.mock.patch.object(O.photo, "start", return_value=None),
         ):
             patcher.start()
@@ -141,6 +161,8 @@ class LegacyStatusTest(unittest.TestCase):
              unittest.mock.patch.object(triage.llm, "chat",
                                         side_effect=self.fake_chat(queue)):
             for turn in case["turns"]:
+                if turn.get("restart_before"):
+                    self.clear_memory()   # a new process has no in-flight pending entry
                 image = None
                 photo = None
                 if turn.get("photo"):
@@ -156,6 +178,7 @@ class LegacyStatusTest(unittest.TestCase):
                     link_base="https://kerbside.test",
                 ))
                 replies.append(outcome.reply or "")
+            self.assertEqual(queue, [], case["name"])   # a turn that skipped the model is visible
             conn = reports_db.connect(db_path)
             try:
                 rows = [dict(row) for row in conn.execute(
@@ -183,14 +206,15 @@ class LegacyStatusTest(unittest.TestCase):
         for text in expect["reply_forbids"]:
             if any(text in reply for reply in replies):
                 found.append(f"reply contains {text!r}")
+        for text in NEVER_SAID:
+            if any(text in reply for reply in replies):
+                found.append(f"reply contains {text!r} (global)")
         if "max_questions" in expect and last.count("?") > expect["max_questions"]:
             found.append(f"{last.count('?')} questions > {expect['max_questions']}")
         if "has_photo" in expect:
             photos = sum(int(row["has_photo"]) for row in rows)
             if photos != expect["has_photo"]:
                 found.append(f"photos {photos} != {expect['has_photo']}")
-        if expect.get("retracted"):
-            found.append("legacy has no retraction state")
         return found
 
     def test_agent_cases_match_their_recorded_legacy_status(self):

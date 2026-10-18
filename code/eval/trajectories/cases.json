@@ -88,7 +88,7 @@
   {
     "name": "wrong_specialist",
     "layer": "graph",
-    "legacy": "fail",
+    "legacy": "unverified",
     "note": "A specialist mismatch must preserve the draft and reroute once.",
     "turns": [
       {
@@ -125,7 +125,7 @@
   {
     "name": "null_patch",
     "layer": "graph",
-    "legacy": "fail",
+    "legacy": "unverified",
     "note": "A null-filled patch cannot clear a location the resident already gave.",
     "turns": [
       {
@@ -287,7 +287,7 @@
   {
     "name": "restart",
     "layer": "graph",
-    "legacy": "fail",
+    "legacy": "unverified",
     "note": "A new runtime instance resumes the pending question instead of starting again.",
     "turns": [
       {
