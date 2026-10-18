@@ -217,8 +217,9 @@ def validate_turn_plan(raw, allow_emergency=False):
     if dialogue_act in DIALOGUE_ACTS and action in ACTIONS and action not in COMPATIBLE[dialogue_act]:
         problems.append(_problem("action.incompatible", action))
 
-    patch = raw.get("incident_patch") or {}
-    problems += _validate_patch_shape(patch)
+    patch = raw.get("incident_patch")
+    if patch is not None:
+        problems += _validate_patch_shape(patch)
     candidates = raw.get("service_candidates") or []
     if not _string_list(candidates):
         problems.append(_problem("schema.invalid", "service_candidates"))
@@ -280,7 +281,7 @@ def validate_turn_plan(raw, allow_emergency=False):
     reasons = raw.get("reason_codes") or []
     if not _string_list(reasons):
         problems.append(_problem("schema.invalid", "reason_codes"))
-    if (patch.get("clear") or []) and not reasons:
+    if patch and (patch.get("clear") or []) and not reasons:
         problems.append("patch.clear_without_reason")
 
     if problems:
@@ -288,7 +289,7 @@ def validate_turn_plan(raw, allow_emergency=False):
     return {
         "dialogue_act": dialogue_act,
         "action": action,
-        "incident_patch": patch,
+        "incident_patch": patch or {},
         "service_candidates": candidates,
         "specialist_request": specialist,
         "clarification": clarification,
@@ -313,7 +314,8 @@ def validate_specialist_result(raw, today=None):
         problems.append(_problem("schema.invalid", "observations"))
     if fit == "mismatch" and not observations:
         problems.append(_problem("specialist.unsupported", "observations"))
-    problems += _validate_patch_shape(raw.get("proposed_patch") or {})
+    problems += _validate_patch_shape(raw.get("proposed_patch")) \
+        if raw.get("proposed_patch") is not None else []
     if not _string_list(raw.get("missing_requirements") or []):
         problems.append(_problem("schema.invalid", "missing_requirements"))
     suggested = raw.get("suggested_question")

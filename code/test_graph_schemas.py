@@ -87,9 +87,9 @@ class TurnPlanTest(unittest.TestCase):
             plan(),
             plan(action="ask", dialogue_act="new_report",
                  clarification={"field": "location", "reason": "need the street"}),
-            plan(dialogue_act="question", action="answer", incident_patch={},
+            plan(dialogue_act="question", action="answer", incident_patch=None,
                  fact_request={"question": "how long for a pothole", "category_id": "pothole"}),
-            plan(dialogue_act="other", action="escalate", incident_patch={},
+            plan(dialogue_act="other", action="escalate", incident_patch=None,
                  escalation={"kind": "national_highways", "destination": "0300 123 5000"}),
         ]
         for index, case in enumerate(cases):
