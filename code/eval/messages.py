@@ -70,14 +70,13 @@ class Checks:
 
 
 def run_voice(check):
-    """The voice layer: compliant text is used, unsafe text falls back."""
-    casual = ("nice one, that's logged - pothole on Weston Lane. "
-              "if you can grab a photo, send it over.")
-    with mock.patch.object(bot.tools, "save_report", return_value=SAVED), \
-         mock.patch.object(bot.voice, "generate", return_value=casual):
-        check("V1 a casual compliant reply is sent",
+    """The send path is the template; a model can no longer rephrase the action."""
+    with mock.patch.object(bot.tools, "save_report", return_value=SAVED):
+        check("V1 the template is sent and it is truthful",
               bot.reply_for(decision(location="Weston Lane"), "+441"),
-              expect=["nice one", LINK], max_lines=4)
+              expect=["Logged: pothole, Weston Lane.",
+                      "hasn't gone to the council yet", LINK],
+              forbid=["The council has it for review"], max_lines=4)
 
     with mock.patch.object(bot.tools, "save_report", return_value=SAVED), \
          mock.patch.object(bot.voice, "generate",
@@ -110,23 +109,17 @@ def run_voice(check):
               expect=["National Highways", "0300 123 5000"],
               forbid=["google.com", "not Southampton City Council's to fix"])
 
-    unsure = "i can help with that - tell me a bit more and i'll point you the right way."
-    with mock.patch.object(bot.voice, "generate", return_value=unsure):
-        check("V6 an unknown answer admits it",
-              bot.reply_for(decision(reason="model_says_not_a_report",
-                                     category_id="council_service_other"), "+441"),
-              expect=["i can help", "tell me"])
+    check("V6 an unknown answer still offers help",
+          bot.reply_for(decision(reason="model_says_not_a_report",
+                                 category_id="council_service_other"), "+441"),
+          expect=["I can help with that", "Tell me a bit more"])
 
-    unclear = ("got it, pothole logged. whereabouts is it? "
-               "a street and the nearest number is plenty. "
-               "if you can grab a photo, send it over.")
-    with mock.patch.object(bot.tools, "save_report", return_value=SAVED), \
-         mock.patch.object(bot.voice, "generate", return_value=unclear):
+    with mock.patch.object(bot.tools, "save_report", return_value=SAVED):
         reply = bot.reply_for(decision(reason="no_location"), "+441", "pothole near me")
         check("V7 an incomplete report asks one question", reply,
-              expect=["whereabouts"], max_lines=4)
+              expect=["Which road", "?"], max_lines=4)
         check("V7b exactly one question mark", reply if reply.count("?") == 1 else "??",
-              expect=["whereabouts"])
+              expect=["Which road"], max_lines=4)
 
     report = {"id": "R-0201", "created_at": "2026-10-17T20:00:00+00:00",
               "category_id": "pothole", "location": "Weston Lane",
@@ -145,15 +138,11 @@ def run_voice(check):
           if not bot._is_image_attachment({"transferName": "x.pluginPayloadAttachment"})
           else "photo", expect=["not a photo"])
 
-    first = "nice one, that's logged - pothole on Weston Lane."
-    second = "pothole on Weston Lane - logged it. want to send a photo?"
     with mock.patch.object(bot.tools, "save_report", return_value=SAVED):
-        with mock.patch.object(bot.voice, "generate", return_value=first):
-            one = bot.reply_for(decision(location="Weston Lane"), "+441")
-        with mock.patch.object(bot.voice, "generate", return_value=second):
-            two = bot.reply_for(decision(location="Weston Lane"), "+441")
-    check("V9 the same brief can read two ways",
-          "different" if one != two else "same", expect=["different"])
+        one = bot.reply_for(decision(location="Weston Lane"), "+441")
+        two = bot.reply_for(decision(location="Weston Lane"), "+441")
+    check("V9 the template is deterministic",
+          "same" if one == two else "different", expect=["same"])
     facts_kept = (LINK in one and LINK in two
                   and "pothole" in one.lower() and "weston lane" in one.lower()
                   and "pothole" in two.lower() and "weston lane" in two.lower())

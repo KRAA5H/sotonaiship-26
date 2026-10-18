@@ -63,8 +63,10 @@ def _system():
     lines += [
         "",
         "outcome=council_report means the council can act on it.",
-        "outcome=info_only or not_council means nothing is saved, but still give the id so we can "
-        "answer the question or point the resident elsewhere.",
+        "outcome=info_only means the answer comes from the checked facts. If the resident is "
+        "reporting a real problem rather than asking a question, still set is_report true and "
+        "give the closest id: the system keeps the report and asks for what is missing.",
+        "outcome=not_council means nothing is saved: point the resident to the right body.",
         "If it is clearly a council matter but nothing fits, use unclear_other. Never force a "
         "category you are unsure of onto a specific one.",
     ]
@@ -128,50 +130,83 @@ def _decision(reason, **fields):
     return decision
 
 
+CAPTURE_CATEGORY = "unclear_other"
+
+
+def _capture_decision(reason, requested, location, description, severity, confidence):
+    """A report the model called real, kept under the catch-all so routing can wait."""
+    category = tools._rulebook()[0][CAPTURE_CATEGORY]
+    decision = _decision(
+        "needs_capture", is_report=True,
+        category_id=CAPTURE_CATEGORY, category_label=category["label"],
+        outcome="council_report", location=location, description=description,
+        severity=severity, confidence=confidence,
+    )
+    decision["requested_category_id"] = requested
+    decision["requested_reason"] = reason
+    return decision
+
+
 def normalise(data):
-    """Check a model-shaped dict and return a decision this system can trust."""
+    """Check a model-shaped dict and return a decision this system can trust.
+
+    is_report governs capture. The category's outcome governs what we say next,
+    never whether the evidence is kept. An information-only or unknown category
+    on a real report is captured as unclear_other, with no routing claimed.
+    """
     if not isinstance(data, dict):
         return _decision("not_an_object")
 
     cats = tools._rulebook()[0]
     category_id = _text(data.get("category_id"), 60).lower()
-    if category_id not in cats:
-        return _decision("unknown_category", description=_text(data.get("description"), 400))
-
-    category = cats[category_id]
-    outcome = category["outcome"]
     location = _text(data.get("location"), 120)
     description = _text(data.get("description"), 400)
     severity = _text(data.get("severity"), 10).lower() or None
     if severity not in tools.SEVERITIES:
         severity = None
-
+    confidence = _confidence(data.get("confidence"))
     wanted = _as_bool(data.get("is_report"))
+
+    if category_id not in cats:
+        if wanted and description:
+            return _capture_decision("unknown_category", category_id or "none",
+                                     location, description, severity, confidence)
+        return _decision("unknown_category", description=description)
+
+    category = cats[category_id]
+    outcome = category["outcome"]
+
     if not wanted:
         return _decision("model_says_not_a_report", category_id=category_id,
                          category_label=category["label"], outcome=outcome,
                          location=location, description=description, severity=severity,
-                         confidence=_confidence(data.get("confidence")))
-    if outcome != "council_report":
-        return _decision("no_report_for_" + outcome, category_id=category_id,
+                         confidence=confidence)
+    if outcome == "not_council":
+        return _decision("no_report_for_not_council", category_id=category_id,
                          category_label=category["label"], outcome=outcome,
                          location=location, description=description, severity=severity,
-                         confidence=_confidence(data.get("confidence")))
+                         confidence=confidence)
+    if outcome == "info_only":
+        if description:
+            return _capture_decision("no_report_for_info_only", category_id,
+                                     location, description, severity, confidence)
+        return _decision("no_description", category_id=category_id,
+                         category_label=category["label"], outcome=outcome,
+                         location=location, severity=severity, confidence=confidence)
     if not description:
         return _decision("no_description", category_id=category_id,
                          category_label=category["label"], outcome=outcome,
-                         location=location, severity=severity,
-                         confidence=_confidence(data.get("confidence")))
+                         location=location, severity=severity, confidence=confidence)
     if not location:
         return _decision("no_location", category_id=category_id,
                          category_label=category["label"], outcome=outcome,
                          description=description, severity=severity,
-                         confidence=_confidence(data.get("confidence")))
+                         confidence=confidence)
 
     return _decision("ok", is_report=True, category_id=category_id,
                      category_label=category["label"], outcome=outcome,
                      location=location, description=description, severity=severity,
-                     confidence=_confidence(data.get("confidence")))
+                     confidence=confidence)
 
 
 EMERGENCY_WORDS = re.compile(

@@ -33,6 +33,11 @@ Submissions lock Sunday 18 Oct 2026 13:00.
 - Named trunk or main roads: if a resident reports an issue on a named trunk or main road (A33, A36 or similar) and the facts don't say who is responsible, say once that you can't confirm who looks after that road, point them to the council's roads page (https://www.southampton.gov.uk/travel-transport/report-issue/potholes/) or National Highways, and do not save a report.
 - Council out-of-hours emergency number is 023 8023 3344 (confirmed fact, source and date in the fact sheet). Adult social care out of hours is 0300 555 1373.
 
+## Codebase cache (read before exploring)
+- `_pi/sotonaiship-26/CODEBASE-MAP.md` in the vault: call chain, module index, exact DB contracts, test seams, drift list. Raw scout reports in `_pi/sotonaiship-26/scouts/`.
+- `_pi/sotonaiship-26/IMPLEMENTATION-PLAN-CONTEXT.md`: `plans/IMPLEMENTATION_PLAN.md` against the code, with the conflicts to settle first.
+- Corrections to the summary above, verified 2026-10-18: `dashboard/schema.sql` has **16** columns, not 11 (photo_guid, photo_mime, area, status_changed_at, photo_features were added). `agent/categories.json` has 22 categories of which **16 are `council_report`**, and **there is no tree category**. Live turn path is `blue_bubbles.handle_inbound` -> `agents.TriageAgent(handle)`, not `code/triage.py`. 475 tests pass offline: `cd code && python -m unittest discover -p "test_*.py"`.
+
 ## Open items
 - Decided to leave out: A33/A36 responsibility not confirmed.
 - Most council multi-step forms only read to their first steps.

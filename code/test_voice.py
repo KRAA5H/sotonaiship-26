@@ -382,86 +382,23 @@ class GenerateTest(unittest.TestCase):
 
 
 class SayTest(unittest.TestCase):
-    def test_the_link_is_appended_exactly_once(self):
-        chat = fake_chat(spoken(GOOD_BY_NAME["saved"][2]))
+    def test_the_template_is_the_send_path(self):
+        reply = voice.say("saved", {**SAVED, "link": LINK}, BAD_TEMPLATE)
+        self.assertEqual(reply, BAD_TEMPLATE)
+
+    def test_the_model_is_never_called(self):
+        chat = fake_chat(spoken("nice one, that's logged - pothole on Weston Lane."))
         with patch("voice.llm.chat", chat):
-            reply = voice.say("saved", {**SAVED, "link": LINK}, BAD_TEMPLATE)
-        self.assertTrue(reply.startswith(GOOD_BY_NAME["saved"][2]))
-        self.assertEqual(reply.count(LINK), 1)
-        self.assertEqual(reply.count("http"), 1)
-        self.assertEqual(reply.splitlines()[-1], f"Follow it: {LINK}")
-
-    def test_no_link_when_the_path_has_none(self):
-        chat = fake_chat(spoken(GOOD_BY_NAME["greeting"][2]))
-        with patch("voice.llm.chat", chat):
-            reply = voice.say("greeting", {}, BAD_TEMPLATE)
-        self.assertEqual(reply, GOOD_BY_NAME["greeting"][2])
-        self.assertNotIn("Follow it", reply)
-
-    def test_a_failed_lint_sends_the_template(self):
-        out = io.StringIO()
-        chat = fake_chat(spoken("logged pothole on Weston Lane, please be advised."))
-        with patch("voice.llm.chat", chat), redirect_stdout(out):
-            reply = voice.say("saved", {**SAVED, "link": LINK}, BAD_TEMPLATE)
-        self.assertEqual(reply, BAD_TEMPLATE)
-        self.assertIn("[voice] fallback saved", out.getvalue())
-        self.assertIn("corporate", out.getvalue())
-
-    def test_a_stub_model_sends_the_template(self):
-        out = io.StringIO()
-        chat = fake_chat(("stub words", "stub"))
-        with patch("voice.llm.chat", chat), redirect_stdout(out):
-            reply = voice.say("saved", {**SAVED, "link": LINK}, BAD_TEMPLATE)
-        self.assertEqual(reply, BAD_TEMPLATE)
-        self.assertIn("[voice] fallback saved no_text", out.getvalue())
-
-    def test_a_broken_model_call_sends_the_template(self):
-        out = io.StringIO()
-        chat = fake_chat(RuntimeError("no route to host"))
-        with patch("voice.llm.chat", chat), redirect_stdout(out):
-            reply = voice.say("status", {**STATUS, "link": LINK}, BAD_TEMPLATE)
-        self.assertEqual(reply, BAD_TEMPLATE)
-        self.assertIn("[voice] fallback status", out.getvalue())
-
-    def test_an_unknown_kind_sends_the_template(self):
-        out = io.StringIO()
-        with patch("voice.llm.chat", fake_chat(spoken("hi"))), redirect_stdout(out):
-            self.assertEqual(voice.say("shouting", {}, BAD_TEMPLATE), BAD_TEMPLATE)
-        self.assertIn("[voice] fallback shouting", out.getvalue())
-
-    def test_a_model_url_is_never_sent(self):
-        out = io.StringIO()
-        chat = fake_chat(spoken("logged pothole on Weston Lane, see https://evil.example/r/x"))
-        with patch("voice.llm.chat", chat), redirect_stdout(out):
-            reply = voice.say("saved", {**SAVED, "link": LINK}, BAD_TEMPLATE)
-        self.assertNotIn("evil.example", reply)
-        self.assertEqual(reply.count(LINK), 1)
-        self.assertEqual(reply, BAD_TEMPLATE)
+            voice.say("saved", {**SAVED, "link": LINK}, BAD_TEMPLATE)
+        self.assertEqual(chat.calls, [])
 
     def test_an_emergency_keeps_its_first_line(self):
-        chat = fake_chat(spoken(GOOD_BY_NAME["emergency"][2]))
-        with patch("voice.llm.chat", chat):
-            reply = voice.say("emergency", {"contact": "999"}, "Call 999 now.")
+        reply = voice.say("emergency", {"contact": "999"}, "Call 999 now.")
         self.assertTrue(reply.startswith("Call 999 now."))
-
-    def test_two_runs_vary_the_words_and_keep_the_facts(self):
-        first = "nice one, that's logged - pothole on Weston Lane. if you can grab a photo, send it over."
-        second = "got it, pothole on Weston Lane is logged. if you can grab a photo, send it over."
-        chat = fake_chat(spoken(first), spoken(second))
-        with patch("voice.llm.chat", chat):
-            one = voice.say("saved", {**SAVED, "link": LINK}, BAD_TEMPLATE)
-            two = voice.say("saved", {**SAVED, "link": LINK}, BAD_TEMPLATE)
-        self.assertNotEqual(one, two)
-        for reply in (one, two):
-            body = reply.split("\nFollow it:")[0]
-            self.assertEqual(voice.lint(body, voice.brief("saved", SAVED)), [])
-            self.assertIn("pothole", body)
-            self.assertIn("Weston Lane", body)
-            self.assertEqual(reply.count(LINK), 1)
 
     def test_nothing_sent_ever_carries_two_links(self):
         for name, kind, facts, text in GOOD:
-            with self.subTest(name), patch("voice.llm.chat", fake_chat(spoken(text))):
+            with self.subTest(name):
                 reply = voice.say(kind, {**facts, "link": LINK}, BAD_TEMPLATE)
                 self.assertLessEqual(reply.count("http"), 1)
                 self.assertEqual(reply.count(LINK), 1)

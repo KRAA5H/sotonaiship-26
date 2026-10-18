@@ -1,15 +1,15 @@
 """The resident's voice: the same facts, said like a person.
 
-Nine reply paths in messages.py return fixed templates. This module asks the
-model for the same message in a friendlier register, then checks that message
-against the facts before a single word of it is sent. The template is the
-fallback on any doubt, so a resident always gets a correct reply.
+Nine reply paths in messages.py return fixed templates. The send path is now the
+template itself: a model must never rephrase an intended action, because that is
+how a wrong decision sounded confident. generate() and lint() stay for the graph
+writer, which will be handed an executed outcome rather than a plan.
 
   brief(kind, facts)          what happened, what must appear, what is banned
   speak_name(category_id)     the casual name a person would use out loud
-  generate(brief)             one model call, JSON {"text": "..."}
-  lint(text, brief)           [] means safe to send
-  say(kind, facts, template)  the voiced reply, or the template unchanged
+  generate(brief)             one model call, JSON {"text": "..."} (graph writer only)
+  lint(text, brief)           [] means safe to send (graph writer only)
+  say(kind, facts, template)  the template, unchanged
 
 Register: a friendly young council employee texting from their phone. British
 English, contractions, casual but helpful, no slang that will date by next week.
@@ -452,32 +452,14 @@ def lint(text, brief_data):
 
 
 def say(kind, facts, template):
-    """The voiced reply, or the template unchanged. Never a partial sentence."""
-    try:
-        brief_data = brief(kind, facts)
-        text = generate(brief_data)
-    except Exception as error:  # noqa: BLE001 - a reply must always go out
-        print(f"[voice] fallback {kind} error:{error}")
-        return template
+    """The template, unchanged.
 
-    if not text:
-        print(f"[voice] fallback {kind} no_text")
-        return template
-
-    try:
-        problems = lint(text, brief_data)
-    except Exception as error:  # noqa: BLE001 - a reply must always go out
-        print(f"[voice] fallback {kind} lint_error:{error}")
-        return template
-    if problems:
-        print(f"[voice] fallback {kind} {' '.join(problems)}")
-        return template
-
-    link = _clean((facts or {}).get("link"))
-    if not link:
-        return text
-    label = _clean((facts or {}).get("link_label")) or "Follow it"
-    return f"{text}\n{label}: {link}"
+    The model is not on the send path. It used to rephrase the plan's template,
+    which made a wrong plan read fluently. The graph writer will call generate()
+    with an ExecutedOutcome and pass the result through lint() before anyone sees
+    it; until then, the template is the honest reply.
+    """
+    return template
 
 
 if __name__ == "__main__":

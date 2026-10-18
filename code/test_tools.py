@@ -239,14 +239,25 @@ class SaveReportTest(DbCase):
                                   conn=self.conn)
         self.assertEqual(self.row(again["report_id"])["reporter_ref"], ref)
 
-    def test_refuses_non_council_and_info_categories(self):
-        for category_id in ("not_council_utility", "outside_southampton", "flooding_severe_weather"):
+    def test_a_captured_info_category_is_saved(self):
+        result = tools.save_report("flooding_severe_weather", "", "Tree down on the road",
+                                   conn=self.conn)
+        self.assertTrue(result["ok"])
+        row = self.row(result["report_id"])
+        self.assertEqual(row["category_id"], "flooding_severe_weather")
+        self.assertEqual(row["location"], "Not given")
+
+    def test_never_saved_categories_are_refused(self):
+        for category_id in ("not_council_utility", "outside_southampton",
+                            "not_council_trunk_road"):
             result = tools.save_report(category_id, "Somewhere", "Something", conn=self.conn)
             self.assertFalse(result["ok"], category_id)
         self.assertEqual(self.conn.execute("SELECT COUNT(*) FROM reports").fetchone()[0], len(FAKE))
 
     def test_validates_input(self):
-        self.assertFalse(tools.save_report("pothole", "", "hole", conn=self.conn)["ok"])
+        saved = tools.save_report("pothole", "", "hole", conn=self.conn)
+        self.assertTrue(saved["ok"])
+        self.assertEqual(self.row(saved["report_id"])["location"], "Not given")
         self.assertFalse(tools.save_report("pothole", "Weston Lane", " ", conn=self.conn)["ok"])
         self.assertFalse(tools.save_report("pothole", "Weston Lane", "hole", severity="emergency",
                                            conn=self.conn)["ok"])

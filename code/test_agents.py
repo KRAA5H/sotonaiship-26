@@ -152,6 +152,49 @@ class OrchestratorTest(AgentCase):
         self.assertEqual(self.newest()["severity"], "medium")
 
 
+class CaptureTest(AgentCase):
+    def test_an_info_only_report_is_captured(self):
+        self.replies = [model(category_id="flooding_severe_weather", location="",
+                              description="tree fallen on the road")]
+        out = self.turn("there is a tree fallen on the road")
+        row = self.newest()
+        self.assertEqual(row["category_id"], "unclear_other")
+        self.assertEqual(row["location"], "Not given")
+        self.assertIn("can't confirm which council team", out.reply)
+        self.assertNotIn("The council has it", out.reply)
+        self.assertIn("/p/", out.reply)
+
+    def test_an_unknown_category_is_captured(self):
+        self.replies = [model(category_id="tree", location="Weston Lane",
+                              description="tree down across the road")]
+        out = self.turn("tree down across weston lane")
+        row = self.newest()
+        self.assertEqual(row["category_id"], "unclear_other")
+        self.assertEqual(row["location"], "Weston Lane")
+        self.assertIn("/r/", out.reply)
+
+    def test_the_catch_all_with_no_street_says_it_is_not_sent(self):
+        self.replies = [model(category_id="unclear_other", location="",
+                              description="tree down across the road")]
+        out = self.turn("tree down across the road")
+        self.assertIn("hasn't gone to the council yet", out.reply)
+        self.assertIn("/p/", out.reply)
+        self.assertEqual(self.newest()["location"], "Not given")
+
+    def test_a_not_council_report_is_still_never_saved(self):
+        self.replies = [model(category_id="not_council_utility", location="Weston Lane",
+                              description="gas main being dug up")]
+        self.turn("gas main being dug up on weston lane")
+        conn = reports_db.connect(self.db_path)
+        try:
+            saved = conn.execute(
+                "SELECT COUNT(*) FROM reports WHERE description = ?",
+                ("gas main being dug up",)).fetchone()[0]
+            self.assertEqual(saved, 0)
+        finally:
+            conn.close()
+
+
 class SafetyTest(AgentCase):
     def test_an_emergency_never_reaches_the_model_or_the_database(self):
         before = self.count()

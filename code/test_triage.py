@@ -37,21 +37,30 @@ class NormaliseTest(unittest.TestCase):
         self.assertEqual(decision["severity"], "high")
         self.assertEqual(decision["confidence"], 0.9)
 
-    def test_unknown_category_is_refused(self):
+    def test_an_unknown_category_is_captured_as_unclear_other(self):
         decision = triage.normalise({**GOOD, "category_id": "meteor_strike"})
-        self.assertFalse(decision["is_report"])
-        self.assertEqual(decision["reason"], "unknown_category")
-        self.assertIsNone(decision["category_id"])
+        self.assertTrue(decision["is_report"])
+        self.assertEqual(decision["reason"], "needs_capture")
+        self.assertEqual(decision["category_id"], "unclear_other")
+        self.assertEqual(decision["requested_category_id"], "meteor_strike")
 
     def test_missing_location_is_held_back(self):
         decision = triage.normalise({**GOOD, "location": "  "})
         self.assertFalse(decision["is_report"])
         self.assertEqual(decision["reason"], "no_location")
 
-    def test_info_only_category_is_never_saved(self):
+    def test_an_info_only_report_is_captured(self):
         decision = triage.normalise({**GOOD, "category_id": "info_student_waste_rules"})
+        self.assertTrue(decision["is_report"])
+        self.assertEqual(decision["reason"], "needs_capture")
+        self.assertEqual(decision["category_id"], "unclear_other")
+        self.assertEqual(decision["requested_category_id"], "info_student_waste_rules")
+
+    def test_an_info_only_question_is_not_captured(self):
+        decision = triage.normalise({**GOOD, "category_id": "info_student_waste_rules",
+                                     "is_report": False})
         self.assertFalse(decision["is_report"])
-        self.assertEqual(decision["reason"], "no_report_for_info_only")
+        self.assertEqual(decision["reason"], "model_says_not_a_report")
 
     def test_out_of_area_is_never_saved(self):
         decision = triage.normalise({**GOOD, "category_id": "outside_southampton"})

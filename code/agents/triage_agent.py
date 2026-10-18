@@ -304,6 +304,28 @@ class TriageAgent:
             return say("handoff", facts(decision, link=form, link_label="Form"),
                        messages.handoff(decision, form))
 
+        # 4b. A real report the model could not map to a confirmed category.
+        # Keep the evidence, claim no routing, ask for the one missing field.
+        if reason == "needs_capture":
+            mode = agent.get("location_mode") or "pin"
+            saved = self.records.save(decision, sender, has_photo,
+                                      location=decision["location"] or "Not given")
+            if not saved.get("ok"):
+                print(f"[capture] refused: {saved.get('error')}")
+                return say("captured", facts(decision), messages.captured(decision))
+            print(f"[captured] {saved['report_id']} from "
+                  f"{decision.get('requested_category_id')} "
+                  f"({decision.get('requested_reason')})")
+            self._attach(saved["report_id"], photo, photo_future)
+            link = None
+            if not decision["location"]:
+                memory.remember_location(sender, text, saved, decision)
+                if mode == "pin":
+                    link = self.location.map_link(saved["report_id"], base=link_base)
+            return say("captured",
+                       facts(decision, saved, link=link or saved.get("link")),
+                       messages.captured(decision, saved, link))
+
         # 5. The resident answered our question about where it is: fill that report in.
         if (reason == "ok" and pending and pending.get("report_id")
                 and decision["category_id"] == pending.get("category_id")):
@@ -348,6 +370,10 @@ class TriageAgent:
                     link = self.location.map_link(saved["report_id"], base=link_base)
                 print(f"[saved] {saved['report_id']} {decision['category_id']} "
                       "incomplete, waiting for the street")
+                if decision["category_id"] == triage.CAPTURE_CATEGORY:
+                    return say("captured",
+                               facts(decision, saved, link=link or saved.get("link")),
+                               messages.captured(decision, saved, link))
             else:
                 print(f"[save] refused: {saved.get('error')}")
             extra = {"link": link, "link_label": "Drop a pin"} if link else {}

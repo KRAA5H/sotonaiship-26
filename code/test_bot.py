@@ -284,25 +284,26 @@ class ConversationTest(unittest.TestCase):
 
 
 class VoiceIntegrationTest(unittest.TestCase):
-    def test_a_compliant_voiced_reply_is_used_and_carries_the_link(self):
-        voiced = ("nice one, that's logged - pothole on Weston Lane. "
-                  "if you can grab a photo, send it over.")
-        with unittest.mock.patch.object(bot.voice, "generate", return_value=voiced),              unittest.mock.patch.object(bot.tools, "save_report", return_value=SAVED):
+    def test_the_template_is_used_and_carries_the_link(self):
+        with unittest.mock.patch.object(bot.tools, "save_report", return_value=SAVED):
             reply = bot.reply_for(decision(reason="ok", location="Weston Lane"), "+441")
-        self.assertIn("nice one, that's logged", reply)
+        self.assertIn("pothole", reply)
         self.assertIn(SAVED["link"], reply)
+        self.assertNotIn("The council has it for review", reply)
 
-    def test_a_corporate_voiced_reply_falls_back_to_the_template(self):
+    def test_a_corporate_voiced_reply_cannot_leak(self):
         bad = "Please be advised that the pothole on Weston Lane has been logged."
-        with unittest.mock.patch.object(bot.voice, "generate", return_value=bad),              unittest.mock.patch.object(bot.tools, "save_report", return_value=SAVED):
+        with unittest.mock.patch.object(bot.voice, "generate", return_value=bad), \
+             unittest.mock.patch.object(bot.tools, "save_report", return_value=SAVED):
             reply = bot.reply_for(decision(reason="ok", location="Weston Lane"), "+441")
         self.assertNotIn("Please be advised", reply)
         self.assertEqual(reply, messages.logged(decision(reason="ok", location="Weston Lane"),
                                                 SAVED))
 
-    def test_an_invented_timescale_falls_back(self):
+    def test_an_invented_timescale_cannot_leak(self):
         bad = "Logged, pothole on Weston Lane, a crew will be out within 2 hours."
-        with unittest.mock.patch.object(bot.voice, "generate", return_value=bad),              unittest.mock.patch.object(bot.tools, "save_report", return_value=SAVED):
+        with unittest.mock.patch.object(bot.voice, "generate", return_value=bad), \
+             unittest.mock.patch.object(bot.tools, "save_report", return_value=SAVED):
             reply = bot.reply_for(decision(reason="ok", location="Weston Lane"), "+441")
         self.assertNotIn("2 hours", reply)
 

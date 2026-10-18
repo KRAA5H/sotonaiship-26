@@ -45,6 +45,8 @@ def _category(category_id):
 
 
 def _label(decision):
+    if decision.get("category_id") == "unclear_other":
+        return "your report"
     return (
         decision.get("category_label")
         or _category(decision.get("category_id")).get("label")
@@ -61,7 +63,7 @@ def _join(*lines):
     return "\n".join(line.strip() for line in lines if line and line.strip())
 
 
-PHOTO_ASK = "If you can send a photo, it will help the crew."
+PHOTO_ASK = "If you can send a photo, it will help."
 
 
 def logged(decision, saved):
@@ -73,7 +75,7 @@ def logged(decision, saved):
     has_photo = bool(decision.get("has_photo"))
     head += ". Photo attached." if has_photo else "."
     ask = "" if has_photo else PHOTO_ASK
-    return _join(head, "The council has it for review.", ask, f"Follow it: {saved['link']}")
+    return _join(head, "It hasn't gone to the council yet.", ask, f"Follow it: {saved['link']}")
 
 
 def duplicate(decision, saved):
@@ -85,7 +87,7 @@ def duplicate(decision, saved):
     ask = "" if decision.get("has_photo") else PHOTO_ASK
     return _join(
         head,
-        "Your report is linked to it, so the same updates apply.",
+        "Your report is linked to it here.",
         ask,
         f"Follow it: {saved['link']}",
     )
@@ -119,7 +121,22 @@ def located(decision, link):
     """The street arrived after the report: from a pin, a shared location or a reply."""
     where = _where(decision) or "the spot you gave"
     return _join(f"Thanks, added: {_label(decision)} at {where}.",
-                 "The council has it for review.", f"Follow it: {link}")
+                 "It hasn't gone to the council yet.", f"Follow it: {link}")
+
+
+def captured(decision, saved=None, map_link=None):
+    """A real report outside the confirmed categories: kept, not routed, nothing claimed."""
+    where = _where(decision)
+    head = "Logged it here" + (f": {where}." if where else ".")
+    head += " I can't confirm which council team owns it, so it hasn't gone to the council yet."
+    if where:
+        line = "" if decision.get("has_photo") else PHOTO_ASK
+    elif map_link:
+        line = "Where is it? Reply with the street, or drop a pin on the map."
+    else:
+        line = "Where is it? Reply with the street and I will add it."
+    link = map_link or (saved or {}).get("link")
+    return _join(head, line, f"Follow it: {link}" if link else "")
 
 
 def already_yours(decision, link):
@@ -128,7 +145,7 @@ def already_yours(decision, link):
     where = _where(decision)
     if where:
         head += f", {where}"
-    return _join(head + ".", "No need to send it again, it's with the council.", f"Follow it: {link}")
+    return _join(head + ".", "No need to send it again, it's still open here.", f"Follow it: {link}")
 
 
 def handoff(decision, form_url):

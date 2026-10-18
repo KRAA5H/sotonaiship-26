@@ -157,6 +157,9 @@ def find_category_facts(category_id):
 # ---------------------------------------------------------------------------
 # Placeholders saved while we wait for a street. Two of them are never the same place.
 MISSING_LOCATIONS = ("", "not given")
+# Never saved, whatever the caller says. These are the rules, not the old gate:
+# outside the city, a trunk road we cannot route, and a utility's problem.
+NEVER_SAVED = {"outside_southampton", "not_council_trunk_road", "not_council_utility"}
 
 
 def duplicate_rule():
@@ -234,16 +237,17 @@ def save_report(category_id, location, description, severity=None, has_photo=Fal
     categories = _rulebook()[0]
     if category_id not in categories:
         return {"ok": False, "error": f"unknown category_id: {category_id}"}
-    outcome = categories[category_id]["outcome"]
-    if outcome != "council_report":
-        return {"ok": False, "error": f"{category_id} is {outcome}: nothing is saved, "
-                                      "point the resident to official guidance instead"}
-    if not (location or "").strip():
-        return {"ok": False, "error": "location is required: ask where the problem is"}
+    if category_id in NEVER_SAVED:
+        return {"ok": False, "error": f"{category_id} is never saved: point the resident to "
+                                      "official guidance instead"}
     if not (description or "").strip():
         return {"ok": False, "error": "description is required"}
     if severity is not None and severity not in SEVERITIES:
         return {"ok": False, "error": f"severity must be one of {', '.join(SEVERITIES)}"}
+    # Capture-first: the caller decides whether the evidence is kept (triage.normalise,
+    # and later the graph policy). A missing street is the truthful state, not a reason
+    # to discard a real report. The placeholder never matches a duplicate.
+    place = (location or "").strip() or "Not given"
 
     # Geocode BEFORE opening the transaction - this is a network call, and
     # holding BEGIN IMMEDIATE (a write lock on the whole file) while waiting
@@ -263,20 +267,20 @@ def save_report(category_id, location, description, severity=None, has_photo=Fal
     # Nominatim is only asked when neither does, and never for the "Not given"
     # placeholder, which no geocoder can place.
     if area is None:
-        area = local_area(location)
-    if area is None and location.strip().lower() not in MISSING_LOCATIONS:
+        area = local_area(place)
+    if area is None and place.lower() not in MISSING_LOCATIONS:
         try:
-            geocoded = _location_service.forward_geocode(location)
+            geocoded = _location_service.forward_geocode(place)
             if geocoded:
                 area = geocoded.get("area")
         except Exception as error:  # noqa: BLE001 - geocoding must never block a save
-            print(f"[geocode] forward_geocode failed for {location!r}: {error}")
+            print(f"[geocode] forward_geocode failed for {place!r}: {error}")
 
     def work(c):
         # IMMEDIATE takes the write lock now, so two webhooks cannot pick the same id.
         c.execute("BEGIN IMMEDIATE")
         try:
-            duplicate = check_duplicate(category_id, location, conn=c)
+            duplicate = check_duplicate(category_id, place, conn=c)
             last = c.execute(
                 "SELECT MAX(CAST(SUBSTR(id, 3) AS INTEGER)) FROM reports WHERE id LIKE 'R-%'"
             ).fetchone()[0]
@@ -291,7 +295,7 @@ def save_report(category_id, location, description, severity=None, has_photo=Fal
                     _now().isoformat(timespec="seconds"),
                     category_id,
                     severity,
-                    location.strip(),
+                    place,
                     area,
                     description.strip(),
                     int(bool(has_photo)),

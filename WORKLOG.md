@@ -9,6 +9,16 @@ Three places, no more:
 
 ---
 
+## 01:33, Sunday: the three capture and truth fixes
+
+- `code/triage.py`: `is_report` now governs capture. An `info_only` or unknown category on a real report returns `reason="needs_capture"` with `category_id="unclear_other"`, and records `requested_category_id`. `not_council` still refuses. The prompt no longer tells the model that `info_only` means nothing is saved.
+- `code/tools.py`: `save_report` no longer gates on outcome or location. It requires a known id and a description, stores a missing street as `Not given`, and keeps an explicit `NEVER_SAVED` set for outside-Southampton, trunk road and utility. Transaction, token and duplicate re-check unchanged.
+- `code/agents/triage_agent.py`: a `needs_capture` branch saves first, claims no routing, remembers the location question, and returns the new capture text. The `no_location` branch uses the same text when the category is the catch-all.
+- `code/messages.py`: new `captured()`; `logged`, `located`, `already_yours` and the photo ask no longer claim the council has the report or that a crew is coming. `unclear_other` is spoken as "your report".
+- `code/voice.py`: `say()` returns the template unchanged. The model is off the send path; `generate()` and `lint()` stay for the graph writer.
+- Tests: 475 pass, 31 message evaluation cases pass. Two gate tests rewritten, seven voice send-path tests replaced, four capture tests added.
+- Reproduced after the fix: the tree message now saves `R-0001 unclear_other` at Weston Lane (or `Not given`) and the reply says "it hasn't gone to the council yet". The challenge turn still returns the generic council link, because correction state is the graph's job, not part of these three.
+
 ## 23:25, Saturday: a simulator while the Mac is away
 
 - `code/simulator.py`: a second app on port 5007, mobile-first, no BlueBubbles. It runs the real triage, voice, reply and save path, keeps a per-browser reporter id, and shows the debug decision, model time and typing time.
