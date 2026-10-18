@@ -47,6 +47,12 @@ JSON shape:
  "retracted_claims": [],
  "reason_codes": []}
 
+Allowed pairs: new_report, detail and correction -> log or ask; question -> answer or escalate;
+status and challenge_previous_claim -> answer; greeting and other -> answer, ask or escalate.
+Escalation kinds: emergency_999, national_highways, utility, council_complaints,
+council_out_of_hours, adult_social_care, council_finder, council_form.
+incident_patch may be {} (no change). To clear a field, include reason_codes.
+Clearable fields: category_id, category_candidates, severity, location.
 Use no markdown and no extra keys. Keep one question at most."""
 
 _KEYWORDS = (
@@ -90,6 +96,10 @@ _HANDOFF_TEXT = re.compile(
 _STATUS_TEXT = re.compile(
     r"\b(any update|update on (my|the) report|what'?s (the )?status|status of (my|the) report|"
     r"has (it|my report) been|is it fixed|still open|any progress)\b", re.I)
+_UTILITY_TEXT = re.compile(r"\b(power cut|electricity|water leak|gas leak)\b", re.I)
+_PROBLEM_EXTRA = re.compile(
+    r"\b(power cut|dead (fox|cat|dog|bird|animal)|parking|wasp|nest|pest|vermin|"
+    r"damp|mould|sewage|drain|infestation|smell|odour|noise)\b", re.I)
 _POSTCODE = re.compile(r"\bSO\d{1,2}\s?\d[A-Z]{2}\b", re.I)
 _SUFFIX = r"(?:Road|Street|Lane|Avenue|Close|Drive|Way|Crescent|Gardens|Hill|Park|Terrace|Place|Grove|Court|Walk|Mews|Rise|Row)"
 _PREP_STREET = re.compile(r"\b(?:on|at|outside|near|by|in)\s+([A-Z][\w']*(?:\s+[A-Z][\w']*){0,4}\s+" + _SUFFIX + r")\b", re.I)
@@ -167,6 +177,8 @@ def hard_route(text):
         return "not_council_trunk_road"
     if _OUTSIDE_TEXT.search(text):
         return "outside_southampton"
+    if _UTILITY_TEXT.search(text):
+        return "not_council_utility"
     if _HANDOFF_TEXT.search(text):
         return "noise_nuisance"
     return None
@@ -176,8 +188,22 @@ def is_status(text):
     return bool(_STATUS_TEXT.search(text or ""))
 
 
+_STOPWORDS = {"a", "an", "and", "at", "by", "for", "from", "here", "in", "is",
+              "it", "its", "near", "of", "on", "or", "that", "the", "there", "this",
+              "to", "was", "with"}
+
+
+def _content_words(text):
+    return [word.lower() for word in re.findall(r"[A-Za-z']+", text or "")
+            if word.lower() not in _STOPWORDS]
+
+
 def is_detail(text, state):
-    """A message that adds to the open incident rather than starting a new one."""
+    """A message that adds to the open incident rather than starting a new one.
+
+    Only a bare place, a pending location reply, a photo or "still there" counts.
+    A second problem with its own noun is a new incident, never an overwrite.
+    """
     draft = state.get("incident_draft") or {}
     if not state.get("active_incident_id") or not draft.get("description"):
         return False
@@ -188,12 +214,15 @@ def is_detail(text, state):
         return bool(draft.get("attachments")) or bool(state.get("pending_question"))
     if text.lower() in ("it is still there", "still there", "it's still there", "same problem"):
         return True
+    if hard_route(text) or _PROBLEM_EXTRA.search(text) or _REPORT_WORDS.search(text):
+        return False
     place = extract_location(text)
-    if place and not _REPORT_WORDS.search(text):
-        return True
+    if place:
+        residual = re.sub(re.escape(place), " ", text, flags=re.I)
+        return not _content_words(residual)
     pending = state.get("pending_question") or {}
-    if pending.get("field") in ("location", "detail") and not _REPORT_WORDS.search(text):
-        return True
+    if pending.get("field") in ("location", "detail"):
+        return len(_content_words(text)) <= 6
     return False
 
 
@@ -382,6 +411,13 @@ def repair_plan(state, deps):
 def fallback_plan(state, deps):
     """The last honest action after a hard policy failure."""
     index = deps.playbooks or {}
+    text = (state.get("inbound") or {}).get("text") or ""
+    plan = state.get("plan") or {}
+    if is_challenge(text) or plan.get("dialogue_act") == "challenge_previous_claim":
+        return _plan("other", "answer", [plan.get("service_candidates") or ["unclear_other"]][0],
+                     fact_request={"question": text, "category_id": "general"},
+                     retracted=plan.get("retracted_claims") or [],
+                     reasons=["challenge"])
     hard = hard_route(((state.get("inbound") or {}).get("text") or ""))
     if hard:
         return (_handoff_plan(index, hard)
@@ -474,6 +510,11 @@ def parse(reply):
             raw["fact_request"] = None
         if action != "escalate":
             raw["escalation"] = None
+        if raw.get("incident_patch") == {}:
+            raw["incident_patch"] = None
+        if action == "answer" and raw.get("fact_request") is None:
+            raw["fact_request"] = {"question": "the resident's question",
+                                   "category_id": "general"}
     patch = raw.get("incident_patch") if isinstance(raw, dict) else None
     sets = patch.get("set") if isinstance(patch, dict) else None
     if isinstance(sets, dict) and isinstance(sets.get("location"), str)             and sets["location"].strip():

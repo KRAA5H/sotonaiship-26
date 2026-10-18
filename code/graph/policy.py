@@ -54,6 +54,7 @@ _OUTSIDE_TEXT = re.compile(r"\b(winchester|eastleigh|fareham|portsmouth|gosport|
 _HANDOFF_TEXT = re.compile(
     r"\b(noisy (neighbour|neighbor)|neighbour(s)? (noise|making noise)|loud music|"
     r"barking dog|noise from (next door|the neighbours?)|noise nuisance)\b", re.I)
+_UTILITY_TEXT = re.compile(r"\b(power cut|electricity|water leak|gas leak)\b", re.I)
 
 
 @dataclass(frozen=True)
@@ -207,9 +208,9 @@ def check(state, context=PolicyContext(), problems=()):
 
     text = (state.get("inbound") or {}).get("text") or ""
     if action in ("log", "ask"):
-        if _TRUNK_TEXT.search(text) or _OUTSIDE_TEXT.search(text):
+        if _TRUNK_TEXT.search(text) or _OUTSIDE_TEXT.search(text)                 or _UTILITY_TEXT.search(text):
             violations.append(_violation("not_council.saved", "inbound",
-                                         "a trunk road or out-of-area issue is never saved",
+                                         "a trunk road, utility or out-of-area issue is never saved",
                                          hard=True))
         if _HANDOFF_TEXT.search(text):
             violations.append(_violation("policy.handoff_action", "inbound",

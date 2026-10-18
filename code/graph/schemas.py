@@ -88,7 +88,7 @@ COMPATIBLE = {
     "new_report": {"log", "ask"},
     "detail": {"log", "ask"},
     "correction": {"log", "ask"},
-    "challenge_previous_claim": {"log", "ask"},
+    "challenge_previous_claim": {"log", "ask", "answer"},
     "question": {"answer", "escalate"},
     "status": {"answer"},
     "greeting": {"ask", "answer"},

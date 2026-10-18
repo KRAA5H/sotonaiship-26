@@ -113,6 +113,8 @@ def execute(state, deps):
     category = draft.get("category_id") or (candidates[0] if candidates else None) \
         or "unclear_other"
     action = plan.get("action") or "ask"
+    if plan.get("dialogue_act") == "challenge_previous_claim" and action != "answer":
+        action = "answer"
 
     if category not in categories and category != "unclear_other":
         category = "unclear_other"
@@ -376,8 +378,11 @@ def compose(state, deps):
     decision = _decision(draft, state)
     url = _link(outcome)
     text = ""
-    challenge = bool(plan.get("retracted_claims")) or "challenge" in (plan.get("reason_codes") or [])
     inbound_text = ((state.get("inbound") or {}).get("text") or "").lower()
+    challenge = (bool(plan.get("retracted_claims"))
+                 or "challenge" in (plan.get("reason_codes") or [])
+                 or plan.get("dialogue_act") == "challenge_previous_claim"
+                 or prompts.is_challenge(inbound_text))
 
     if challenge:
         text = messages.challenge(decision, url,

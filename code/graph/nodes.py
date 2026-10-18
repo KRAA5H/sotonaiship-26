@@ -131,13 +131,10 @@ def make_nodes(deps):
         previous_text = (previous.get("description") or "").strip()
         place = prompts.extract_location(text)
         detail_only = bool(previous_text) and (
-            (place and not prompts._REPORT_WORDS.search(text))
-            or (text.lower() in ("it is still there", "still there", "it's still there"))
+            prompts.is_detail(text, state)
             or (not text and (ref or inbound.get("card")))
             or prompts.is_challenge(text)
             or prompts.is_question(text)
-            or (bool(state.get("pending_question"))
-                and not prompts._REPORT_WORDS.search(text))
         )
         if detail_only:
             draft = dict(previous)

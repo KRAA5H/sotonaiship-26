@@ -48,7 +48,8 @@ def plan_from_model(model, text):
             "dialogue_act": "question", "action": "answer",
             "incident_patch": {}, "service_candidates": [category],
             "specialist_request": None, "clarification": None,
-            "fact_request": {"question": text, "category_id": "general"},
+            "fact_request": {"question": text,
+                             "category_id": category if category != "unclear_other" else "general"},
             "escalation": None, "retracted_claims": [], "reason_codes": [],
         }
     patch = {"set": {"description": model.get("description") or text,
