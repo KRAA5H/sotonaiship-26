@@ -37,6 +37,7 @@ import priority
 import reports_db
 import tools
 from graph.store import TaskStore
+from council.store import CouncilStore
 
 import loader  # noqa: E402  (agent/loader.py, on the path via tools)
 
@@ -142,6 +143,9 @@ def task_page(token):
     task = TaskStore().get_by_token(token)
     if not task:
         return Response("No task found.", 404, mimetype="text/plain")
+    store = CouncilStore()
+    form = store.form(task["kind"]) or store.service(task["kind"]) or {}
+    form_url = form.get("url") if "url" in form else form.get("form_url") or form.get("page_url")
     fields = "".join(
         f"<li><b>{key}</b>: {value}</li>"
         for key, value in (task.get("fields") or {}).items())
@@ -150,7 +154,9 @@ def task_page(token):
     <p>Southampton City Council</p><h1>{task['kind']} task</h1>
     <p>Status: <b>{task['status']}</b></p>
     <p>Reference: <b>{task.get('external_ref') or 'not created yet'}</b></p>
-    <ul>{fields}</ul><p>This is a prepared case in the council sandbox. Nothing was submitted unless a reference says so.</p>
+    <ul>{fields}</ul>
+    {f'<p><a href="{form_url}">Open the official form</a></p>' if form_url else ''}
+    <p>This is a prepared case. Nothing was submitted unless a confirmed reference says so.</p>
     </body>""", mimetype="text/html")
 
 
@@ -160,16 +166,43 @@ def council_tasks():
     if denied:
         return denied
     rows = TaskStore().all()
+    store = CouncilStore()
     body = "".join(
         f"<tr><td>{task['task_id']}</td><td>{task['kind']}</td><td>{task['status']}</td>"
-        f"<td>{task.get('external_ref') or ''}</td><td>{task.get('fields') or {}}</td></tr>"
+        f"<td>{task.get('external_ref') or ''}</td><td>{task.get('fields') or {}}</td>"
+        f"<td>{(store.form(task['kind']) or {}).get('url') or (store.service(task['kind']) or {}).get('page_url') or ''}</td></tr>"
         for task in rows)
     return Response(f"""<!doctype html><title>Council tasks</title>
-    <body style="font:16px system-ui;margin:2rem"><h1>Council tasks</h1>
-    <p><a href="/council">Back to reports</a></p>
+    <body style="font:16px system-ui;margin:2rem"><h1>Council tasks and form details</h1>
+    <p><a href="/council">Back to reports</a> · <a href="/council/forms">Forms</a></p>
     <table border="1" cellpadding="6" cellspacing="0"><thead><tr>
-    <th>Task</th><th>Kind</th><th>Status</th><th>Reference</th><th>Fields</th>
-    </tr></thead><tbody>{body or '<tr><td colspan=5>No tasks yet.</td></tr>'}</tbody></table>
+    <th>Task</th><th>Kind</th><th>Status</th><th>Reference</th><th>Fields</th><th>Form</th>
+    </tr></thead><tbody>{body or '<tr><td colspan=6>No tasks yet.</td></tr>'}</tbody></table>
+    </body>""", mimetype="text/html")
+
+
+@site.get("/council/forms")
+def council_forms():
+    denied = _council_denied()
+    if denied:
+        return denied
+    store = CouncilStore()
+    services = store.services()
+    rows = []
+    for service in services:
+        form = store.form(service["service_id"]) or {}
+        rows.append(
+            f"<tr><td>{service['service_id']}</td><td>{service['name']}</td>"
+            f"<td>{service['group_name']}</td><td>{service['status']}</td>"
+            f"<td>{form.get('url') or service.get('form_url') or service.get('page_url') or ''}</td>"
+            f"<td>{form.get('fields') or 'not parsed'}</td></tr>")
+    return Response(f"""<!doctype html><title>Council forms</title>
+    <body style="font:16px system-ui;margin:2rem"><h1>Council services and forms</h1>
+    <p><a href="/council">Back to reports</a> · <a href="/council/tasks">Tasks</a></p>
+    <p>Fields are only shown where a verified form inventory exists. Empty means not parsed yet.</p>
+    <table border="1" cellpadding="6" cellspacing="0"><thead><tr>
+    <th>Service</th><th>Name</th><th>Group</th><th>Status</th><th>Form</th><th>Fields</th>
+    </tr></thead><tbody>{''.join(rows)}</tbody></table>
     </body>""", mimetype="text/html")
 
 

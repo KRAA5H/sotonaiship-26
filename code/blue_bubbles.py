@@ -49,7 +49,7 @@ import tools  # noqa: F401  patched by tests; the agents use it
 import triage  # noqa: F401
 import voice  # noqa: F401  patched by tests; the agents use it
 from agents import ORCHESTRATOR, Turn
-from graph import service
+import channel
 from agents import memory
 from agents.location_agent import is_location_card
 from agents.triage_agent import (  # noqa: F401  the names this module has always offered
@@ -66,6 +66,7 @@ from geo import southampton as city
 from website import site
 
 MODE = (os.getenv("MODE") or "graph").lower()
+ONBOARDING = channel.ONBOARDING
 
 # Never reply to the server's own account. Replying to yourself creates an
 # infinite loop, because the reply itself arrives as a new inbound message.
@@ -370,23 +371,21 @@ def handle_inbound(inbound):
 
         if MODE == "graph":
             sender = inbound.get("sender") or chat_guid
-            graph_inbound = {
-                "sender": sender,
-                "chat": chat_guid,
-                "text": text,
-                "message_guid": inbound.get("message_guid") or "",
-                "photo_ref": photo_ref,
-                "card": card,
-            }
+            if channel.first_contact(sender):
+                deliver(chat_guid, ONBOARDING)
             started = time.perf_counter()
-            result = service.get_runtime().turn(graph_inbound)
+            result = channel.turn(sender, text, photo_ref=photo_ref, card=card,
+                                  message_guid=inbound.get("message_guid") or "",
+                                  chat=chat_guid)
             print(f"[graph] {round((time.perf_counter() - started) * 1000)}ms "
                   f"{result['kind']} to={chat_guid}")
             for bubble in result.get("bubbles") or []:
                 deliver(chat_guid, bubble)
             if result.get("url"):
+                deliver(chat_guid, _link_label(result["url"]))
                 deliver(chat_guid, result["url"])
             if result.get("source_url"):
+                deliver(chat_guid, _link_label(result["source_url"]))
                 deliver(chat_guid, result["source_url"])
             return
 
@@ -421,6 +420,7 @@ def health():
             "agents": ["safety", "triage", "photo", "category", "location", "duplicate",
                        "records", "reply", "status"],
             "text_provider": "deepseek" if deepseek else "openrouter",
+            "text_key": llm.key_source("DEEPSEEK_API_KEY") if deepseek else llm.key_source("LLM_API_KEY"),
             "text_model": llm.DS_MODEL,
             "thinking": "off",
             "vision_model": llm.DS_MODEL if deepseek else llm.VISION_MODEL,

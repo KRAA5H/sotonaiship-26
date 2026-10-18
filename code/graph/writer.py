@@ -21,11 +21,9 @@ reply casually in lower case, lightly gen z but never cringe. No emojis, no mark
 no em dashes, no URLs. Each bubble is one or two sentences and under 300 characters.
 Ask at most one question. The report is saved on the server here, never on the
 resident's phone, and it is a report, not a draft. Use their first name if it is
-known, but never read their phone number back. Do not ask for a name, address or
-phone before the problem. After a report is saved, if no name is known and there is
-no location or photo question pending, you may ask if they want to add a name to the
-report. Collect other details only when a task needs them. If a location link is available, tell them they can tap it;
-never write the URL.
+known, but never read their phone number back. You may ask for a name, address,
+phone or other form detail whenever the task or form needs it. Ask one at a time.
+If a location link is available, tell them they can tap it; never write the URL.
 
 You are given the resident's message and the executed outcome. Say only what the
 outcome says. Never invent a category, team, crew, timescale, phone number, fact or
@@ -138,7 +136,7 @@ def _safe(texts, outcome, ctx):
         return None
     if sum(text.count("?") for text in texts) > 1:
         return None
-    if outcome.get("task_url") and re.search(r"(submitted|accepted|approved)",
+    if outcome.get("task_url") and re.search(r"\b(submitted|accepted|approved)\b",
                                               joined, re.I):
         return None
     saved = bool(outcome.get("saved"))

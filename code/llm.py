@@ -30,11 +30,32 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
 HERE = Path(__file__).resolve().parent
-load_dotenv(HERE.parent / ".env")   # root .env, where DEEPSEEK_API_KEY lives
-load_dotenv(HERE / ".env")          # code/.env, where the OpenRouter key lives
+PROJECT_ENV = (HERE.parent / ".env", HERE / ".env")   # root: DeepSeek key, code/: OpenRouter key
+
+# The project's .env must win over a key already exported in the shell.
+# load_dotenv never overrides, so a machine-level DEEPSEEK_API_KEY (the one the
+# pi agent uses for itself) would silently pay for this project's calls instead.
+# Only keys the files actually define are overridden; the rest of the process
+# environment is left untouched.
+_project_keys = {}
+for _env_path in PROJECT_ENV:
+    _project_keys.update({k: v for k, v in dotenv_values(_env_path).items() if v})
+os.environ.update(_project_keys)
+
+
+def key_source(name):
+    """Project .env file that supplied a key, with its last four characters.
+
+    Never the key itself: the point is to see which key is in use when two of
+    them have the same name, not to put a secret in a log.
+    """
+    for path in PROJECT_ENV:
+        if _project_keys.get(name):
+            return f"{path.name} (...{_project_keys[name][-4:]})"
+    return "environment"
 
 DS_BASE = (os.getenv("DEEPSEEK_BASE_URL") or "https://api.deepseek.com").rstrip("/")
 DS_MODEL = os.getenv("DEEPSEEK_MODEL") or "deepseek-flash"

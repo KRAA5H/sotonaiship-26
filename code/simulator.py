@@ -25,6 +25,7 @@ from pathlib import Path
 from flask import Flask, jsonify, make_response, request
 
 import blue_bubbles as bot
+import channel
 import messages  # noqa: F401
 import pin_service
 import triage  # noqa: F401  patched by tests; the orchestrator calls it
@@ -63,11 +64,9 @@ def run_turn(sender, text, image=None, link_base=None):
     """The same path as the webhook, minus the phone: one graph owns the turn."""
     started = time.time()
     if MODE == "graph":
-        inbound = {"sender": sender, "chat": sender, "text": text,
-                   "message_guid": uuid.uuid4().hex}
-        if image:
-            inbound["photo_ref"] = (f"sim-{uuid.uuid4().hex[:12]}", "image/jpeg")
-        result = service.get_runtime().turn(inbound)
+        photo_ref = (f"sim-{uuid.uuid4().hex[:12]}", "image/jpeg") if image else None
+        result = channel.turn(sender, text, photo_ref=photo_ref,
+                              message_guid=uuid.uuid4().hex, chat=sender)
         draft = result["state"].get("incident_draft") or {}
         outcome = result["state"].get("executed_outcome") or {}
         label = (prompts.playbook(draft.get("category_id") or "") or {}).get("label")
@@ -230,7 +229,7 @@ PAGE = """<!doctype html>
     <span class="sub">simulator</span>
   </header>
   <div id="chat">
-    <div class="row bot"><div class="bubble">hey, this is soton council. what can we help with?</div></div>
+    <div class="row bot"><div class="bubble">__ONBOARDING__</div></div>
   </div>
   <div class="tools">
     <label><input type="checkbox" id="simulate" checked> simulate typing</label>
@@ -284,10 +283,17 @@ PAGE = """<!doctype html>
   simulate.onchange = function () { localStorage.setItem('simulate', simulate.checked ? '1' : '0'); };
   if (localStorage.getItem('simulate') === '0') simulate.checked = false;
 
+  function linkLabel(url) {
+    if (url.indexOf('/p/') !== -1) return 'share your location here';
+    if (url.indexOf('/t/') !== -1) return 'open your task';
+    if (url.indexOf('/r/') !== -1) return 'follow your report';
+    return 'source';
+  }
+
   function linkBubble(url) {
     var row = add('bot', '', 'link');
     var a = document.createElement('a');
-    a.href = url; a.textContent = url; a.target = '_blank'; a.rel = 'noopener';
+    a.href = url; a.textContent = linkLabel(url); a.target = '_blank'; a.rel = 'noopener';
     row.firstChild.textContent = '';
     row.firstChild.appendChild(a);
   }
@@ -369,7 +375,7 @@ def outbox():
 @app.get("/")
 def page():
     """Every page load starts a brand new chat, never the previous one."""
-    response = make_response(PAGE)
+    response = make_response(PAGE.replace("__ONBOARDING__", channel.ONBOARDING))
     response.headers["Cache-Control"] = "no-store"
     response.set_cookie("sim_sid", uuid.uuid4().hex[:12], max_age=86400, samesite="Lax")
     return response
