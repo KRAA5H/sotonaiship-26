@@ -9,6 +9,10 @@ Three places, no more:
 
 ---
 
+## 02:28, Sunday: graph contracts
+
+- Step 2: `code/graph/{state,copy_rules,schemas}.py` and `code/test_graph_schemas.py`. 36 contract tests. `ExecutedOutcome`, set/clear/add patch semantics with append-only evidence and a required version, suppressed bubble plans, policy-owned fields, and copy constants that match `voice.py`. 519 tests pass, 4 skips, 31/31 message evaluation. The Step 2 doctor blocked v1; this is the revised contract. D51 and D57 recorded.
+
 ## 02:17, Sunday: trajectory fixtures
 
 - Step 1: eight fixtures in `code/eval/trajectories/cases.json` and their loader in `code/test_trajectories.py`. Four agent cases run against the legacy path: tree capture passes, challenge retraction fails (no retraction, generic link), photo after text passes, two incidents passes. Four graph and channel cases are loaded and skipped until those runtimes exist. 482 tests pass, 4 skips, 31/31 message evaluation. Plan: `plans/STEP-01-trajectories.md`.
