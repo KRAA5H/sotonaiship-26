@@ -213,11 +213,11 @@ Review focus: no invented requirement. If the source does not say it, the playbo
 
 ### [ ] Step 6. Graph shell (worker + reviewer, 2 hours)
 
-Files: `code/graph/nodes.py` (hydrate, precheck, cheap, capture), `code/graph/build.py`, `code/graph/runtime.py`, `code/test_graph_runtime.py`, `code/requirements.txt`.
+Files: `code/graph/nodes.py` (hydrate, precheck, cheap, capture), `code/graph/build.py`, `code/graph/runtime.py`, `code/test_graph_runtime.py`, `code/test_trajectories.py` (graph runner scaffold), `code/requirements.txt`.
 
 Install and pin `langgraph` and `langgraph-checkpoint-sqlite`. Deps injected. `MemorySaver` in tests.
 
-Done when: `python code/graph/runtime.py --turn "there is a tree fallen on the road"` with a fake model writes one capture row and shows the decision. Emergency short-circuits with zero model calls. No channel changes.
+Done when: `python code/graph/runtime.py --turn "there is a tree fallen on the road"` with a fake model writes one capture row and shows the decision. `python code/graph/runtime.py --selftest` runs the agent-layer fixtures and reports the graph cases as not implemented yet, rather than skipping them silently. Emergency short-circuits with zero model calls. No channel changes. D53 is signed before this step, because the graph replaces the orchestrator here, not at cutover.
 
 Review focus: dependency injection, no module-level globals, and the precheck order.
 
@@ -253,21 +253,21 @@ Review focus: every claim is traceable to the outcome or a fact.
 
 ### [ ] Step 10. Corrections and restart (worker + reviewer, 1.5 hours)
 
-Files: `code/graph/nodes.py` (hydrate, reconsider), `code/test_graph_corrections.py`.
+Files: `code/graph/nodes.py` (hydrate, reconsider), `code/test_graph_corrections.py`, `code/test_trajectories.py`, `code/eval/trajectories/cases.json` (four safety cases: question not captured, emergency not saved, utility not saved, outside Southampton), `code/web/templates/resident.html`, `code/website.py`, `code/messages.py`, `code/tools.py`, `code/test_website.py`, `code/test_messages.py`.
 
-Persist claims, detect a challenge deterministically, retract, preserve the incident, resume the pending question. Restart test with `SqliteSaver`.
+Persist claims, detect a challenge deterministically, retract, preserve the incident, resume the pending question. Restart test with `SqliteSaver`. Add the four safety fixtures and update the fixture count from 8 to 12. Fix the live truth contradiction: `resident.html` and `website.STEPS` currently claim a council officer is looking at the report and that the council resolved it.
 
-Done when: the tree trajectory passes, one row, retraction recorded, pending question survives a new runtime instance.
+Done when: the tree trajectory passes, one row, retraction recorded, pending question survives a new runtime instance, the four safety cases pass, and `/r/<token>` never claims council receipt (D55).
 
 Review focus: correction cannot create a second report, and cannot delete evidence.
 
 ### [ ] Step 11. Channel cutover (worker + reviewer, 1 hour)
 
-Files: `code/blue_bubbles.py`, `code/simulator.py`, `code/test_bot.py`.
+Files: `code/blue_bubbles.py`, `code/simulator.py`, `code/test_bot.py`, `code/eval/messages.py`, `code/test_agents.py` (migrate or retire), `code/agents/triage_agent.py` (legacy shim only).
 
-`MODE=graph` calls `TurnRuntime`. `MODE=legacy` keeps the old path. Delivery drains the outbox.
+`MODE=graph` calls `TurnRuntime`. `MODE=legacy` keeps the old path. Delivery drains the outbox. Rewire the message evaluation and the legacy agent tests to the graph; do not let cutover delete the tests that prove the product.
 
-Done when: the same input produces the same rows and bubbles through the webhook and the simulator. Legacy still runs behind the flag.
+Done when: the same input produces the same rows and bubbles through the webhook and the simulator, the message evaluation runs against the graph, the legacy tests are migrated or explicitly retired, the new test count is recorded, and `MODE=legacy` still works.
 
 Review focus: guards preserved: self-ignore, stale skip, GUID dedupe, burst, one turn per sender.
 
@@ -324,7 +324,9 @@ Manual checks: one tree message captures one row and asks once; a challenge retr
 
 ## Open items
 
-- D51 to D57 are signed one line at a time, in the step that needs them: D51 at Step 3, D52 and D55 at Step 10, D53 at Step 11, D54 at Step 1, D56 at Step 3, D57 before Step 2. No decision number changes in Step 0.
+- D51 to D57 are signed one line at a time, in the step that needs them: D51 at Step 3, D52 and D55 at Step 10, **D53 at Step 6** (the graph replaces the orchestrator when the nodes are written, not at cutover), D54 at Step 1, D56 at Step 3, D57 before Step 2. D51, D56 and D57 are already recorded.
 - LangGraph install happens in Step 6, with its own approval. If it fails on the demo machine, stop and report.
+- The trajectory runner is the gate at Steps 6, 10 and 12. A `layer: graph` case may not stay skipped after Step 10.
+- Safety and never-saved fixtures are added at Step 10, before cutover, and the fixture count goes from 8 to 12.
 - One commit per step. If a step passes 400 changed lines or two hours, stop and split it.
 - If a playbook group fails its trajectory slice after Step 12, use the D60 promotion rule. Two promotions maximum.
