@@ -9,6 +9,10 @@ Three places, no more:
 
 ---
 
+## 03:58, Sunday: graph shell
+
+- Step 6: `code/graph/{nodes,build,runtime}.py`, 13 runtime tests and a graph runner scaffold. `langgraph==1.2.16`, `langgraph-checkpoint-sqlite==3.1.2`. `--turn` prints a capture draft and writes no report; `--selftest` runs tree, duplicate, greeting, silence, emergency and empty. D53 recorded. 640 tests, 4 skips, 31/31.
+
 ## 03:55, Sunday: truth pass
 
 - D55: the resident page, `website.STEPS`, `tools.STATUS_TEXT`, the greeting and the photo ask now say a report is saved here and has not gone to the council. `messages` no longer asserts trunk-road ownership. The status copy is local, not council action. 625 tests, 4 skips, 31/31.

@@ -23,6 +23,9 @@ import tools  # noqa: E402
 import triage  # noqa: E402
 import voice  # noqa: E402
 from agents import Turn, memory  # noqa: E402
+from graph import store  # noqa: E402
+from graph.runtime import Deps, TurnRuntime  # noqa: E402
+from langgraph.checkpoint.memory import MemorySaver  # noqa: E402
 
 CASES_FILE = Path(__file__).resolve().parent / "eval" / "trajectories" / "cases.json"
 O = agents.ORCHESTRATOR
@@ -234,6 +237,28 @@ class LegacyStatusTest(unittest.TestCase):
             if case["layer"] in ("graph", "channel"):
                 with self.subTest(case=case["name"]):
                     self.skipTest(f"{case['name']}: {case['layer']} runtime not built yet")
+
+
+class GraphScaffoldTest(unittest.TestCase):
+    def test_the_tree_case_reaches_a_capture_draft(self):
+        case = next(item for item in load_cases() if item["name"] == "tree_capture")
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "kerbside.db"
+            store.migrate(db)
+            runtime = TurnRuntime(Deps(threads=store.ThreadStore(db), playbooks={}),
+                                  MemorySaver())
+            result = runtime.turn({"sender": "+447700900002",
+                                   "text": case["turns"][0]["text"],
+                                   "message_guid": "g-tree"})
+        self.assertEqual(result["kind"], "captured")
+        self.assertIn("tree", result["state"]["incident_draft"]["description"])
+        self.assertEqual(result["state"]["incident_draft"]["capture_state"], "captured")
+
+    def test_the_remaining_graph_cases_are_named_not_skipped(self):
+        pending = {"wrong_specialist": "Step 12", "null_patch": "Step 10",
+                   "restart": "Step 10"}
+        found = {item["name"] for item in load_cases() if item["layer"] == "graph"}
+        self.assertEqual(found, set(pending))
 
 
 if __name__ == "__main__":

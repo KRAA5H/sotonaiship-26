@@ -4,3 +4,7 @@ python-dotenv
 
 # Only needed for MODE=agent (the multi-turn IntakeAgent path).
 # anthropic
+
+# Graph runtime (Step 6). Pinned after install on 2026-10-18.
+langgraph==1.2.16
+langgraph-checkpoint-sqlite==3.1.2
