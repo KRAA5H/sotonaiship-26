@@ -93,7 +93,7 @@ def score_duplicates(proposed, labels):
     rows = []
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "eval.db"
-        reports_db.init_db(path, seed=False)
+        reports_db.init_db(path)
         conn = reports_db.connect(path)
         try:
             for kind in ("repeats", "pairs", "negatives"):

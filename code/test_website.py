@@ -21,7 +21,7 @@ import reports_db
 import tools
 import website
 
-FAKE = json.loads(reports_db.FAKE_REPORTS_PATH.read_text(encoding="utf-8"))
+from fixtures import REPORTS as FAKE, seed as seed_fixtures  # noqa: E402
 PASSWORD = "test-password"
 
 
@@ -51,6 +51,7 @@ class SiteCase(unittest.TestCase):
 
         self.tmp = tempfile.TemporaryDirectory()
         self.path = Path(self.tmp.name) / "site.db"
+        seed_fixtures(self.path)
         self.app = website.create_app(self.path, PASSWORD)
         self.client = self.app.test_client()
         self.conn = reports_db.connect(self.path)

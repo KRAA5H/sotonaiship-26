@@ -84,13 +84,13 @@ class MigrationTest(unittest.TestCase):
     def test_adds_both_columns_to_an_existing_file(self):
         legacy_db(self.path)
         self.assertEqual(len(columns(self.path)), 11)
-        self.assertEqual(reports_db.init_db(self.path, seed=False), 1)
+        self.assertEqual(reports_db.init_db(self.path), 1)
         self.assertIn("photo_guid", columns(self.path))
         self.assertIn("photo_mime", columns(self.path))
 
     def test_keeps_the_existing_rows(self):
         legacy_db(self.path)
-        reports_db.init_db(self.path, seed=False)
+        reports_db.init_db(self.path)
         conn = reports_db.connect(self.path)
         try:
             row = conn.execute(
@@ -105,16 +105,17 @@ class MigrationTest(unittest.TestCase):
 
     def test_running_twice_changes_nothing(self):
         legacy_db(self.path)
-        reports_db.init_db(self.path, seed=False)
+        reports_db.init_db(self.path)
         after_first = columns(self.path)
-        self.assertEqual(reports_db.init_db(self.path, seed=False), 1)
+        self.assertEqual(reports_db.init_db(self.path), 1)
         self.assertEqual(columns(self.path), after_first)
         self.assertEqual(after_first.count("photo_guid"), 1)
         self.assertEqual(after_first.count("photo_mime"), 1)
 
     def test_a_fresh_file_gets_the_columns_from_the_schema(self):
+        # A fresh file starts empty: real reports come from import_fixmystreet.py or the agent.
         count = reports_db.init_db(self.path)
-        self.assertGreater(count, 0)
+        self.assertEqual(count, 0)
         self.assertIn("photo_guid", columns(self.path))
         self.assertIn("photo_mime", columns(self.path))
 

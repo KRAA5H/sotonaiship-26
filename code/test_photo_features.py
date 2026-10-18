@@ -15,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import fixtures
 import photo_features
 import priority
 import reports_db
@@ -124,7 +125,7 @@ class NeverALocationTest(unittest.TestCase):
     def test_storing_features_never_touches_the_report_location(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "f.db"
-            reports_db.init_db(path)
+            fixtures.seed(path)
             conn = reports_db.connect(path)
             try:
                 before = conn.execute("SELECT location, area FROM reports WHERE id = 'R-0001'").fetchone()
@@ -184,13 +185,14 @@ class CouncilPageTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.path = Path(self.tmp.name) / "c.db"
+        fixtures.seed(self.path)
         self.client = website.create_app(self.path, "pw").test_client()
         self.auth = {"Authorization": "Basic " + base64.b64encode(b"officer:pw").decode()}
 
     def reports(self):
         return {r["id"]: r for r in self.client.get("/council/reports.json", headers=self.auth).get_json()["reports"]}
 
-    def test_synthetic_data_has_no_model_text(self):
+    def test_fixture_data_has_no_model_text(self):
         self.assertTrue(all(r["photo_features"] is None for r in self.reports().values()))
 
     def test_page_gets_validated_features_only(self):

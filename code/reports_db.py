@@ -1,14 +1,16 @@
 """The reports database: one SQLite file built from dashboard/schema.sql.
 
 The schema is the table in dashboard/SCHEMA.md: the 11 report columns, the two
-photo reference columns, and "area", which of Southampton's 31 named areas
+photo reference columns, source and source_url (internal only), and "area", which of Southampton's 31 named areas
 (the Wikipedia list of 30, plus Portswood) the report falls into, matched by
 LocationService from the resident's GPS coordinates. The file is local to the
 demo Mac and never committed (*.db is in .gitignore).
 
 Run:
-  python code/reports_db.py           create the file and load the synthetic reports if empty
-  python code/reports_db.py --reset   delete the file first, then do the same
+  python code/reports_db.py           create the file (empty) if it is missing
+  python code/reports_db.py --reset   delete the file first, then create it empty
+
+Real reports are loaded by code/import_fixmystreet.py; the agent adds its own.
 """
 
 import argparse
@@ -24,7 +26,6 @@ load_dotenv(Path(__file__).with_name(".env"))
 
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_PATH = ROOT / "dashboard" / "schema.sql"
-FAKE_REPORTS_PATH = ROOT / "dashboard" / "fake_reports.json"
 # Named kerbside.db so it never collides with database.py's older reports.db.
 DB_PATH = Path(os.getenv("DB_PATH") or Path(__file__).with_name("kerbside.db"))
 
@@ -33,12 +34,15 @@ COLUMNS = (
     "severity", "location", "area",
     "description", "has_photo", "photo_guid", "photo_mime", "duplicate_of",
     "reporter_ref", "link_token", "status_changed_at", "photo_features",
+    "source", "source_url",
 )
 # What the council dashboard may see. reporter_ref never leaves the database,
 # and neither does the attachment guid: it is a key to the resident's photo, not
 # something the dashboard reads. The page gets photo_stored instead and asks the
 # password-protected /council/photos/<id> route for the image.
-COUNCIL_COLUMNS = tuple(c for c in COLUMNS if c not in ("reporter_ref", "photo_guid", "photo_mime"))
+# source and source_url are internal: imported rows look like any other row.
+COUNCIL_COLUMNS = tuple(c for c in COLUMNS
+                        if c not in ("reporter_ref", "photo_guid", "photo_mime", "source", "source_url"))
 STATUSES = ("new", "in_review", "resolved")
 # The webhook threads and the website share one file, so a writer waits for
 # the lock instead of failing with "database is locked".
@@ -49,6 +53,8 @@ PHOTO_COLUMNS = (("photo_guid", "TEXT"), ("photo_mime", "TEXT"))
 # D51: capture and routing are policy-owned and default to the honest state.
 POLICY_COLUMNS = (("capture_state", "TEXT NOT NULL DEFAULT 'captured'"),
                   ("routing_status", "TEXT NOT NULL DEFAULT 'needs_review'"))
+# Where a row came from: our agent, or an imported FixMyStreet report. Internal only.
+SOURCE_COLUMNS = (("source", "TEXT NOT NULL DEFAULT 'agent'"), ("source_url", "TEXT"))
 
 
 def connect(path=None):
@@ -66,16 +72,17 @@ def connect(path=None):
 def council_reports(conn):
     """Every report for the dashboard, newest first, without reporter_ref.
 
-    `synthetic` is worked out here from reporter_ref, so the page can label
-    synthetic rows without ever receiving the reference itself.
+    An imported report has no resident to send a link to, so its link_token
+    comes back empty and the page shows no resident view for it. Nothing
+    else about the row says where it came from.
     """
+    columns = [c if c != "link_token" else
+               "CASE WHEN source = 'fixmystreet' THEN NULL ELSE link_token END AS link_token"
+               for c in COUNCIL_COLUMNS]
     rows = conn.execute(
-        f"SELECT {', '.join(COUNCIL_COLUMNS)}, "
-        "COALESCE(reporter_ref LIKE 'synthetic-%', 0) AS synthetic, "
-        # A real photo is one BlueBubbles holds (photo_guid); a synthetic demo row
-        # with has_photo gets a placeholder image.
-        "(COALESCE(photo_guid, '') != '' OR (COALESCE(reporter_ref LIKE 'synthetic-%', 0) AND has_photo)) "
-        "AS photo_stored "
+        f"SELECT {', '.join(columns)}, "
+        # A photo the dashboard can show is one BlueBubbles holds (photo_guid).
+        "COALESCE(photo_guid, '') != '' AS photo_stored "
         "FROM reports ORDER BY created_at DESC"
     ).fetchall()
     return [dict(row) for row in rows]
@@ -224,12 +231,10 @@ def set_photo_features(conn, report_id, raw):
 def council_photo_source(conn, report_id):
     """What the council photo route needs to find one report's photo, or None.
 
-    photo_guid/photo_mime point at the resident's photo in BlueBubbles; synthetic
-    demo rows have neither and are given a placeholder by the route.
+    photo_guid/photo_mime point at the resident's photo in BlueBubbles.
     """
     row = conn.execute(
-        "SELECT photo_guid, photo_mime, category_id, has_photo, "
-        "COALESCE(reporter_ref LIKE 'synthetic-%', 0) AS synthetic FROM reports WHERE id = ?",
+        "SELECT photo_guid, photo_mime, category_id, has_photo FROM reports WHERE id = ?",
         (report_id,),
     ).fetchone()
     return dict(row) if row else None
@@ -246,8 +251,8 @@ def _ensure_area_column(conn):
         conn.execute("ALTER TABLE reports ADD COLUMN area TEXT")
 
 
-def init_db(path=None, seed=True):
-    """Create the table if missing, migrate it, then seed the synthetic reports.
+def init_db(path=None):
+    """Create the table if missing and migrate it. Never adds rows.
 
     Safe to call on every start. Returns the number of rows in reports.
     """
@@ -261,16 +266,13 @@ def init_db(path=None, seed=True):
             conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
         _add_photo_columns(conn)
         _add_policy_columns(conn)
+        _add_columns(conn, SOURCE_COLUMNS)
 
         _ensure_area_column(conn)
         for column in ("status_changed_at", "photo_features"):
             _ensure_column(conn, column)
 
-        count = conn.execute("SELECT COUNT(*) FROM reports").fetchone()[0]
-        if seed and count == 0:
-            load_reports(conn, json.loads(FAKE_REPORTS_PATH.read_text(encoding="utf-8")))
-            count = conn.execute("SELECT COUNT(*) FROM reports").fetchone()[0]
-        return count
+        return conn.execute("SELECT COUNT(*) FROM reports").fetchone()[0]
     finally:
         conn.close()
 
@@ -289,6 +291,19 @@ def _add_photo_columns(conn):
             conn.execute(f"ALTER TABLE reports ADD COLUMN {name} {kind}")
         except sqlite3.OperationalError as error:
             # A second process added the column between the check and the ALTER.
+            if "duplicate column" not in str(error).lower():
+                raise
+
+
+def _add_columns(conn, columns):
+    """Additive migration: add any of these (name, type) columns that are missing."""
+    present = {row["name"] for row in conn.execute("PRAGMA table_info(reports)")}
+    for name, kind in columns:
+        if name in present:
+            continue
+        try:
+            conn.execute(f"ALTER TABLE reports ADD COLUMN {name} {kind}")
+        except sqlite3.OperationalError as error:
             if "duplicate column" not in str(error).lower():
                 raise
 
@@ -321,6 +336,7 @@ def load_reports(conn, reports):
         row["capture_state"] = row["capture_state"] or "captured"
         row["routing_status"] = row["routing_status"] or "needs_review"
         row["has_photo"] = int(bool(row["has_photo"]))
+        row["source"] = row["source"] or "agent"
         rows.append(row)
 
     placeholders = ", ".join(f":{column}" for column in COLUMNS)
@@ -369,20 +385,6 @@ def most_common_category(conn):
     return dict(row) if row else None
 
 
-def reports_by_area(conn):
-    """Returns every area with its report count, busiest first. Reports
-    with no matched area (e.g. the location link was never completed, or
-    this row predates the area column) are grouped under 'Unknown' rather
-    than silently dropped."""
-    rows = conn.execute("""
-        SELECT COALESCE(area, 'Unknown') AS area, COUNT(*) AS count
-        FROM reports
-        GROUP BY area
-        ORDER BY count DESC
-    """).fetchall()
-    return [dict(row) for row in rows]
-
-
 OPEN_STATUSES = ("new", "in_review")
 
 
@@ -394,8 +396,8 @@ def summary_stats(conn):
     only on reports whose status has changed at least once.
     """
     rows = conn.execute(
-        "SELECT category_id, status, severity, has_photo, duplicate_of, created_at, status_changed_at, "
-        "COALESCE(reporter_ref LIKE 'synthetic-%', 0) AS synthetic FROM reports"
+        "SELECT category_id, status, severity, has_photo, duplicate_of, created_at, status_changed_at "
+        "FROM reports"
     ).fetchall()
     open_rows = [r for r in rows if r["status"] in OPEN_STATUSES]
 
@@ -412,7 +414,6 @@ def summary_stats(conn):
     return {
         "total": len(rows),
         "open": len(open_rows),
-        "synthetic": sum(r["synthetic"] for r in rows),
         "open_by_severity": by_severity,
         "open_by_category": dict(sorted(by_category.items(), key=lambda kv: (-kv[1], kv[0]))),
         "with_photo": sum(r["has_photo"] for r in rows),
@@ -423,7 +424,7 @@ def summary_stats(conn):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Create and seed the reports database")
+    parser = argparse.ArgumentParser(description="Create the reports database")
     parser.add_argument("--reset", action="store_true", help="delete the database file first")
     args = parser.parse_args()
 

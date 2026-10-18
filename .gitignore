@@ -18,6 +18,8 @@ __pycache__/
 # Real FixMyStreet reports used only by the evaluation (code/eval/fms/).
 # Raw downloads and any file holding report text stay local: the repo may go public.
 code/eval/fms/raw/
+# Raw FixMyStreet import cache (code/import_fixmystreet.py)
+code/data/fixmystreet_cache/
 code/eval/fms/*.local.*
 # Report photos are served only behind the council password. Real ones stay
 # local; only the synthetic placeholders are committed.

@@ -382,7 +382,9 @@ def get_report_status(link_token, conn=None):
     def work(c):
         row = c.execute(
             "SELECT created_at, category_id, status, location, area, description, has_photo, "
-            "photo_guid, photo_mime, duplicate_of FROM reports WHERE link_token = ?",
+            "photo_guid, photo_mime, duplicate_of FROM reports WHERE link_token = ? "
+            # An imported FixMyStreet report has no resident here, so no resident page.
+            "AND COALESCE(source, 'agent') != 'fixmystreet'",
             (link_token,),
         ).fetchone()
         if row is None:

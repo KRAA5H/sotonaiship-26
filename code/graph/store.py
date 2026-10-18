@@ -95,7 +95,7 @@ def _now():
 
 def migrate(path=None):
     """Create the reports columns and the four graph tables. Idempotent."""
-    reports_db.init_db(path, seed=False)
+    reports_db.init_db(path)
     conn = reports_db.connect(path)
     try:
         conn.executescript(TABLES)

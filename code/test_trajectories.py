@@ -156,7 +156,7 @@ class LegacyStatusTest(unittest.TestCase):
     def run_case(self, case, sender="+447700900001"):
         case_dir = Path(tempfile.mkdtemp(dir=self.tmp.name))
         db_path = case_dir / "kerbside.db"
-        reports_db.init_db(db_path, seed=False)
+        reports_db.init_db(db_path)
         queue = [dict(turn["model"]) for turn in case["turns"] if turn.get("model")]
         replies = []
         self.clear_memory()

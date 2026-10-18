@@ -17,5 +17,7 @@ CREATE TABLE reports (
   status_changed_at TEXT,                        -- when the status FIRST changed, for time to first action
   capture_state TEXT NOT NULL DEFAULT 'captured', -- captured | locally_actionable | submission_ready | submitted
   routing_status TEXT NOT NULL DEFAULT 'needs_review', -- needs_review | verified
-  photo_features TEXT                            -- JSON from the vision model, shape in code/photo_features.py; never a location
+  photo_features TEXT,                           -- JSON from the vision model, shape in code/photo_features.py; never a location
+  source        TEXT NOT NULL DEFAULT 'agent',   -- agent | fixmystreet. Internal only, never shown on a page
+  source_url    TEXT                             -- the original FixMyStreet report, imported rows only. Internal only
 );

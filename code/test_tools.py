@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import reports_db
 import tools
 
-FAKE = json.loads(reports_db.FAKE_REPORTS_PATH.read_text(encoding="utf-8"))
+from fixtures import REPORTS as FAKE, seed as seed_fixtures  # noqa: E402
 BY_ID = {r["id"]: r for r in FAKE}
 FLAGGED = [r for r in FAKE if r["duplicate_of"]]
 # One known pair from the synthetic data: (original, repeat).
@@ -29,7 +29,7 @@ def at(report, **delta):
 
 
 class DbCase(unittest.TestCase):
-    """Each test gets a fresh database seeded with the 68 synthetic reports."""
+    """Each test gets a fresh database seeded with the 68 test fixture reports."""
 
     def setUp(self):
         # save_report() geocodes the location via a real network call to
@@ -47,7 +47,7 @@ class DbCase(unittest.TestCase):
 
         self.tmp = tempfile.TemporaryDirectory()
         self.path = Path(self.tmp.name) / "test.db"
-        reports_db.init_db(self.path)
+        seed_fixtures(self.path)
         self.conn = reports_db.connect(self.path)
 
     def tearDown(self):

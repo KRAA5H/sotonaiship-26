@@ -92,6 +92,11 @@ class PinCase(unittest.TestCase):
             "BASE_URL": "https://pin.example",
         })
         self.env.start()
+        # A TriageAgent built by another test module installs hooks that write to the
+        # real kerbside.db. Pin tests must never reach it: clear them, restore after.
+        hooks = unittest.mock.patch.dict(pin_service.HOOKS, {"on_confirm": None, "describe": None})
+        hooks.start()
+        self.addCleanup(hooks.stop)
         for name in ("STORE_COORDINATES", "BOT_API_KEY", "DEMO", "CONTROLLER_NAME", "CONTACT_EMAIL", "TRUST_PROXY"):
             os.environ.pop(name, None)
         self.web = FakeWeb()

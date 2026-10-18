@@ -12,7 +12,7 @@ Submissions lock Sunday 18 Oct 2026 13:00.
 - agent/confirmed_with_websites.csv: fact sheet (54 rows, source URL + date 2026-10-17). category_id may hold several ids separated by ";".
 - agent/loader.py: joins the two on category_id.
 - dashboard/schema.sql + SCHEMA.md: reports table, 11 columns (id, created_at, category_id, status, severity, location, description, has_photo, duplicate_of, reporter_ref, link_token). No coordinates, no channel column.
-- dashboard/fake_reports.*: 68 SYNTHETIC reports. dashboard/prototype/index.html: clickable prototype.
+- code/import_fixmystreet.py: loads recent real FixMyStreet reports into kerbside.db (D67-D69); no synthetic data in the product. code/fixtures/: test-only rows. dashboard/prototype/index.html: clickable prototype, no data.
 - reference/: team/judge material. Do NOT load into the agent.
 
 ## Decisions

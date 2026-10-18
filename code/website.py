@@ -27,7 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from dotenv import load_dotenv
-from flask import Blueprint, Flask, Response, current_app, jsonify, render_template, request, send_file
+from flask import Blueprint, Flask, Response, current_app, jsonify, render_template, request
 
 load_dotenv(Path(__file__).with_name(".env"))
 
@@ -40,13 +40,7 @@ from graph.store import TaskStore
 
 import loader  # noqa: E402  (agent/loader.py, on the path via tools)
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dashboard"))
-from make_fake_photos import photo_for as synthetic_photo_for  # noqa: E402
-
 WEB_DIR = Path(__file__).with_name("web")
-# Synthetic placeholder photos. Never under WEB_DIR/static: only /council/photos/<id>
-# serves them, behind the council password. Real photos stay in BlueBubbles.
-PHOTO_DIR = Path(__file__).with_name("photos")
 # Same whitelist as photos.py: BlueBubbles converts on download, so only these two.
 IMAGE_MIMES = ("image/jpeg", "image/png")
 PHOTO_WIDTH = 1024
@@ -55,7 +49,6 @@ STEPS = (
     ("in_review", "In review", "It is being looked at on this dashboard."),
     ("resolved", "Resolved", "It is marked as resolved here."),
 )
-SYNTHETIC_PREFIX = "Synthetic example: "
 
 # Called with (report_id, status) after the council saves a status: the status
 # agent texts the resident. Hooks run after the response is decided and must
@@ -207,7 +200,6 @@ def council_stats_csv():
     rows = [
         ("generated_at", datetime.now().astimezone().isoformat(timespec="seconds")),
         ("total_reports", stats["total"]),
-        ("synthetic_reports", stats["synthetic"]),
         ("open_reports", stats["open"]),
         *((f"open_severity_{level.replace(' ', '_')}", n) for level, n in stats["open_by_severity"].items()),
         *((f"open_category_{cid}", n) for cid, n in stats["open_by_category"].items()),
@@ -252,13 +244,6 @@ def council_photo(report_id):
         if mime is None:
             return not_found
         response = Response(body, mimetype=mime)
-    elif source["synthetic"] and source["has_photo"]:
-        # Demo rows: a placeholder chosen by category, never a path from the database.
-        root = Path(current_app.config.get("PHOTO_DIR") or PHOTO_DIR).resolve()
-        path = (root / synthetic_photo_for(source["category_id"])).resolve()
-        if root not in path.parents or not path.is_file() or path.suffix.lower() != ".png":
-            return not_found
-        response = send_file(path, mimetype="image/png")
     else:
         return not_found
     response.headers["Content-Security-Policy"] = "default-src 'none'"
@@ -304,8 +289,6 @@ def resident(token):
     reached = [key for key, _, _ in STEPS].index(report["status"]) if report["status"] in reports_db.STATUSES else 0
     steps = [{"title": title, "text": text, "done": i <= reached} for i, (_, title, text) in enumerate(STEPS)]
     description = report["description"] or ""
-    if description.startswith(SYNTHETIC_PREFIX):
-        description = description[len(SYNTHETIC_PREFIX):]
     return render_template("resident.html", report=report, steps=steps, description=description,
                            status_label=dict((k, t) for k, t, _ in STEPS).get(report["status"], report["status"]))
 
@@ -314,11 +297,10 @@ from predict.web import forecast  # noqa: E402  Forecast section, /council/forec
 site.register_blueprint(forecast)
 
 
-def create_app(db_path=None, council_password=None, photo_dir=None):
+def create_app(db_path=None, council_password=None):
     app = Flask(__name__, static_folder=None)
     app.config["KERBSIDE_DB"] = db_path
     app.config["COUNCIL_PASSWORD"] = council_password
-    app.config["PHOTO_DIR"] = photo_dir
     app.register_blueprint(site)
     return app
 
