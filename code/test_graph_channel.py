@@ -30,7 +30,8 @@ class GraphWebhookTest(unittest.TestCase):
         fake = FakeRuntime()
         sent = []
         with unittest.mock.patch.object(bot, "MODE", "graph"), \
-             unittest.mock.patch.object(bot.service, "get_runtime", return_value=fake), \
+             unittest.mock.patch.object(bot.channel.service, "get_runtime", return_value=fake), \
+             unittest.mock.patch.object(bot.channel, "first_contact", return_value=False), \
              unittest.mock.patch.object(bot, "deliver",
                                        side_effect=lambda chat, text: sent.append(text)):
             bot.handle_inbound({
@@ -43,7 +44,9 @@ class GraphWebhookTest(unittest.TestCase):
         self.assertEqual(sent, [
             "Logged it here.",
             "Where is it?",
+            "follow your report",
             "https://example.test/r/" + "a" * 16,
+            "source",
             "https://www.southampton.gov.uk/example",
         ])
         self.assertEqual(fake.inbound["sender"], "+447700900321")
@@ -51,8 +54,8 @@ class GraphWebhookTest(unittest.TestCase):
 
     def test_a_shared_location_card_reaches_the_graph(self):
         fake = FakeRuntime()
-        with unittest.mock.patch.object(bot, "MODE", "graph"),              unittest.mock.patch.object(bot.service, "get_runtime", return_value=fake),              unittest.mock.patch.object(bot, "read_attachments",
-                                       return_value=(None, None, "BEGIN:VCARD END:VCARD")),              unittest.mock.patch.object(bot, "deliver"):
+        with unittest.mock.patch.object(bot, "MODE", "graph"),              unittest.mock.patch.object(bot.channel.service, "get_runtime", return_value=fake),              unittest.mock.patch.object(bot.channel, "first_contact", return_value=False),              unittest.mock.patch.object(bot, "read_attachments",
+                                        return_value=(None, None, "BEGIN:VCARD END:VCARD")),              unittest.mock.patch.object(bot, "deliver"):
             bot.handle_inbound({
                 "chat_guid": "chat-card-1",
                 "sender": "+447700900322",
@@ -61,6 +64,30 @@ class GraphWebhookTest(unittest.TestCase):
                 "attachments": [{"guid": "card-1", "transferName": "x.loc.vcf"}],
             })
         self.assertEqual(fake.inbound["card"], "BEGIN:VCARD END:VCARD")
+
+    def test_a_map_link_alone_is_sent_when_there_is_no_tracking_link(self):
+        """No street yet: the question, then only the map link, never a tracking link."""
+        class AskRuntime(FakeRuntime):
+            def turn(self, inbound):
+                result = super().turn(inbound)
+                return dict(result, url=None, source_url="https://example.test/p/abc123")
+        sent = []
+        with unittest.mock.patch.object(bot, "MODE", "graph"),              unittest.mock.patch.object(bot.channel.service, "get_runtime", return_value=AskRuntime()),              unittest.mock.patch.object(bot.channel, "first_contact", return_value=False),              unittest.mock.patch.object(bot, "deliver",
+                                        side_effect=lambda chat, text: sent.append(text)):
+            bot.handle_inbound({"chat_guid": "chat-map-1", "sender": "+447700900323",
+                                "text": "pothole near my house", "message_guid": "G-MAP-1",
+                                "attachments": []})
+        self.assertEqual(sent, ["Logged it here.", "Where is it?", "share your location here",
+                                "https://example.test/p/abc123"])
+        self.assertFalse(any("/r/" in text for text in sent))
+
+    def test_a_first_message_gets_the_welcome_text_first(self):
+        sent = []
+        with unittest.mock.patch.object(bot, "MODE", "graph"),              unittest.mock.patch.object(bot.channel.service, "get_runtime", return_value=FakeRuntime()),              unittest.mock.patch.object(bot.channel, "first_contact", return_value=True),              unittest.mock.patch.object(bot, "deliver",
+                                        side_effect=lambda chat, text: sent.append(text)):
+            bot.handle_inbound({"chat_guid": "chat-new-1", "sender": "+447700900324",
+                                "text": "hi", "message_guid": "G-NEW-1", "attachments": []})
+        self.assertEqual(sent[0], bot.ONBOARDING)
 
     def test_legacy_mode_is_still_selectable(self):
         self.assertIn("legacy", ("legacy", "graph"))

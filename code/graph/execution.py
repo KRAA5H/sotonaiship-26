@@ -443,13 +443,21 @@ def compose(state, deps):
     draft = state.get("incident_draft") or {}
     decision = _decision(draft, state)
     url = _link(outcome)
+    location_missing = "location" in (outcome.get("missing") or [])
+    # Bins and housing need a house address and neighbour problems go to the council's
+    # form: only "pin" categories are ever given a map link.
+    map_url = outcome.get("location_url") if decision.get("location_mode") in (None, "pin") else None
+    if location_missing:
+        # No street yet: ask where, with the map link. The tracking link waits until
+        # the street is known, so "Follow it" never goes out on a half-finished report.
+        url = None
     ctx = context(deps, state)
     if deps.writer:
         written = writer.write(state, deps, outcome, ctx)
         if written:
             written["url"] = url
             written["source_url"] = (outcome.get("task_url")
-                                     or outcome.get("location_url")
+                                     or map_url
                                      or _source_url(outcome))
             return {"bubble_plan": written}
         # The model answered nothing usable. Keep the turn alive with the checked
@@ -470,9 +478,10 @@ def compose(state, deps):
         if outcome.get("duplicate_of"):
             text = messages.duplicate(decision, {"link": url})
         elif decision["category_id"] == "unclear_other":
-            text = messages.captured(decision, {"link": url})
+            text = messages.captured(decision, {"link": url},
+                                     map_link=map_url if location_missing else None)
         elif "location" in (outcome.get("missing") or []):
-            text = messages.need_location(decision, None,
+            text = messages.need_location(decision, map_url,
                                           decision.get("location_mode") or "pin")
             if url:
                 text = text + f"\nFollow it: {url}"
@@ -481,7 +490,7 @@ def compose(state, deps):
     elif outcome.get("action") == "ask":
         field = (plan.get("clarification") or {}).get("field")
         if field == "location" or (field is None and "location" in (outcome.get("missing") or [])):
-            text = messages.need_location(decision, None,
+            text = messages.need_location(decision, map_url,
                                           decision.get("location_mode") or "pin")
             if url:
                 text = text + f"\nFollow it: {url}"
@@ -511,7 +520,7 @@ def compose(state, deps):
         text = messages.sorry()
 
     bubbles, url, source_url = _split(text, url)
-    source_url = source_url or outcome.get("task_url") or outcome.get("location_url")
+    source_url = source_url or outcome.get("task_url") or map_url
     destination = outcome.get("destination")
     if outcome.get("action") == "escalate" and isinstance(destination, str) \
             and destination.startswith(("http://", "https://")):
