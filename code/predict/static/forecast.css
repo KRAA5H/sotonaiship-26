@@ -1,0 +1,42 @@
+/* Only what kerbside.css does not already cover. Uses its colour tokens. */
+.fc-nav{display:flex;gap:6px;margin-left:auto}
+.fc-here{background:var(--accent-soft);color:var(--accent-ink)}
+.fc-banner{margin:16px 0}
+.fc-syn{background:var(--warn-bg);color:var(--warn-fg);border-radius:var(--r);padding:10px 14px;margin:0 0 8px}
+.fc-warn{display:flex;gap:8px;align-items:center;background:var(--warn-bg);color:var(--warn-fg);border:1px solid currentColor;border-radius:var(--r);padding:10px 14px;margin:0 0 8px;font-weight:600}
+.fc-meta{margin:0 0 4px;color:var(--ink-2)}
+.fc-sources{color:var(--ink-3);font-size:.9rem}
+.fc-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0 20px}
+.fc-tiles .tile{display:flex;flex-direction:column;gap:2px}
+.panel{margin:0 0 24px}
+.panel h2{margin:0 0 6px;font-size:1.15rem}
+.fc-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:10px}
+.fc-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;box-shadow:var(--shadow)}
+.fc-card h3{margin:2px 0 6px;font-size:1rem}
+.fc-card p{margin:0 0 6px}
+.fc-tag{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--accent-ink)}
+.fc-surge{border-color:var(--high)}
+.fc-surge .fc-tag{color:var(--high)}
+.fc-table{width:100%;border-collapse:collapse;font-size:.92rem}
+.fc-table th,.fc-table td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}
+.fc-table thead th{font-size:.8rem;color:var(--ink-3);font-weight:600}
+.fc-over td:first-child{border-left:3px solid var(--high)}
+.fc-overdue{color:var(--high);font-weight:700;font-size:.8rem}
+.fc-filter{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.fc-heat{border-collapse:collapse;font-size:.85rem;min-width:100%}
+.fc-heat th,.fc-heat td{padding:6px 8px;border:1px solid var(--line);text-align:center;min-width:64px}
+.fc-heat tbody th{text-align:left;font-weight:600;white-space:nowrap}
+.fc-heat thead th{font-size:.75rem;color:var(--ink-3);font-weight:600}
+.fc-heat .h0{background:var(--surface)}
+.fc-heat .h1{background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+.fc-heat .h2{background:color-mix(in srgb,var(--accent) 28%,var(--surface))}
+.fc-heat .h3{background:color-mix(in srgb,var(--accent) 45%,var(--surface))}
+.fc-heat .h4{background:color-mix(in srgb,var(--accent) 65%,var(--surface));color:var(--on-accent)}
+.fc-heat .h5{background:var(--accent);color:var(--on-accent);font-weight:700}
+.fc-board{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.fc-col{background:var(--surface-2);border-radius:var(--r);padding:10px}
+.fc-col h3{margin:0 0 8px;font-size:.95rem;display:flex;gap:6px;align-items:center}
+.fc-plan{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 10px;margin:0 0 8px}
+.fc-plan p{margin:0 0 4px}
+.fc-btns{display:flex;gap:6px;flex-wrap:wrap}
+.fc-fail .fc-card{border-style:dashed;max-width:520px}

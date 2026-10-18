@@ -3,6 +3,7 @@
 {% block sub %}Council view · every report the assistant has saved{% endblock %}
 {% block topbar_extra %}
 <span class="live" id="live"><i class="pulse" aria-hidden="true"></i><span id="updated">Updates every 15 seconds</span></span>
+<a class="btn-ghost" href="{{ url_for('website.forecast.page') }}">Forecast</a>
 {% endblock %}
 {% block after_main %}
 <dialog class="drawer" id="detail" aria-labelledby="d-title"></dialog>
