@@ -8,3 +8,9 @@ python-dotenv
 # Graph runtime (Step 6). Pinned after install on 2026-10-18.
 langgraph==1.2.16
 langgraph-checkpoint-sqlite==3.1.2
+
+# Forecast section (code/predict/). Pinned after install on 2026-10-18.
+scikit-learn==1.9.1
+pandas==3.0.6
+numpy==2.5.4
+scipy==1.18.1

@@ -343,6 +343,10 @@ def resident(token):
                            status_label=dict((k, t) for k, t, _ in STEPS).get(report["status"], report["status"]))
 
 
+from predict.web import forecast  # noqa: E402  Forecast section, /council/forecast (code/predict/)
+site.register_blueprint(forecast)
+
+
 def create_app(db_path=None, council_password=None, photo_dir=None):
     app = Flask(__name__, static_folder=None)
     app.config["KERBSIDE_DB"] = db_path
