@@ -9,6 +9,10 @@ Three places, no more:
 
 ---
 
+## 03:37, Sunday: policy goal gaps closed
+
+- After the goal audit: a wrong proposed category is repairable and cannot kill a valid capture; `locally_actionable` now uses service requirements and a street or postcode, not a district name; an answer without facts or a record is `policy.answer_ungrounded`; negation is scoped to the claim's clause; receipt matching covers "have it", "got it" and "received it". 62 policy tests, 621 total, 4 skips, 31/31.
+
 ## 02:42, Sunday: graph policy gate
 
 - Step 4: `code/graph/policy.py` and `code/test_graph_policy.py`, plus `emergency`/`model_calls` in `ThreadState` and `hard` in `VIOLATION_KEYS`. The gate applies the plan patch before judging, separates an emergency from a cheap turn, and checks specialist mismatch, routing status, fact dates, repeated questions, substantive corrections, claim text and the four-call budget. Two background audits (oracle and reviewer) blocked the first design; their blocking findings are in. 57 policy tests, 595 total, 4 skips, 31/31.

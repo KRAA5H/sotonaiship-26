@@ -27,6 +27,11 @@ The Step 4 plan was audited by two background subagents before implementation. T
 - New semantic checks: `policy.specialist_mismatch`, `policy.routing_unverified`, `policy.question_repeated`, substantive correction, both the effective and proposed category, and a denial cannot be retracted as a claim.
 - `capture.lost` for a log is separate from `capture.no_location` on an outcome, and a fresh ask for a description is allowed.
 - The hard/repairable tables cover every `schemas.PROBLEM_CODES` entry plus the policy codes; deferred copy and duplicate codes are listed in `DEFERRED` with an owner.
+- Goal audit: a wrong **proposed** category is a repairable `policy.category_unknown`, never a hard `not_council.saved`. Only the effective write target gets the never-save rule, so a valid `unclear_other` capture cannot be killed by the model's label.
+- Goal audit: `required_local` and `location_mode` make `locally_actionable` service-specific. An area-only location is not a place to act on, but it no longer blocks a question for the street.
+- Goal audit: an answer with no fact and no record is `policy.answer_ungrounded` (hard). A status answer with a report or link is still allowed.
+- Goal audit: negation is scoped to the claim's clause, so "it's not flooding, it's a tree" can retract the tree while the flooding denial is not treated as a claim.
+- Goal audit: receipt matching includes "have it", "got it" and "received it".
 
 ---
 
@@ -60,6 +65,8 @@ class PolicyContext:
     allowed_numbers: frozenset[str] | None = None
     forbidden_team_names: frozenset[str] | None = None
     missing_fields: frozenset[str] | None = None
+    required_local: frozenset[str] | None = None
+    location_mode: str | None = None
     handoff_categories: frozenset[str] = frozenset(
         {"noise_nuisance", "other_nuisance", "property_concern"})
     never_saved: frozenset[str] = frozenset(
@@ -110,8 +117,8 @@ A violation is `{"code": str, "field": str | None, "message": str, "hard": bool}
 
 - `action="answer"` with `fact_request.category_id` outside `known_categories` is `policy.category_unknown`.
 - `action="escalate"` with a destination outside `allowed_destinations` is `policy.destination_unknown` (hard). A model cannot invent a URL or a phone number.
-- `emergency_999` is allowed only when `state["short_circuit"]` is true. Elsewhere it is `escalation.emergency_from_model` (hard), duplicating the schema guard because this is safety-critical.
-- A short-circuit turn may not log, ask or patch: `emergency.tools` (hard). It answers or escalates and stops.
+- `emergency_999` is allowed only when `state["emergency"]` is true. Elsewhere it is `escalation.emergency_from_model` (hard), duplicating the schema guard because this is safety-critical.
+- An emergency may not log, ask or patch: `emergency.tools` (hard). It answers or escalates and stops. A cheap short-circuit turn (greeting, status) may ask or answer, but may not log or patch: `policy.short_circuit_action` (hard).
 
 ### Budgets
 
@@ -126,7 +133,7 @@ A violation is `{"code": str, "field": str | None, "message": str, "hard": bool}
 
 - `submitted=True` is `claim.council_receipt` (hard). Phase 1 has no submission integration.
 - `locally_actionable=True` while the draft has no street (or only `"Not given"`) is `capture.lost` (hard).
-- Every fact URL must be in `known_fact_urls` when supplied; otherwise `policy.fact_unknown` (hard).
+- Every fact URL must be in `known_facts` when supplied, and its date must equal the mapped checked date; otherwise `policy.fact_unknown` or `policy.fact_date` (hard).
 - `saved=True` with no report is a schema problem; the policy repeats it defensively.
 - A failed or ambiguous transport must keep its error; the writer reads it. Policy does not rewrite it.
 
@@ -196,7 +203,7 @@ If a row cannot be tested with the policy alone, the plan says which later step 
 - a matching challenge passes and does not require a category change;
 - a no-op correction is `policy.correction_noop`;
 - an escalation destination outside the allowlist is hard `policy.destination_unknown`;
-- `emergency_999` without `short_circuit` is hard;
+- `emergency_999` without `emergency` is hard;
 - a short-circuit emergency with a log, ask or patch is `emergency.tools`; with an answer or escalate it passes;
 - `repair_count=1` plus a repairable violation decides `fallback`; `repair_count=0` decides `repair`;
 - `specialist_call_count=2` plus a specialist request is `budget.exceeded`;

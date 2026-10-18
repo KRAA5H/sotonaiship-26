@@ -30,7 +30,7 @@ HARD = frozenset({
     "capture.lost", "capture.no_location", "not_council.saved", "emergency.tools",
     "policy.short_circuit_action", "budget.exceeded",
     "claim.council_receipt", "claim.team", "claim.number", "claim.timescale",
-    "policy.fact_unknown", "policy.fact_date",
+    "policy.fact_unknown", "policy.fact_date", "policy.answer_ungrounded",
     "policy.destination_unknown", "policy.specialist_mismatch",
     "policy.routing_unverified", "escalation.emergency_from_model",
     "action.missing", "policy.plan_missing", "patch.stale_version", "patch.protected",
@@ -42,7 +42,8 @@ DEFERRED = frozenset({"copy.lines", "copy.urls", "copy.markdown", "copy.banned",
 
 _NEGATION = re.compile(r"\b(not|can't|cannot|isn't|wasn't|no)\b", re.I)
 _COUNCIL_RECEIPT = re.compile(
-    r"\b(the council has|with the council|council is looking|council has it|council will)\b",
+    r"\b(the council has|the council have|with the council|council is looking|"
+    r"council has it|council have it|council got it|council received|council will)\b",
     re.I)
 _TIMESCALE = re.compile(
     r"\bwithin\s+\d+|\bin\s+\d+\s*(hour|day|week)|\b(tonight|tomorrow|today|this week)\b"
@@ -60,6 +61,8 @@ class PolicyContext:
     allowed_numbers: frozenset[str] | None = None
     forbidden_team_names: frozenset[str] | None = None
     missing_fields: frozenset[str] | None = None
+    required_local: frozenset[str] | None = None
+    location_mode: str | None = None
     handoff_categories: frozenset[str] = frozenset(
         {"noise_nuisance", "other_nuisance", "property_concern"})
     never_saved: frozenset[str] = frozenset(
@@ -90,9 +93,10 @@ def _dedupe(violations):
     return unique
 
 
-def _has_location(draft):
+def _has_place(draft):
+    """A street, address or postcode. A district name alone is not a place to act on."""
     location = draft.get("location") or {}
-    for key in ("text", "street", "area", "postcode"):
+    for key in ("text", "street", "postcode"):
         value = location.get(key)
         if isinstance(value, str) and value.strip() \
                 and value.strip().lower() != LOCATION_UNKNOWN.lower():
@@ -132,12 +136,12 @@ def _catches(category, context):
 
 
 def _sent_claim(claim, sent):
-    """True when the claim appears in a positive sentence we actually sent."""
+    """True when the claim appears in a positive clause we actually sent."""
     needle = " ".join(str(claim).lower().split())
     for item in sent:
-        text = " ".join(str(item).lower().split())
-        if needle and needle in text and not _NEGATION.search(text):
-            return True
+        for clause in re.split(r"[,.;!?]|\bbut\b", str(item).lower()):
+            if needle and needle in clause and not _NEGATION.search(clause):
+                return True
     return False
 
 
@@ -208,14 +212,23 @@ def check(state, context=PolicyContext(), problems=()):
 
     if action in ("log", "ask"):
         category = _category(plan, effective)
-        proposed = (plan.get("service_candidates") or [None])[0]
-        for candidate in {category, proposed}:
-            if candidate:
-                violations += _catches(candidate, context)
-        if action == "log" and not category:
+        if category:
+            violations += _catches(category, context)
+        elif action == "log":
             violations += _catches(None, context)
-        if (category in context.handoff_categories
-                or proposed in context.handoff_categories) and action == "log":
+        proposed = (plan.get("service_candidates") or [None])[0]
+        if proposed and proposed != category:
+            # A candidate is not the write target. A wrong label is repairable,
+            # never a hard never-save that kills a valid capture.
+            if proposed in context.never_saved \
+                    or (context.category_outcomes or {}).get(proposed) == "not_council":
+                violations.append(_violation("policy.category_unknown", "service_candidates",
+                                             f"{proposed} is not the write target"))
+            elif context.known_categories and proposed not in context.known_categories \
+                    and proposed != "unclear_other":
+                violations.append(_violation("policy.category_unknown", "service_candidates",
+                                             f"{proposed} is not in the rulebook"))
+        if category in context.handoff_categories and action == "log":
             violations.append(_violation("policy.handoff_action", "category_id",
                                          "neighbour problems use the council form, not a log"))
         if category == "unclear_other" \
@@ -231,7 +244,7 @@ def check(state, context=PolicyContext(), problems=()):
     if action == "ask":
         ambiguous = bool((effective.get("location") or {}).get("ambiguous"))
         still_missing = bool(context.missing_fields and target in context.missing_fields)
-        if target == "location" and _has_location(effective) \
+        if target == "location" and _has_place(effective) \
                 and not ambiguous and not still_missing:
             violations.append(_violation("ask.known_field", "clarification",
                                          "the street is already known"))
@@ -308,9 +321,20 @@ def check_outcome(outcome, draft=None, context=PolicyContext()):
     if outcome.get("submitted") is True:
         violations.append(_violation("claim.council_receipt", "submitted",
                                      "no submission integration exists"))
-    if outcome.get("locally_actionable") and draft is not None and not _has_location(draft):
-        violations.append(_violation("capture.no_location", "location",
-                                     "locally actionable without a resolved location"))
+    if outcome.get("locally_actionable") and draft is not None:
+        required = context.required_local
+        if required is None:
+            required = frozenset({"description", "location"})
+        if "description" in required and not (draft.get("description") or "").strip():
+            violations.append(_violation("capture.lost", "description",
+                                         "locally actionable without a description"))
+        if {"location", "address"} & set(required) and not _has_place(draft):
+            violations.append(_violation("capture.no_location", "location",
+                                         "locally actionable without a street or postcode"))
+    if outcome.get("action") == "answer" and not outcome.get("facts") \
+            and not outcome.get("report_id") and not outcome.get("link_token"):
+        violations.append(_violation("policy.answer_ungrounded", "facts",
+                                     "an answer needs a checked fact or a record"))
     if context.known_facts:
         for fact in outcome.get("facts") or []:
             url, date = fact.get("url"), fact.get("date")

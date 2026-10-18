@@ -74,6 +74,8 @@ CONTEXT = policy.PolicyContext(
     allowed_questions=frozenset({"location", "description", "photo"}),
     allowed_numbers=frozenset({"0300 123 5000"}),
     forbidden_team_names=frozenset({"Highways Team"}),
+    required_local=frozenset({"description", "location"}),
+    location_mode="pin",
 )
 
 
@@ -123,6 +125,12 @@ class CapturePolicyTest(unittest.TestCase):
         the_plan = plan(incident_patch={"set": {"category_id": "flooding_severe_weather"}})
         self.assertIn("policy.category_unknown",
                       codes(policy.check(make(the_plan=the_plan, the_draft=draft()), CONTEXT)))
+
+    def test_a_wrong_not_council_candidate_cannot_kill_a_capture(self):
+        the_plan = plan(incident_patch=None, service_candidates=["not_council_utility"])
+        problems = policy.check(make(the_plan=the_plan, the_draft=captured()), CONTEXT)
+        self.assertFalse(any(item["hard"] for item in problems), problems)
+        self.assertTrue(policy.can_repair(problems))
 
     def test_info_only_logged_directly_is_a_category_error(self):
         item = captured(category_id="flooding_severe_weather")
@@ -183,6 +191,13 @@ class QuestionPolicyTest(unittest.TestCase):
         self.assertEqual(policy.check(
             make(the_plan=self.ask("location"), the_draft=draft()), context), [])
 
+    def test_ask_allows_an_area_only_location(self):
+        item = draft()
+        item["location"] = {"text": "", "street": None, "area": "Bassett",
+                            "postcode": None, "provenance": "gps", "ambiguous": False}
+        self.assertEqual(policy.check(
+            make(the_plan=self.ask("location"), the_draft=item), CONTEXT), [])
+
     def test_ask_cannot_repeat_a_known_description(self):
         self.assertIn("ask.known_field", codes(policy.check(
             make(the_plan=self.ask("description"), the_draft=draft()), CONTEXT)))
@@ -227,6 +242,10 @@ class CorrectionPolicyTest(unittest.TestCase):
     def test_a_denial_is_not_a_claim(self):
         problems = self.challenge(["flooding"], ["we can't help with flooding"])
         self.assertIn("retraction.missing", codes(problems))
+
+    def test_a_negation_does_not_hide_a_later_positive_claim(self):
+        self.assertTrue(policy._sent_claim("tree", ["it's not flooding, it's a tree"]))
+        self.assertFalse(policy._sent_claim("flooding", ["it's not flooding, it's a tree"]))
 
     def test_a_matching_challenge_passes(self):
         self.assertEqual(self.challenge(["flooding"], ["we logged it as flooding"]), [])
@@ -334,7 +353,7 @@ class OutcomePolicyTest(unittest.TestCase):
                       codes(policy.check_outcome(self.outcome(submitted=True), draft(), CONTEXT)))
 
     def test_locally_actionable_without_a_location(self):
-        item = new_incident_draft("tree", {"text": "Not given"})
+        item = new_incident_draft("tree", {"text": "", "area": "Bassett"})
         self.assertIn("capture.no_location",
                       codes(policy.check_outcome(self.outcome(), item, CONTEXT)))
 
@@ -342,6 +361,11 @@ class OutcomePolicyTest(unittest.TestCase):
         item = new_incident_draft("tree", {"text": "", "street": "Alma Road",
                                            "provenance": "pin"})
         self.assertEqual(policy.check_outcome(self.outcome(), item, CONTEXT), [])
+
+    def test_an_answer_without_facts_is_refused(self):
+        self.assertIn("policy.answer_ungrounded",
+                      codes(policy.check_outcome(new_executed_outcome("answer"),
+                                                 draft(), CONTEXT)))
 
     def test_an_unknown_fact_url_is_hard(self):
         bad = self.outcome(facts=[{"fact": "x", "url": "https://evil.test",
@@ -355,6 +379,8 @@ class OutcomePolicyTest(unittest.TestCase):
 
     def test_an_answer_may_write_nothing(self):
         good = new_executed_outcome("answer")
+        good["facts"] = [{"fact": "x", "url": "https://example.test/fact",
+                          "date": "2026-10-17"}]
         self.assertEqual(policy.check_outcome(good, draft(), CONTEXT), [])
 
 
@@ -365,6 +391,13 @@ class BubblePolicyTest(unittest.TestCase):
         self.assertIn("claim.timescale",
                       codes(policy.check_bubbles(["a crew will be out within 2 hours"],
                                                  None, CONTEXT)))
+
+    def test_receipt_phrasings(self):
+        for phrase in ("the council have it", "the council got it",
+                       "the council received it"):
+            with self.subTest(phrase=phrase):
+                self.assertIn("claim.council_receipt",
+                              codes(policy.check_bubbles([phrase], None, CONTEXT)))
 
     def test_numbers_and_team_names(self):
         self.assertIn("claim.number",
