@@ -29,7 +29,8 @@ FAKE_REPORTS_PATH = ROOT / "dashboard" / "fake_reports.json"
 DB_PATH = Path(os.getenv("DB_PATH") or Path(__file__).with_name("kerbside.db"))
 
 COLUMNS = (
-    "id", "created_at", "category_id", "status", "severity", "location", "area",
+    "id", "created_at", "category_id", "status", "capture_state", "routing_status",
+    "severity", "location", "area",
     "description", "has_photo", "photo_guid", "photo_mime", "duplicate_of",
     "reporter_ref", "link_token", "status_changed_at", "photo_features",
 )
@@ -45,6 +46,9 @@ BUSY_TIMEOUT_MS = 5000
 # Added after the first reports table was built and populated, so init_db adds
 # them to an existing file instead of relying on schema.sql alone.
 PHOTO_COLUMNS = (("photo_guid", "TEXT"), ("photo_mime", "TEXT"))
+# D51: capture and routing are policy-owned and default to the honest state.
+POLICY_COLUMNS = (("capture_state", "TEXT NOT NULL DEFAULT 'captured'"),
+                  ("routing_status", "TEXT NOT NULL DEFAULT 'needs_review'"))
 
 
 def connect(path=None):
@@ -256,6 +260,7 @@ def init_db(path=None, seed=True):
             # schema.sql has no IF NOT EXISTS, so only run it on a fresh file.
             conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
         _add_photo_columns(conn)
+        _add_policy_columns(conn)
 
         _ensure_area_column(conn)
         for column in ("status_changed_at", "photo_features"):
@@ -288,6 +293,23 @@ def _add_photo_columns(conn):
                 raise
 
 
+def _add_policy_columns(conn):
+    """Additive D51 migration: capture_state and routing_status, with defaults.
+
+    Idempotent, like _add_photo_columns, so a fresh schema.sql and an older file
+    end up the same after one start.
+    """
+    present = {row["name"] for row in conn.execute("PRAGMA table_info(reports)")}
+    for name, kind in POLICY_COLUMNS:
+        if name in present:
+            continue
+        try:
+            conn.execute(f"ALTER TABLE reports ADD COLUMN {name} {kind}")
+        except sqlite3.OperationalError as error:
+            if "duplicate column" not in str(error).lower():
+                raise
+
+
 def load_reports(conn, reports):
     rows = []
     for report in reports:
@@ -296,6 +318,8 @@ def load_reports(conn, reports):
         row["duplicate_of"] = row["duplicate_of"] or None
         row["status_changed_at"] = row["status_changed_at"] or None
         row["photo_features"] = row["photo_features"] or None
+        row["capture_state"] = row["capture_state"] or "captured"
+        row["routing_status"] = row["routing_status"] or "needs_review"
         row["has_photo"] = int(bool(row["has_photo"]))
         rows.append(row)
 

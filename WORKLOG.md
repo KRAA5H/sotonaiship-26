@@ -9,6 +9,10 @@ Three places, no more:
 
 ---
 
+## 02:32, Sunday: graph storage
+
+- Step 3: `code/graph/store.py` and `code/test_graph_store.py`. `threads`, `turn_operations`, `delivery_outbox`, `claims_sent`, plus the D51 `capture_state`/`routing_status` columns in `reports_db` and `dashboard/schema.sql`. 15 store tests. 534 tests pass, 4 skips, 31/31. D56 recorded. Step 3 now owns the D51 migration; Step 8 uses the columns and adds nothing.
+
 ## 02:28, Sunday: graph contracts
 
 - Step 2: `code/graph/{state,copy_rules,schemas}.py` and `code/test_graph_schemas.py`. 36 contract tests. `ExecutedOutcome`, set/clear/add patch semantics with append-only evidence and a required version, suppressed bubble plans, policy-owned fields, and copy constants that match `voice.py`. 519 tests pass, 4 skips, 31/31 message evaluation. The Step 2 doctor blocked v1; this is the revised contract. D51 and D57 recorded.

@@ -15,5 +15,7 @@ CREATE TABLE reports (
   link_token    TEXT UNIQUE NOT NULL,            -- long random string for the resident's page /r/<token>
   area          TEXT,                            -- named Southampton area, from LocationService (may be empty)
   status_changed_at TEXT,                        -- when the status FIRST changed, for time to first action
+  capture_state TEXT NOT NULL DEFAULT 'captured', -- captured | locally_actionable | submission_ready | submitted
+  routing_status TEXT NOT NULL DEFAULT 'needs_review', -- needs_review | verified
   photo_features TEXT                            -- JSON from the vision model, shape in code/photo_features.py; never a location
 );
