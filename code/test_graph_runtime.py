@@ -357,6 +357,43 @@ class CaptureTest(RuntimeCase):
         self.assertIn("unclear_other", index["categories"])
 
 
+class MapLinkTest(RuntimeCase):
+    """With the AI writer off the checked template speaks, and it must still offer the map."""
+
+    def row(self):
+        conn = reports_db.connect(self.db)
+        try:
+            return conn.execute("SELECT * FROM reports").fetchone()
+        finally:
+            conn.close()
+
+    def test_a_street_less_report_offers_the_map_link(self):
+        result = self.turn("theres a pothole near my house", "g-pin")
+        self.assertEqual(result["kind"], "saved")
+        self.assertIn("/p/", result["source_url"] or "", "the drop-a-pin link reaches the resident")
+        self.assertIn("/r/", result["url"], "the tracking link is still there, and separate")
+        self.assertEqual(result["source_url"],
+                         result["state"]["executed_outcome"]["location_url"])
+        for bubble in result["bubbles"]:
+            self.assertNotIn("http", bubble, "links travel separately, never inside a bubble")
+        self.assertEqual(" ".join(result["bubbles"]).count("?"), 1)
+
+    def test_a_bin_asks_for_a_house_and_never_a_pin(self):
+        self.runtime = self.make_runtime(llm=FakeLLM([model_plan(
+            action="log", service_candidates=["missed_bin"],
+            incident_patch={"set": {"category_id": "missed_bin"}})]))
+        result = self.turn("my bin was missed on tuesday", "g-bin")
+        self.assertEqual(result["kind"], "saved")
+        self.assertEqual(self.row()["category_id"], "missed_bin")
+        self.assertNotIn("/p/", result["source_url"] or "")
+        self.assertIn("house", " ".join(result["bubbles"]).lower())
+
+    def test_a_report_with_a_street_gets_no_map_link(self):
+        result = self.turn("theres a pothole on weston lane", "g-street")
+        self.assertEqual(result["kind"], "saved")
+        self.assertNotIn("/p/", result["source_url"] or "")
+
+
 class CheckpointerTest(RuntimeCase):
     def test_sqlite_saver_resumes_the_thread(self):
         with SqliteSaver.from_conn_string(str(self.db)) as saver:

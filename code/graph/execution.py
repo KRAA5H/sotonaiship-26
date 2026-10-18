@@ -469,7 +469,7 @@ def compose(state, deps):
         elif decision["category_id"] == "unclear_other":
             text = messages.captured(decision, {"link": url})
         elif "location" in (outcome.get("missing") or []):
-            text = messages.need_location(decision, None,
+            text = messages.need_location(decision, outcome.get("location_url"),
                                           decision.get("location_mode") or "pin")
             if url:
                 text = text + f"\nFollow it: {url}"
@@ -478,7 +478,7 @@ def compose(state, deps):
     elif outcome.get("action") == "ask":
         field = (plan.get("clarification") or {}).get("field")
         if field == "location" or (field is None and "location" in (outcome.get("missing") or [])):
-            text = messages.need_location(decision, None,
+            text = messages.need_location(decision, outcome.get("location_url"),
                                           decision.get("location_mode") or "pin")
             if url:
                 text = text + f"\nFollow it: {url}"
