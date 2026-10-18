@@ -1,0 +1,98 @@
+{
+  "allowed_question_fields": [
+    "description",
+    "detail",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": null,
+  "detail_question": null,
+  "detail_words": [],
+  "duplicate_window_days": 30,
+  "emergency": false,
+  "example_phrases": [
+    "house full of rubbish and rats seen going in",
+    "neighbour's garden is piled with junk and smells"
+  ],
+  "facts": [
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "Concerns about a property that has become very dirty, with possible rodent infestations, or where hoarded possessions make access difficult can be reported for investigation.",
+      "fact_key": "7416c3564157",
+      "id": "F007",
+      "topic": "Property concerns",
+      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "Council page lists: blocked drains, empty or derelict property, filthy property, overcrowded property, overgrown or untidy garden. Speak to owner first.",
+      "fact_key": "221a1bcd9e82",
+      "id": "F054",
+      "topic": "Council's own property concern types",
+      "url": "https://www.southampton.gov.uk/environment/neighbourhood-nuisances-and-property-concerns/concern-about-property/"
+    }
+  ],
+  "fms_categories": [
+    "Rubbish accumulation on private property",
+    "Rats"
+  ],
+  "form_notes": "Types: blocked drains, empty/derelict, filthy, overcrowded, overgrown garden. Speak to owner first.",
+  "form_url": "https://www.southampton.gov.uk/environment/neighbourhood-nuisances-and-property-concerns/concern-about-property/",
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": true,
+  "id": "property_concern",
+  "info_first": false,
+  "label": "Concern about a property (very dirty, hoarding, possible rodents)",
+  "location_mode": "handoff",
+  "note": "Do not ask for or store the name of the person living there.",
+  "outcome": "council_report",
+  "questions": [
+    {
+      "field": "detail",
+      "text": "What is the address or nearest address?"
+    },
+    {
+      "field": "detail",
+      "text": "What can you see or smell from outside?"
+    },
+    {
+      "field": "detail",
+      "text": "Have you seen rats or other pests?"
+    }
+  ],
+  "redirect_to": null,
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [],
+  "required_local": [],
+  "required_submission": [],
+  "rulebook_group": "neighbourhood_nuisance",
+  "rulebook_required_fields": [
+    "address",
+    "description"
+  ],
+  "service_id": "property_concern",
+  "severity": {
+    "high": [
+      "rodent infestation",
+      "health hazard described"
+    ],
+    "low": []
+  },
+  "severity_keywords": {},
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+  "specialist_group": null,
+  "submission_status": "unverified",
+  "team": "Environmental health",
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

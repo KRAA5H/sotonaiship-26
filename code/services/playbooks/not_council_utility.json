@@ -1,0 +1,93 @@
+{
+  "allowed_question_fields": [
+    "description",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": null,
+  "detail_question": null,
+  "detail_words": [],
+  "duplicate_window_days": 30,
+  "emergency": false,
+  "example_phrases": [
+    "water leak running down the road for weeks",
+    "BT cable box open on the pavement"
+  ],
+  "facts": [
+    {
+      "caveat": "Confirmed for graffiti on this equipment only, not for general faults.",
+      "date": "2026-10-17",
+      "fact": "Graffiti on BT or Openreach street cabinets should be reported to Openreach on 0800 023 2023 and on Virgin Media cabinets to Virgin Media on 0330 333 0444. Graffiti on bus shelters or railway bridges should be reported to the company responsible, not the council.",
+      "fact_key": "159d769271ac",
+      "id": "F016",
+      "topic": "Utility and company property",
+      "url": "https://southampton.gov.uk/environmental-issues/street-cleaning/graffiti"
+    },
+    {
+      "caveat": "Link to the page for safety advice. Do not rewrite the steps.",
+      "date": "2026-10-17",
+      "fact": "The gas emergency number is 0800 111 999. It is free and open 24 hours a day. National Gas lists the official safety steps on the same page.",
+      "fact_key": "5c4ef72d5d32",
+      "id": "F033",
+      "topic": "Gas emergency",
+      "url": "https://www.nationalgas.com/emergency-contacts"
+    },
+    {
+      "caveat": "The page does not list the areas SSEN covers.",
+      "date": "2026-10-17",
+      "fact": "Call 105 to report a power cut or damage to electricity equipment. Lines are open 24 hours a day, 365 days a year.",
+      "fact_key": "73fae7a1d951",
+      "id": "F034",
+      "topic": "Power cuts",
+      "url": "https://www.ssen.co.uk/power-cuts-emergencies/"
+    },
+    {
+      "caveat": "The page does not give opening hours or a number for sewer flooding.",
+      "date": "2026-10-17",
+      "fact": "Southern Water gives 0800 820 999 for urgent leaks such as a burst pipe or water flowing quickly across the ground.",
+      "fact_key": "ccd21c523f4c",
+      "id": "F035",
+      "topic": "Urgent water leaks",
+      "url": "https://www.southernwater.co.uk/report-a-problem/"
+    }
+  ],
+  "fms_categories": [],
+  "form_notes": "",
+  "form_url": null,
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": false,
+  "id": "not_council_utility",
+  "info_first": false,
+  "label": "Utility problem (water, gas, electricity, telecoms)",
+  "location_mode": "pin",
+  "note": "We do not yet have verified contact details for each utility. Add them after checking. Until then, tell the resident it is probably the utility company's job and log it as low confidence for officer review.",
+  "outcome": "not_council",
+  "questions": [],
+  "redirect_to": "find_your_council",
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [],
+  "required_local": [
+    "description",
+    "location"
+  ],
+  "required_submission": [],
+  "rulebook_group": "not_council",
+  "rulebook_required_fields": [],
+  "service_id": "not_council_utility",
+  "severity": {},
+  "severity_keywords": {},
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": "https://www.fixmystreet.com/reports/Southampton",
+  "specialist_group": null,
+  "submission_status": "unverified",
+  "team": null,
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

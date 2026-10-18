@@ -1,0 +1,92 @@
+{
+  "allowed_question_fields": [
+    "description",
+    "detail",
+    "location",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": null,
+  "detail_question": null,
+  "detail_words": [],
+  "duplicate_window_days": 30,
+  "emergency": true,
+  "example_phrases": [
+    "road is flooded",
+    "river is coming up to the houses",
+    "storm brought down a tree on the road"
+  ],
+  "facts": [
+    {
+      "caveat": "The page does not say what the role covers or how to report blocked drains or road flooding.",
+      "date": "2026-10-17",
+      "fact": "The council names itself as Lead Local Flood Authority and has a report a flood section on its flood risk management page.",
+      "fact_key": "86b70eb392d0",
+      "id": "F032",
+      "topic": "Flood responsibility",
+      "url": "https://www.southampton.gov.uk/environment/emergencies-and-severe-weather/flood-risk-management"
+    }
+  ],
+  "fms_categories": [
+    "Other"
+  ],
+  "form_notes": "",
+  "form_url": null,
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": false,
+  "id": "flooding_severe_weather",
+  "info_first": false,
+  "label": "Flooding or severe weather",
+  "location_mode": "pin",
+  "note": "Do not write our own safety instructions. Show the official links first, then offer to log a report.",
+  "outcome": "info_only",
+  "questions": [
+    {
+      "field": "location",
+      "text": "Where is it?"
+    },
+    {
+      "field": "detail",
+      "text": "Is anyone in danger right now?"
+    }
+  ],
+  "redirect_to": null,
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [],
+  "required_local": [
+    "description",
+    "location"
+  ],
+  "required_submission": [],
+  "rulebook_group": "emergency",
+  "rulebook_required_fields": [
+    "location",
+    "description"
+  ],
+  "service_id": "flooding_severe_weather",
+  "severity": {
+    "high": [
+      "anyone in danger",
+      "water entering homes"
+    ],
+    "low": []
+  },
+  "severity_keywords": {},
+  "show_guidance": [
+    "emergency",
+    "flood_warnings"
+  ],
+  "source_date": "2026-10-17",
+  "source_url": "https://www.southampton.gov.uk/environment",
+  "specialist_group": null,
+  "submission_status": "unverified",
+  "team": "Emergency planning / highways (our label)",
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

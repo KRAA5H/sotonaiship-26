@@ -1,0 +1,834 @@
+{
+  "allowed_questions": [
+    "address",
+    "description",
+    "detail",
+    "location",
+    "photo"
+  ],
+  "allowed_questions_by_category": {
+    "abandoned_vehicle": [
+      "description",
+      "detail",
+      "location",
+      "photo"
+    ],
+    "council_housing_repair": [
+      "address",
+      "description",
+      "detail",
+      "photo"
+    ],
+    "council_service_other": [
+      "description",
+      "photo"
+    ],
+    "dead_animal": [
+      "description",
+      "detail",
+      "location",
+      "photo"
+    ],
+    "dog_fouling": [
+      "description",
+      "detail",
+      "location",
+      "photo"
+    ],
+    "flooding_severe_weather": [
+      "description",
+      "detail",
+      "location",
+      "photo"
+    ],
+    "fly_tipping": [
+      "description",
+      "detail",
+      "location",
+      "photo"
+    ],
+    "glass_spillage_hazard": [
+      "description",
+      "detail",
+      "location",
+      "photo"
+    ],
+    "graffiti_flyposting": [
+      "description",
+      "detail",
+      "location",
+      "photo"
+    ],
+    "illegal_parking": [
+      "description",
+      "detail",
+      "location",
+      "photo"
+    ],
+    "info_student_waste_rules": [
+      "description",
+      "photo"
+    ],
+    "litter_street_cleaning": [
+      "description",
+      "detail",
+      "location",
+      "photo"
+    ],
+    "lost_damaged_bin": [
+      "address",
+      "description",
+      "detail",
+      "photo"
+    ],
+    "missed_bin": [
+      "address",
+      "description",
+      "detail",
+      "photo"
+    ],
+    "noise_nuisance": [
+      "description",
+      "detail",
+      "photo"
+    ],
+    "not_council_trunk_road": [
+      "description",
+      "photo"
+    ],
+    "not_council_utility": [
+      "description",
+      "photo"
+    ],
+    "other_nuisance": [
+      "description",
+      "detail",
+      "photo"
+    ],
+    "outside_southampton": [
+      "description",
+      "photo"
+    ],
+    "pothole": [
+      "description",
+      "detail",
+      "location",
+      "photo"
+    ],
+    "property_concern": [
+      "description",
+      "detail",
+      "photo"
+    ],
+    "unclear_other": [
+      "description",
+      "location",
+      "photo"
+    ]
+  },
+  "categories": {
+    "abandoned_vehicle": "council_report",
+    "council_housing_repair": "council_report",
+    "council_service_other": "info_only",
+    "dead_animal": "council_report",
+    "dog_fouling": "council_report",
+    "flooding_severe_weather": "info_only",
+    "fly_tipping": "council_report",
+    "glass_spillage_hazard": "council_report",
+    "graffiti_flyposting": "council_report",
+    "illegal_parking": "council_report",
+    "info_student_waste_rules": "info_only",
+    "litter_street_cleaning": "council_report",
+    "lost_damaged_bin": "council_report",
+    "missed_bin": "council_report",
+    "noise_nuisance": "council_report",
+    "not_council_trunk_road": "not_council",
+    "not_council_utility": "not_council",
+    "other_nuisance": "council_report",
+    "outside_southampton": "not_council",
+    "pothole": "council_report",
+    "property_concern": "council_report",
+    "unclear_other": "council_report"
+  },
+  "duplicate_windows": {
+    "abandoned_vehicle": 30,
+    "council_housing_repair": 14,
+    "council_service_other": 30,
+    "dead_animal": 3,
+    "dog_fouling": 3,
+    "flooding_severe_weather": 30,
+    "fly_tipping": 7,
+    "glass_spillage_hazard": 3,
+    "graffiti_flyposting": 14,
+    "illegal_parking": 1,
+    "info_student_waste_rules": 30,
+    "litter_street_cleaning": 3,
+    "lost_damaged_bin": 14,
+    "missed_bin": 7,
+    "noise_nuisance": 30,
+    "not_council_trunk_road": 30,
+    "not_council_utility": 30,
+    "other_nuisance": 30,
+    "outside_southampton": 30,
+    "pothole": 30,
+    "property_concern": 30,
+    "unclear_other": 7
+  },
+  "emergency_categories": [
+    "flooding_severe_weather"
+  ],
+  "fact_ids": {
+    "F001": {
+      "categories": [
+        "general"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "c325c5e10cfc",
+      "url": "https://southampton.gov.uk/council-democracy/about-the-council"
+    },
+    "F002": {
+      "categories": [
+        "fly_tipping",
+        "dog_fouling",
+        "dead_animal",
+        "glass_spillage_hazard"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "ec20e0c92814",
+      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    "F003": {
+      "categories": [
+        "fly_tipping",
+        "dog_fouling",
+        "dead_animal",
+        "litter_street_cleaning",
+        "graffiti_flyposting",
+        "glass_spillage_hazard"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "dfd6037b52d1",
+      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    "F004": {
+      "categories": [
+        "graffiti_flyposting"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "45dab0142240",
+      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    "F005": {
+      "categories": [
+        "abandoned_vehicle",
+        "pothole"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "39a56545969a",
+      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    "F006": {
+      "categories": [
+        "noise_nuisance",
+        "other_nuisance"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "c5fdb2395dc0",
+      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    "F007": {
+      "categories": [
+        "property_concern"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "7416c3564157",
+      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    "F008": {
+      "categories": [
+        "general"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "eb9229110812",
+      "url": "https://www.southampton.gov.uk/environment"
+    },
+    "F009": {
+      "categories": [
+        "litter_street_cleaning"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "2b04c60c53c1",
+      "url": "https://www.southampton.gov.uk/environment/street-cleaning"
+    },
+    "F010": {
+      "categories": [
+        "fly_tipping"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "71bff1210848",
+      "url": "https://southampton.gov.uk/environmental-issues/street-cleaning/fixed-penalty-notices-for-fly-tipping"
+    },
+    "F011": {
+      "categories": [
+        "fly_tipping"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "67b18748c9c6",
+      "url": "https://southampton.gov.uk/environmental-issues/street-cleaning/fixed-penalty-notices-for-fly-tipping"
+    },
+    "F012": {
+      "categories": [
+        "fly_tipping"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "c7de5137bb08",
+      "url": "https://southampton.gov.uk/environmental-issues/street-cleaning/fixed-penalty-notices-for-fly-tipping"
+    },
+    "F013": {
+      "categories": [
+        "graffiti_flyposting"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "38e3732109c4",
+      "url": "https://southampton.gov.uk/environmental-issues/street-cleaning/graffiti"
+    },
+    "F014": {
+      "categories": [
+        "graffiti_flyposting"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "7705375d704e",
+      "url": "https://southampton.gov.uk/environmental-issues/street-cleaning/graffiti"
+    },
+    "F015": {
+      "categories": [
+        "graffiti_flyposting"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "fa083b4e4bc9",
+      "url": "https://southampton.gov.uk/environmental-issues/street-cleaning/graffiti"
+    },
+    "F016": {
+      "categories": [
+        "graffiti_flyposting",
+        "not_council_utility"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "159d769271ac",
+      "url": "https://southampton.gov.uk/environmental-issues/street-cleaning/graffiti"
+    },
+    "F017": {
+      "categories": [
+        "pothole"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "649ac2c5e01a",
+      "url": "https://www.southampton.gov.uk/travel-transport/report-issue/potholes"
+    },
+    "F018": {
+      "categories": [
+        "pothole"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "6cd41e14de26",
+      "url": "https://southampton.gov.uk/news/article/11-9-million-confirmed-for-highways-and-footways-programme-during-2023-2024"
+    },
+    "F019": {
+      "categories": [
+        "missed_bin"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "e24eabd84a9b",
+      "url": "https://southampton.gov.uk/bins-recycling/bins/missed-collections"
+    },
+    "F020": {
+      "categories": [
+        "missed_bin"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "69753baa9f47",
+      "url": "https://southampton.gov.uk/bins-recycling/bins/missed-collections"
+    },
+    "F021": {
+      "categories": [
+        "missed_bin"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "fc2d2323afec",
+      "url": "https://southampton.gov.uk/news/article/important-waste-collection-update-from-councillor-fielker-leader-of-southampton-city-council"
+    },
+    "F022": {
+      "categories": [
+        "lost_damaged_bin"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "2081dc866c06",
+      "url": "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/"
+    },
+    "F023": {
+      "categories": [
+        "lost_damaged_bin"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "b8a7204ac23a",
+      "url": "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/my-bin-is-lost-or-stolen"
+    },
+    "F024": {
+      "categories": [
+        "info_student_waste_rules"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "b7d26a52ea92",
+      "url": "https://southampton.gov.uk/bins-recycling/bins/information-for-students"
+    },
+    "F025": {
+      "categories": [
+        "council_housing_repair"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "40b7cf3163a3",
+      "url": "https://southampton.gov.uk/contact-us/online-forms"
+    },
+    "F026": {
+      "categories": [
+        "general",
+        "council_housing_repair"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "fa44796a6bb1",
+      "url": "https://www.southampton.gov.uk/contact-us/emergency-out-of-hours/"
+    },
+    "F027": {
+      "categories": [
+        "general"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "31d7a5189258",
+      "url": "https://www.southampton.gov.uk/contact-us/emergency-out-of-hours/"
+    },
+    "F028": {
+      "categories": [
+        "noise_nuisance"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "f2b5771bb508",
+      "url": "https://southampton.gov.uk/noiseprotocol"
+    },
+    "F029": {
+      "categories": [
+        "noise_nuisance"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "6f100c706260",
+      "url": "https://southampton.gov.uk/noiseprotocol"
+    },
+    "F030": {
+      "categories": [
+        "noise_nuisance"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "2e36556a9cb5",
+      "url": "https://southampton.gov.uk/noiseprotocol"
+    },
+    "F031": {
+      "categories": [
+        "noise_nuisance"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "37e5a90f8a86",
+      "url": "https://southampton.gov.uk/noiseprotocol"
+    },
+    "F032": {
+      "categories": [
+        "flooding_severe_weather"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "86b70eb392d0",
+      "url": "https://www.southampton.gov.uk/environment/emergencies-and-severe-weather/flood-risk-management"
+    },
+    "F033": {
+      "categories": [
+        "not_council_utility"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "5c4ef72d5d32",
+      "url": "https://www.nationalgas.com/emergency-contacts"
+    },
+    "F034": {
+      "categories": [
+        "not_council_utility"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "73fae7a1d951",
+      "url": "https://www.ssen.co.uk/power-cuts-emergencies/"
+    },
+    "F035": {
+      "categories": [
+        "not_council_utility"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "ccd21c523f4c",
+      "url": "https://www.southernwater.co.uk/report-a-problem/"
+    },
+    "F036": {
+      "categories": [
+        "general"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "4806e8a76433",
+      "url": "https://www.fixmystreet.com/reports/Southampton"
+    },
+    "F037": {
+      "categories": [
+        "general"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "e738d5fe5589",
+      "url": "https://www.fixmystreet.com/reports/Southampton"
+    },
+    "F038": {
+      "categories": [
+        "general"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "704b82e29f83",
+      "url": "https://www.mysociety.org/2024/02/06/statement-from-mysociety-regarding-misuse-of-fixmystreet-data/"
+    },
+    "F039": {
+      "categories": [
+        "general"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "ac82d78c216e",
+      "url": "https://data.mysociety.org/datasets/fms-geographic/"
+    },
+    "F040": {
+      "categories": [
+        "general"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "09fcf14906a0",
+      "url": "https://api.gov.uk/scc/directory-of-support-services/"
+    },
+    "F041": {
+      "categories": [
+        "pothole"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "39ac91546e03",
+      "url": "https://www.southampton.gov.uk/travel-transport/report-issue/potholes/"
+    },
+    "F042": {
+      "categories": [
+        "fly_tipping"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "389813eb6ff9",
+      "url": "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/fly-tipping/"
+    },
+    "F043": {
+      "categories": [
+        "dead_animal"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "73435a19bb68",
+      "url": "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/dead-animals/"
+    },
+    "F044": {
+      "categories": [
+        "litter_street_cleaning"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "2bd258908737",
+      "url": "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/abandoned-shopping-trolleys/"
+    },
+    "F045": {
+      "categories": [
+        "litter_street_cleaning"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "603d3f54b94d",
+      "url": "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/leaves/"
+    },
+    "F046": {
+      "categories": [
+        "graffiti_flyposting"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "167d66c3a101",
+      "url": "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/graffiti/"
+    },
+    "F047": {
+      "categories": [
+        "abandoned_vehicle"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "36b22496212f",
+      "url": "https://www.southampton.gov.uk/travel-transport/report-issue/parking-offence/abandoned-vehicles/"
+    },
+    "F048": {
+      "categories": [
+        "illegal_parking"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "eeb6e06133c0",
+      "url": "https://www.southampton.gov.uk/travel-transport/report-issue/parking-offence/"
+    },
+    "F049": {
+      "categories": [
+        "noise_nuisance"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "c16f4f219c78",
+      "url": "https://www.southampton.gov.uk/environment/neighbourhood-nuisances-and-property-concerns/neighbourhood-nuisances/noise/make-a-complaint/"
+    },
+    "F050": {
+      "categories": [
+        "other_nuisance"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "44eccc3a3994",
+      "url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/environmental-health-report-local-nuisance-or-concern"
+    },
+    "F051": {
+      "categories": [
+        "noise_nuisance"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "c473f0994ca5",
+      "url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/environmental-health-report-local-nuisance-or-concern"
+    },
+    "F052": {
+      "categories": [
+        "missed_bin"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "5128411aa756",
+      "url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-missed-bin-collection"
+    },
+    "F053": {
+      "categories": [
+        "outside_southampton"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "351648c12db8",
+      "url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-missed-bin-collection"
+    },
+    "F054": {
+      "categories": [
+        "property_concern"
+      ],
+      "date": "2026-10-17",
+      "fact_key": "221a1bcd9e82",
+      "url": "https://www.southampton.gov.uk/environment/neighbourhood-nuisances-and-property-concerns/concern-about-property/"
+    }
+  },
+  "general_fact_ids": [
+    "F001",
+    "F008",
+    "F026",
+    "F027",
+    "F036",
+    "F037",
+    "F038",
+    "F039",
+    "F040"
+  ],
+  "generated_from": {
+    "categories": "0.3",
+    "category_count": 22,
+    "fact_count": 54,
+    "facts_date": "2026-10-17"
+  },
+  "groups": {
+    "cleansing": [
+      "dead_animal",
+      "dog_fouling",
+      "fly_tipping",
+      "glass_spillage_hazard",
+      "graffiti_flyposting",
+      "litter_street_cleaning"
+    ],
+    "highways": [
+      "abandoned_vehicle",
+      "illegal_parking",
+      "pothole"
+    ],
+    "housing": [
+      "council_housing_repair"
+    ],
+    "waste": [
+      "lost_damaged_bin",
+      "missed_bin"
+    ]
+  },
+  "guidance": {
+    "council_out_of_hours": {
+      "contact": "023 8023 3344",
+      "date_checked": "2026-10-17",
+      "label": "Southampton City Council emergency out of hours",
+      "source": "https://www.southampton.gov.uk/contact-us/emergency-out-of-hours/"
+    },
+    "council_roads": {
+      "label": "Southampton City Council: report a pothole or road defect",
+      "url": "https://www.southampton.gov.uk/travel-transport/report-issue/potholes/"
+    },
+    "emergency": {
+      "contact": "999",
+      "label": "Emergency services"
+    },
+    "find_your_council": {
+      "label": "Find your local council",
+      "url": "https://www.gov.uk/find-local-council"
+    },
+    "flood_warnings": {
+      "label": "Environment Agency flood warnings",
+      "url": "https://www.gov.uk/check-flood-risk"
+    },
+    "national_highways": {
+      "contact": "0300 123 5000",
+      "label": "National Highways (motorways and trunk roads)",
+      "source": "https://www.hants.gov.uk/transport/highways/report-a-problem/streetlight"
+    }
+  },
+  "guidance_by_category": {
+    "flooding_severe_weather": {
+      "redirect_to": null,
+      "show_guidance": [
+        "emergency",
+        "flood_warnings"
+      ]
+    },
+    "not_council_trunk_road": {
+      "redirect_to": "national_highways",
+      "show_guidance": []
+    },
+    "not_council_utility": {
+      "redirect_to": "find_your_council",
+      "show_guidance": []
+    },
+    "outside_southampton": {
+      "redirect_to": "find_your_council",
+      "show_guidance": []
+    }
+  },
+  "handoff_categories": [
+    "noise_nuisance",
+    "other_nuisance",
+    "property_concern"
+  ],
+  "known_facts": {
+    "https://api.gov.uk/scc/directory-of-support-services/": "2026-10-17",
+    "https://data.mysociety.org/datasets/fms-geographic/": "2026-10-17",
+    "https://southampton.gov.uk/bins-recycling/bins/information-for-students": "2026-10-17",
+    "https://southampton.gov.uk/bins-recycling/bins/missed-collections": "2026-10-17",
+    "https://southampton.gov.uk/contact-us/online-forms": "2026-10-17",
+    "https://southampton.gov.uk/council-democracy/about-the-council": "2026-10-17",
+    "https://southampton.gov.uk/environmental-issues/report-an-issue": "2026-10-17",
+    "https://southampton.gov.uk/environmental-issues/street-cleaning/fixed-penalty-notices-for-fly-tipping": "2026-10-17",
+    "https://southampton.gov.uk/environmental-issues/street-cleaning/graffiti": "2026-10-17",
+    "https://southampton.gov.uk/news/article/11-9-million-confirmed-for-highways-and-footways-programme-during-2023-2024": "2026-10-17",
+    "https://southampton.gov.uk/news/article/important-waste-collection-update-from-councillor-fielker-leader-of-southampton-city-council": "2026-10-17",
+    "https://southampton.gov.uk/noiseprotocol": "2026-10-17",
+    "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/environmental-health-report-local-nuisance-or-concern": "2026-10-17",
+    "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-missed-bin-collection": "2026-10-17",
+    "https://www.fixmystreet.com/reports/Southampton": "2026-10-17",
+    "https://www.mysociety.org/2024/02/06/statement-from-mysociety-regarding-misuse-of-fixmystreet-data/": "2026-10-17",
+    "https://www.nationalgas.com/emergency-contacts": "2026-10-17",
+    "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/": "2026-10-17",
+    "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/my-bin-is-lost-or-stolen": "2026-10-17",
+    "https://www.southampton.gov.uk/contact-us/emergency-out-of-hours/": "2026-10-17",
+    "https://www.southampton.gov.uk/environment": "2026-10-17",
+    "https://www.southampton.gov.uk/environment/emergencies-and-severe-weather/flood-risk-management": "2026-10-17",
+    "https://www.southampton.gov.uk/environment/neighbourhood-nuisances-and-property-concerns/concern-about-property/": "2026-10-17",
+    "https://www.southampton.gov.uk/environment/neighbourhood-nuisances-and-property-concerns/neighbourhood-nuisances/noise/make-a-complaint/": "2026-10-17",
+    "https://www.southampton.gov.uk/environment/street-cleaning": "2026-10-17",
+    "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/abandoned-shopping-trolleys/": "2026-10-17",
+    "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/dead-animals/": "2026-10-17",
+    "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/fly-tipping/": "2026-10-17",
+    "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/graffiti/": "2026-10-17",
+    "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/leaves/": "2026-10-17",
+    "https://www.southampton.gov.uk/travel-transport/report-issue/parking-offence/": "2026-10-17",
+    "https://www.southampton.gov.uk/travel-transport/report-issue/parking-offence/abandoned-vehicles/": "2026-10-17",
+    "https://www.southampton.gov.uk/travel-transport/report-issue/potholes": "2026-10-17",
+    "https://www.southampton.gov.uk/travel-transport/report-issue/potholes/": "2026-10-17",
+    "https://www.southernwater.co.uk/report-a-problem/": "2026-10-17",
+    "https://www.ssen.co.uk/power-cuts-emergencies/": "2026-10-17"
+  },
+  "location_modes": {
+    "abandoned_vehicle": "pin",
+    "council_housing_repair": "address",
+    "council_service_other": "pin",
+    "dead_animal": "pin",
+    "dog_fouling": "pin",
+    "flooding_severe_weather": "pin",
+    "fly_tipping": "pin",
+    "glass_spillage_hazard": "pin",
+    "graffiti_flyposting": "pin",
+    "illegal_parking": "pin",
+    "info_student_waste_rules": "pin",
+    "litter_street_cleaning": "pin",
+    "lost_damaged_bin": "address",
+    "missed_bin": "address",
+    "noise_nuisance": "handoff",
+    "not_council_trunk_road": "pin",
+    "not_council_utility": "pin",
+    "other_nuisance": "handoff",
+    "outside_southampton": "pin",
+    "pothole": "pin",
+    "property_concern": "handoff",
+    "unclear_other": "pin"
+  },
+  "never_saved": [
+    "not_council_trunk_road",
+    "not_council_utility",
+    "outside_southampton"
+  ],
+  "numbers": [
+    "023 8023 3344",
+    "0300 123 5000",
+    "0300 555 1373",
+    "0330 333 0444",
+    "0800 023 2023",
+    "0800 111 999",
+    "0800 820 999",
+    "999"
+  ],
+  "playbooks": {
+    "abandoned_vehicle": "abandoned_vehicle.json",
+    "council_housing_repair": "council_housing_repair.json",
+    "council_service_other": "council_service_other.json",
+    "dead_animal": "dead_animal.json",
+    "dog_fouling": "dog_fouling.json",
+    "flooding_severe_weather": "flooding_severe_weather.json",
+    "fly_tipping": "fly_tipping.json",
+    "glass_spillage_hazard": "glass_spillage_hazard.json",
+    "graffiti_flyposting": "graffiti_flyposting.json",
+    "illegal_parking": "illegal_parking.json",
+    "info_student_waste_rules": "info_student_waste_rules.json",
+    "litter_street_cleaning": "litter_street_cleaning.json",
+    "lost_damaged_bin": "lost_damaged_bin.json",
+    "missed_bin": "missed_bin.json",
+    "noise_nuisance": "noise_nuisance.json",
+    "not_council_trunk_road": "not_council_trunk_road.json",
+    "not_council_utility": "not_council_utility.json",
+    "other_nuisance": "other_nuisance.json",
+    "outside_southampton": "outside_southampton.json",
+    "pothole": "pothole.json",
+    "property_concern": "property_concern.json",
+    "unclear_other": "unclear_other.json"
+  },
+  "teams": [
+    "Emergency planning / highways (our label)",
+    "Environmental health",
+    "Highways",
+    "Highways / parking enforcement",
+    "Housing repairs",
+    "Manual review",
+    "Parking enforcement",
+    "Southampton City Council",
+    "Street cleansing",
+    "Waste collection"
+  ],
+  "version": "0.3+38f8b56fe45e"
+}

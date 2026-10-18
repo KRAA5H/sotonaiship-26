@@ -1,0 +1,104 @@
+{
+  "allowed_question_fields": [
+    "description",
+    "detail",
+    "location",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": "\b[A-Z]{2}[0-9]{2}\\s?[A-Z]{3}\b",
+  "detail_question": "If you can, send the registration plate.",
+  "detail_words": [],
+  "duplicate_window_days": 30,
+  "emergency": false,
+  "example_phrases": [
+    "car has not moved for months and has flat tyres",
+    "burnt out car left on the street"
+  ],
+  "facts": [
+    {
+      "caveat": "The page does not give criteria for abandoned vehicles.",
+      "date": "2026-10-17",
+      "fact": "The council takes reports of abandoned vehicles and of problems with a road or pavement such as a pothole.",
+      "fact_key": "39a56545969a",
+      "id": "F005",
+      "topic": "Roads and parking options",
+      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    {
+      "caveat": "Council cannot tell the reporter the outcome.",
+      "date": "2026-10-17",
+      "fact": "Vehicle must not be in use; inspected usually within a week (burnt out within 24 hours); untaxed investigations take 4-8 weeks; no guarantee of removal; reporter needs contact details and registration number.",
+      "fact_key": "36b22496212f",
+      "id": "F047",
+      "topic": "Criteria and process",
+      "url": "https://www.southampton.gov.uk/travel-transport/report-issue/parking-offence/abandoned-vehicles/"
+    }
+  ],
+  "fms_categories": [
+    "Other"
+  ],
+  "form_notes": "Must not be in use. Reporter needs contact details (DVLA condition), registration, photos. Private land needs signed landowner declaration.",
+  "form_url": "https://www.southampton.gov.uk/travel-transport/report-issue/parking-offence/abandoned-vehicles/",
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": false,
+  "id": "abandoned_vehicle",
+  "info_first": false,
+  "label": "Abandoned vehicle",
+  "location_mode": "pin",
+  "note": null,
+  "outcome": "council_report",
+  "questions": [
+    {
+      "field": "location",
+      "text": "Where is it?"
+    },
+    {
+      "field": "detail",
+      "text": "How long has it been there?"
+    },
+    {
+      "field": "detail",
+      "text": "Can you see a registration plate, and is it burnt out or damaged?"
+    }
+  ],
+  "redirect_to": null,
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [
+    "vehicle_registration_if_visible"
+  ],
+  "required_local": [
+    "description",
+    "location"
+  ],
+  "required_submission": [],
+  "rulebook_group": "roads_and_parking",
+  "rulebook_required_fields": [
+    "location",
+    "description",
+    "vehicle_registration_if_visible"
+  ],
+  "service_id": "abandoned_vehicle",
+  "severity": {
+    "high": [
+      "burnt out",
+      "blocking access"
+    ],
+    "low": []
+  },
+  "severity_keywords": {},
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+  "specialist_group": "highways",
+  "submission_status": "unverified",
+  "team": "Highways / parking enforcement",
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

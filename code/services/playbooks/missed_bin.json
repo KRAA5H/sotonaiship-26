@@ -1,0 +1,122 @@
+{
+  "allowed_question_fields": [
+    "address",
+    "description",
+    "detail",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": null,
+  "detail_question": null,
+  "detail_words": [],
+  "duplicate_window_days": 7,
+  "emergency": false,
+  "example_phrases": [
+    "bins weren't collected today",
+    "they skipped our street again"
+  ],
+  "facts": [
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "Before reporting, residents should check the bin was out on the correct day, was clearly visible to the crew, is a council-supplied bin, and that the report is within two working days of the collection day. The council aims to return for a missed collection within two to five working days.",
+      "fact_key": "e24eabd84a9b",
+      "id": "F019",
+      "topic": "Missed collection rules",
+      "url": "https://southampton.gov.uk/bins-recycling/bins/missed-collections"
+    },
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "If the wrong bin was put out, or the bin contained contamination or items the council cannot collect such as rubble or clinical waste, the bin is not treated as missed. Contamination must be removed and the bin is collected on the next scheduled day.",
+      "fact_key": "69753baa9f47",
+      "id": "F020",
+      "topic": "Not a missed collection",
+      "url": "https://southampton.gov.uk/bins-recycling/bins/missed-collections"
+    },
+    {
+      "caveat": "The page was undated when read. Check whether it is still current.",
+      "date": "2026-10-17",
+      "fact": "The council Leader published a notice about disruption to household waste collections in patches of the city and urged residents to keep reporting missed collections online.",
+      "fact_key": "fc2d2323afec",
+      "id": "F021",
+      "topic": "Collection disruption notice",
+      "url": "https://southampton.gov.uk/news/article/important-waste-collection-update-from-councillor-fielker-leader-of-southampton-city-council"
+    },
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "Form asks if bin was out on correct day, clearly visible, out by 6:30am, and report within two working days, then property address.",
+      "fact_key": "5128411aa756",
+      "id": "F052",
+      "topic": "Form checklist",
+      "url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-missed-bin-collection"
+    }
+  ],
+  "fms_categories": [],
+  "form_notes": "Council checklist: out on correct day, visible, out by 6:30am, within 2 working days; if due today only after 4pm.",
+  "form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-missed-bin-collection",
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": false,
+  "id": "missed_bin",
+  "info_first": true,
+  "label": "Missed bin collection",
+  "location_mode": "address",
+  "note": null,
+  "outcome": "council_report",
+  "questions": [
+    {
+      "field": "address",
+      "text": "What is your address or postcode?"
+    },
+    {
+      "field": "detail",
+      "text": "Which bin was missed (general waste, recycling, glass)?"
+    },
+    {
+      "field": "detail",
+      "text": "What was the scheduled collection day?"
+    },
+    {
+      "field": "detail",
+      "text": "Was the bin out the right day and clearly visible?"
+    }
+  ],
+  "redirect_to": null,
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [
+    "which_bin",
+    "scheduled_collection_day"
+  ],
+  "required_local": [
+    "description",
+    "address"
+  ],
+  "required_submission": [],
+  "rulebook_group": "bins",
+  "rulebook_required_fields": [
+    "address",
+    "which_bin",
+    "scheduled_collection_day"
+  ],
+  "service_id": "missed_bin",
+  "severity": {
+    "high": [],
+    "low": []
+  },
+  "severity_keywords": {},
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": "https://southampton.gov.uk/bins-recycling/bins/missed-collections",
+  "specialist_group": "waste",
+  "submission_status": "unverified",
+  "team": "Waste collection",
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

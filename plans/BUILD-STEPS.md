@@ -69,7 +69,7 @@ code/graph/build.py
 code/graph/runtime.py
 code/graph/writer.py
 code/services/build_playbooks.py
-code/services/playbooks/*.yaml
+code/services/playbooks/*.json
 code/services/reports.py
 code/specialists/base.py
 code/specialists/registry.py
@@ -203,11 +203,11 @@ Review focus: no false pass. A plan that claims council receipt must never valid
 
 ### [ ] Step 5. Playbooks (worker + reviewer, 1.5 hours)
 
-Files: `code/services/build_playbooks.py`, `code/services/playbooks/*.yaml`, `code/test_playbooks.py`.
+Files: `code/services/__init__.py`, `code/services/build_playbooks.py`, `code/services/playbooks/*.json`, `code/services/playbooks/_index.json`, `code/test_playbooks.py`.
 
-Generate one YAML per category from `categories.json` plus the CSV. Include `version`, `facts`, `required_local`, `required_submission`, `questions`, `form_url`, `source_url`, `source_date`, `dup_window_days`, severity rules.
+Generate one JSON playbook per category from `categories.json` plus the CSV. Include `version`, `source_date`, `facts`, `required_capture_any`, `required_local`, `required_detail`, `required_submission`, `questions`, `form_url`, `source_url`, `duplicate_window_days`, severity rules, and the derived `specialist_group`, `guidance_by_category`, `teams` and `numbers` blocks in the index. JSON, not YAML: no YAML parser is installed and `--check` needs an exact byte compare.
 
-Done when: 22 files, deterministic regeneration, `--check` exits 0, every fact has a URL and date.
+Done when: 22 playbooks plus `_index.json`, deterministic regeneration, `--check` exits 0, every fact has a URL and date, and the nine `general` rows are covered.
 
 Review focus: no invented requirement. If the source does not say it, the playbook does not contain it.
 

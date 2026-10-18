@@ -1,0 +1,63 @@
+{
+  "allowed_question_fields": [
+    "description",
+    "location",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": null,
+  "detail_question": null,
+  "detail_words": [],
+  "duplicate_window_days": 7,
+  "emergency": false,
+  "example_phrases": [],
+  "facts": [],
+  "fms_categories": [
+    "Other"
+  ],
+  "form_notes": "",
+  "form_url": null,
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": false,
+  "id": "unclear_other",
+  "info_first": false,
+  "label": "Unclear or other",
+  "location_mode": "pin",
+  "note": "Use when confidence is low or after the conversation limit. Never guess a category. Flag for officer review.",
+  "outcome": "council_report",
+  "questions": [
+    {
+      "field": "location",
+      "text": "Can you tell me a bit more about what is happening and where?"
+    }
+  ],
+  "redirect_to": null,
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [],
+  "required_local": [
+    "description",
+    "location"
+  ],
+  "required_submission": [],
+  "rulebook_group": "fallback",
+  "rulebook_required_fields": [
+    "description"
+  ],
+  "service_id": "unclear_other",
+  "severity": {},
+  "severity_keywords": {},
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": null,
+  "specialist_group": null,
+  "submission_status": "unverified",
+  "team": "Manual review",
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

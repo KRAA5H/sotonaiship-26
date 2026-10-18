@@ -1,0 +1,118 @@
+{
+  "allowed_question_fields": [
+    "description",
+    "detail",
+    "location",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": null,
+  "detail_question": null,
+  "detail_words": [],
+  "duplicate_window_days": 3,
+  "emergency": false,
+  "example_phrases": [
+    "litter everywhere outside the shops",
+    "street never gets swept",
+    "abandoned shopping trolley"
+  ],
+  "facts": [
+    {
+      "caveat": "This is an aim, not a guarantee.",
+      "date": "2026-10-17",
+      "fact": "The council aims to deal with at least 75% of urgent street cleaning requests within one working day of being reported.",
+      "fact_key": "dfd6037b52d1",
+      "id": "F003",
+      "topic": "Urgent response aim",
+      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    {
+      "caveat": "Only the section menu was read.",
+      "date": "2026-10-17",
+      "fact": "The council has local street cleansing teams and a separate commercial street cleansing service.",
+      "fact_key": "2b04c60c53c1",
+      "id": "F009",
+      "topic": "Street cleansing teams",
+      "url": "https://www.southampton.gov.uk/environment/street-cleaning"
+    },
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "Report to the retailer first; council removes only badly damaged untraceable trolleys, as fly-tipping.",
+      "fact_key": "2bd258908737",
+      "id": "F044",
+      "topic": "Shopping trolleys",
+      "url": "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/abandoned-shopping-trolleys/"
+    },
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "Leaves cleared Oct to mid-Jan; reports actioned only for serious hazard or flood risk; photo helps.",
+      "fact_key": "603d3f54b94d",
+      "id": "F045",
+      "topic": "Leaves",
+      "url": "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/leaves/"
+    }
+  ],
+  "fms_categories": [
+    "Litter in the street",
+    "Street cleaning",
+    "Leaves",
+    "Shopping trolleys"
+  ],
+  "form_notes": "Shopping trolleys: tell resident to contact the retailer first. Leaves: only serious hazard or flood risk.",
+  "form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-street-cleaning-issue",
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": false,
+  "id": "litter_street_cleaning",
+  "info_first": false,
+  "label": "Litter / street needs cleaning",
+  "location_mode": "pin",
+  "note": null,
+  "outcome": "council_report",
+  "questions": [
+    {
+      "field": "location",
+      "text": "Which street and which stretch?"
+    },
+    {
+      "field": "detail",
+      "text": "Is it litter, leaves, or something else?"
+    }
+  ],
+  "redirect_to": null,
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [],
+  "required_local": [
+    "description",
+    "location"
+  ],
+  "required_submission": [],
+  "rulebook_group": "street_cleansing",
+  "rulebook_required_fields": [
+    "location",
+    "description"
+  ],
+  "service_id": "litter_street_cleaning",
+  "severity": {
+    "high": [],
+    "low": [
+      "general litter"
+    ]
+  },
+  "severity_keywords": {},
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": "https://www.southampton.gov.uk/environment/street-cleaning",
+  "specialist_group": "cleansing",
+  "submission_status": "unverified",
+  "team": "Street cleansing",
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

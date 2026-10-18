@@ -1,0 +1,61 @@
+{
+  "allowed_question_fields": [
+    "description",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": null,
+  "detail_question": null,
+  "detail_words": [],
+  "duplicate_window_days": 30,
+  "emergency": false,
+  "example_phrases": [
+    "how do I pay my council tax",
+    "I need a blue badge",
+    "my taxi complaint"
+  ],
+  "facts": [],
+  "fms_categories": [],
+  "form_notes": "",
+  "form_url": null,
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": false,
+  "id": "council_service_other",
+  "info_first": false,
+  "label": "A council service the agent does not handle",
+  "location_mode": "pin",
+  "note": null,
+  "outcome": "info_only",
+  "questions": [],
+  "redirect_to": null,
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [
+    "topic"
+  ],
+  "required_local": [
+    "description",
+    "location"
+  ],
+  "required_submission": [],
+  "rulebook_group": "routing",
+  "rulebook_required_fields": [
+    "topic"
+  ],
+  "service_id": "council_service_other",
+  "severity": {},
+  "severity_keywords": {},
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": "https://www.southampton.gov.uk/contact-us/online-forms",
+  "specialist_group": null,
+  "submission_status": "unverified",
+  "team": "Southampton City Council",
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

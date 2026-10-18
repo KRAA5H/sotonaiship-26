@@ -1,0 +1,56 @@
+{
+  "allowed_question_fields": [
+    "description",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": null,
+  "detail_question": null,
+  "detail_words": [],
+  "duplicate_window_days": 30,
+  "emergency": false,
+  "example_phrases": [
+    "pothole on the motorway slip road",
+    "streetlight out on the M27"
+  ],
+  "facts": [],
+  "fms_categories": [],
+  "form_notes": "",
+  "form_url": null,
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": false,
+  "id": "not_council_trunk_road",
+  "info_first": false,
+  "label": "Motorway or trunk road problem",
+  "location_mode": "pin",
+  "note": "If the resident names a trunk or main road (A33, A36 or similar) and the facts do not say who is responsible, say once that we cannot confirm who looks after that road, point them to the council_roads page or National Highways, and do not save a report.",
+  "outcome": "not_council",
+  "questions": [],
+  "redirect_to": "national_highways",
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [],
+  "required_local": [
+    "description",
+    "location"
+  ],
+  "required_submission": [],
+  "rulebook_group": "not_council",
+  "rulebook_required_fields": [],
+  "service_id": "not_council_trunk_road",
+  "severity": {},
+  "severity_keywords": {},
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": "https://newweb.fareham.gov.uk/parking_and_traffic/traffic_management/reportaproblem.aspx",
+  "specialist_group": null,
+  "submission_status": "unverified",
+  "team": null,
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

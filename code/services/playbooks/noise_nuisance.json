@@ -1,0 +1,153 @@
+{
+  "allowed_question_fields": [
+    "description",
+    "detail",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": null,
+  "detail_question": null,
+  "detail_words": [],
+  "duplicate_window_days": 30,
+  "emergency": false,
+  "example_phrases": [
+    "loud music every night from next door",
+    "neighbours shouting late",
+    "dog barking all day"
+  ],
+  "facts": [
+    {
+      "caveat": "The wording is may be able to help, not a promise of action.",
+      "date": "2026-10-17",
+      "fact": "The council gives advice and may be able to help with problems from a neighbouring property such as noise, light, dust, smoke or odours.",
+      "fact_key": "c5fdb2395dc0",
+      "id": "F006",
+      "topic": "Neighbourhood nuisance scope",
+      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "The council prefers audio recordings uploaded through its Noise App. Paper log sheets are accepted only in exceptional cases. Evidence is due within 28 days. If it does not show a likely statutory nuisance, or none is provided, the council takes no further action and does not reinvestigate for three calendar months. Officers may also visit or install a recording device.",
+      "fact_key": "f2b5771bb508",
+      "id": "F028",
+      "topic": "Evidence rules",
+      "url": "https://southampton.gov.uk/noiseprotocol"
+    },
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "Excluded noise includes children playing or crying, neighbours talking, snoring, impact noise in shared buildings, daytime domestic appliances and DIY (roughly 0700 to 2200), garden equipment, one-off parties, traffic, aircraft, fireworks and wild animals such as seagulls. A service manager can allow an excluded complaint in exceptional circumstances.",
+      "fact_key": "6f100c706260",
+      "id": "F029",
+      "topic": "Excluded noise",
+      "url": "https://southampton.gov.uk/noiseprotocol"
+    },
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "Complaints from business representatives are investigated. For commercial or industrial noise officers first consider early engagement with the operator. The protocol treats licensed entertainment venues as commercial premises and may refer them to licensing services.",
+      "fact_key": "2e36556a9cb5",
+      "id": "F030",
+      "topic": "Businesses and licensed premises",
+      "url": "https://southampton.gov.uk/noiseprotocol"
+    },
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "The protocol applies section 79 of the Environmental Protection Act 1990 and uses an average person test, weighing the type of noise, frequency, time of day and the character of the area.",
+      "fact_key": "37e5a90f8a86",
+      "id": "F031",
+      "topic": "Statutory nuisance test",
+      "url": "https://southampton.gov.uk/noiseprotocol"
+    },
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "Long list of excluded noise types (see scope_checks.csv). Needs contact details and takes about 10 minutes.",
+      "fact_key": "c16f4f219c78",
+      "id": "F049",
+      "topic": "What council will not investigate",
+      "url": "https://www.southampton.gov.uk/environment/neighbourhood-nuisances-and-property-concerns/neighbourhood-nuisances/noise/make-a-complaint/"
+    },
+    {
+      "caveat": "Later steps not read.",
+      "date": "2026-10-17",
+      "fact": "After choosing Noise the form asks type of noise (loud music, shouting, barking dogs, DIY, alarms, party etc.) and whether the noise is from a neighbour.",
+      "fact_key": "c473f0994ca5",
+      "id": "F051",
+      "topic": "Noise form questions",
+      "url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/environmental-health-report-local-nuisance-or-concern"
+    }
+  ],
+  "fms_categories": [
+    "Noise nuisance"
+  ],
+  "form_notes": "Check the council's excluded noise list before taking a report; car/motorcycle noise: police first; council needs contact details.",
+  "form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/environmental-health-report-local-nuisance-or-concern",
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": true,
+  "id": "noise_nuisance",
+  "info_first": false,
+  "label": "Noise from a neighbouring property",
+  "location_mode": "handoff",
+  "note": "If there are threats or violence, show 999 guidance. Do not handle it as a normal noise report.",
+  "outcome": "council_report",
+  "questions": [
+    {
+      "field": "detail",
+      "text": "What kind of noise is it?"
+    },
+    {
+      "field": "detail",
+      "text": "What times does it happen, and how often?"
+    },
+    {
+      "field": "detail",
+      "text": "How long has it been going on?"
+    },
+    {
+      "field": "detail",
+      "text": "Is it a house, flat or HMO?"
+    }
+  ],
+  "redirect_to": null,
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [
+    "address_of_noise_source_or_nearest",
+    "times_and_frequency"
+  ],
+  "required_local": [],
+  "required_submission": [],
+  "rulebook_group": "neighbourhood_nuisance",
+  "rulebook_required_fields": [
+    "address_of_noise_source_or_nearest",
+    "description",
+    "times_and_frequency"
+  ],
+  "service_id": "noise_nuisance",
+  "severity": {
+    "high": [
+      "late night and regular",
+      "threats or violence involved (use emergency_redirect)"
+    ],
+    "low": [
+      "one-off"
+    ]
+  },
+  "severity_keywords": {},
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+  "specialist_group": null,
+  "submission_status": "unverified",
+  "team": "Environmental health",
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

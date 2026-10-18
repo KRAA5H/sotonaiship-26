@@ -1,0 +1,100 @@
+{
+  "allowed_question_fields": [
+    "description",
+    "detail",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": null,
+  "detail_question": null,
+  "detail_words": [],
+  "duplicate_window_days": 30,
+  "emergency": false,
+  "example_phrases": [
+    "neighbour burns rubbish every weekend",
+    "floodlight shines into our bedroom",
+    "smell from next door"
+  ],
+  "facts": [
+    {
+      "caveat": "The wording is may be able to help, not a promise of action.",
+      "date": "2026-10-17",
+      "fact": "The council gives advice and may be able to help with problems from a neighbouring property such as noise, light, dust, smoke or odours.",
+      "fact_key": "c5fdb2395dc0",
+      "id": "F006",
+      "topic": "Neighbourhood nuisance scope",
+      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    {
+      "caveat": "Read from the form dropdown; nothing submitted.",
+      "date": "2026-10-17",
+      "fact": "Council nuisance form types: Birds, Bonfire smoke, Derelict or empty property, Dock or port, Drainage, Dust, Filthy verminous property, Gas/vapour/solvent smell, Noise, Overcrowding, Rats, Rubbish build up, Security light nuisance, Trains.",
+      "fact_key": "44eccc3a3994",
+      "id": "F050",
+      "topic": "Council's own issue types",
+      "url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/environmental-health-report-local-nuisance-or-concern"
+    }
+  ],
+  "fms_categories": [
+    "Other"
+  ],
+  "form_notes": "Council form types include dust, bonfire smoke, smells, security light nuisance, birds.",
+  "form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/environmental-health-report-local-nuisance-or-concern",
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": true,
+  "id": "other_nuisance",
+  "info_first": false,
+  "label": "Light, dust, smoke or odour from a neighbouring property",
+  "location_mode": "handoff",
+  "note": null,
+  "outcome": "council_report",
+  "questions": [
+    {
+      "field": "detail",
+      "text": "What is the problem (light, dust, smoke, smell)?"
+    },
+    {
+      "field": "detail",
+      "text": "When does it happen and how often?"
+    }
+  ],
+  "redirect_to": null,
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [
+    "address_of_source_or_nearest",
+    "times_and_frequency"
+  ],
+  "required_local": [],
+  "required_submission": [],
+  "rulebook_group": "neighbourhood_nuisance",
+  "rulebook_required_fields": [
+    "address_of_source_or_nearest",
+    "description",
+    "times_and_frequency"
+  ],
+  "service_id": "other_nuisance",
+  "severity": {
+    "high": [
+      "health impact described",
+      "regular and ongoing"
+    ],
+    "low": [
+      "one-off"
+    ]
+  },
+  "severity_keywords": {},
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+  "specialist_group": null,
+  "submission_status": "unverified",
+  "team": "Environmental health",
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

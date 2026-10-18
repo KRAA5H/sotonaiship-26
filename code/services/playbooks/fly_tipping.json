@@ -1,0 +1,195 @@
+{
+  "allowed_question_fields": [
+    "description",
+    "detail",
+    "location",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": null,
+  "detail_question": "What's been dumped, and roughly how much?",
+  "detail_words": [
+    "sofa",
+    "mattress",
+    "bag",
+    "bags",
+    "fridge",
+    "freezer",
+    "tyre",
+    "tyres",
+    "rubble",
+    "furniture",
+    "wood",
+    "pallet",
+    "pallets",
+    "rubbish",
+    "waste",
+    "trolley",
+    "bed",
+    "chair",
+    "table",
+    "boxes",
+    "carpet",
+    "van"
+  ],
+  "duplicate_window_days": 7,
+  "emergency": false,
+  "example_phrases": [
+    "someone dumped a sofa by the bins",
+    "bags of rubbish left on the verge",
+    "mattress dumped in the alley"
+  ],
+  "facts": [
+    {
+      "caveat": "The page does not say whether private land is covered.",
+      "date": "2026-10-17",
+      "fact": "Fly-tipping, dog fouling, dead animals, spillages, broken glass and other dangerous items seen on a road, pavement or public space in Southampton can be reported as a street cleaning problem.",
+      "fact_key": "ec20e0c92814",
+      "id": "F002",
+      "topic": "What can be reported as street cleaning",
+      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    {
+      "caveat": "This is an aim, not a guarantee.",
+      "date": "2026-10-17",
+      "fact": "The council aims to deal with at least 75% of urgent street cleaning requests within one working day of being reported.",
+      "fact_key": "dfd6037b52d1",
+      "id": "F003",
+      "topic": "Urgent response aim",
+      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    {
+      "caveat": "National limits can change. Re-check on the day.",
+      "date": "2026-10-17",
+      "fact": "The fixed penalty for fly-tipping is 400 pounds, reduced to 250 pounds if paid within ten days of the notice being issued.",
+      "fact_key": "71bff1210848",
+      "id": "F010",
+      "topic": "Fixed penalty amount",
+      "url": "https://southampton.gov.uk/environmental-issues/street-cleaning/fixed-penalty-notices-for-fly-tipping"
+    },
+    {
+      "caveat": "The page does not mention private land specifically.",
+      "date": "2026-10-17",
+      "fact": "The council defines fly-tipping as waste greater than one black sack left on land without the owner's permission.",
+      "fact_key": "67b18748c9c6",
+      "id": "F011",
+      "topic": "Definition of fly-tipping",
+      "url": "https://southampton.gov.uk/environmental-issues/street-cleaning/fixed-penalty-notices-for-fly-tipping"
+    },
+    {
+      "caveat": "The page does not mention licensed waste carriers or transfer notes.",
+      "date": "2026-10-17",
+      "fact": "A fixed penalty can be issued to anyone who allows their waste to be fly-tipped. The page gives the example of using someone found online to dispose of waste without getting their full details and a receipt.",
+      "fact_key": "c7de5137bb08",
+      "id": "F012",
+      "topic": "Responsibility for own waste",
+      "url": "https://southampton.gov.uk/environmental-issues/street-cleaning/fixed-penalty-notices-for-fly-tipping"
+    },
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "Private land or property fly-tipping must be resolved by the owner or occupier; form is for public land or witnessed fly-tips with evidence of who did it.",
+      "fact_key": "389813eb6ff9",
+      "id": "F042",
+      "topic": "Private land",
+      "url": "https://www.southampton.gov.uk/environment/street-cleaning/report-a-street-cleaning-problem/fly-tipping/"
+    }
+  ],
+  "fms_categories": [
+    "Flytipping",
+    "Rubbish accumulation on private property"
+  ],
+  "form_notes": "Private land: owner/occupier resolves it. Report only if on public land, or witnessed with evidence of who did it.",
+  "form_url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-street-cleaning-issue",
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": false,
+  "id": "fly_tipping",
+  "info_first": false,
+  "label": "Fly-tipping",
+  "location_mode": "pin",
+  "note": null,
+  "outcome": "council_report",
+  "questions": [
+    {
+      "field": "location",
+      "text": "Where exactly is it (street name or nearest house number)?"
+    },
+    {
+      "field": "detail",
+      "text": "What has been dumped, and roughly how much?"
+    },
+    {
+      "field": "detail",
+      "text": "Can you send a photo?"
+    },
+    {
+      "field": "detail",
+      "text": "Is it blocking a path or road?"
+    }
+  ],
+  "redirect_to": null,
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [],
+  "required_local": [
+    "description",
+    "location"
+  ],
+  "required_submission": [],
+  "rulebook_group": "street_cleansing",
+  "rulebook_required_fields": [
+    "location",
+    "description",
+    "photo_recommended"
+  ],
+  "service_id": "fly_tipping",
+  "severity": {
+    "high": [
+      "blocking road or pavement",
+      "hazardous items such as asbestos, needles, chemicals"
+    ],
+    "low": [
+      "a single small bag"
+    ]
+  },
+  "severity_keywords": {
+    "high": [
+      "asbestos",
+      "needle",
+      "needles",
+      "syringe",
+      "chemical",
+      "chemicals",
+      "paint tins",
+      "oil",
+      "gas bottle",
+      "gas canister",
+      "blocking",
+      "van load",
+      "vanload",
+      "fridge",
+      "freezer",
+      "tyres",
+      "mattresses"
+    ],
+    "low": [
+      "one bag",
+      "single bag",
+      "small bag",
+      "a bag"
+    ]
+  },
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+  "specialist_group": "cleansing",
+  "submission_status": "unverified",
+  "team": "Street cleansing",
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

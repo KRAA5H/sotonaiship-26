@@ -317,7 +317,7 @@ No chat handle is persisted. Undeliverable outbox rows after a restart are marke
 
 ## 7. Playbooks and specialists
 
-`code/services/build_playbooks.py` generates one YAML per category from `categories.json` plus the CSV. A test asserts the YAML matches the source, so it cannot drift. `playbook_version` is the categories version plus a hash of the CSV.
+`code/services/build_playbooks.py` generates one JSON playbook per category from `categories.json` plus the CSV. A test asserts the playbooks match the source, so they cannot drift. `playbook_version` is the categories version plus a hash of the CSV. JSON, not YAML, because no YAML parser is installed and `--check` needs an exact byte compare.
 
 | Group | Categories | Handling | What it actually does |
 |---|---|---|---|

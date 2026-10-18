@@ -1,0 +1,102 @@
+{
+  "allowed_question_fields": [
+    "description",
+    "detail",
+    "location",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": null,
+  "detail_question": null,
+  "detail_words": [],
+  "duplicate_window_days": 1,
+  "emergency": false,
+  "example_phrases": [
+    "car blocking my driveway",
+    "cars parked on the pavement",
+    "parked on double yellows by the school"
+  ],
+  "facts": [
+    {
+      "caveat": "Dangerous parking with no restriction is police only (101).",
+      "date": "2026-10-17",
+      "fact": "Form covers blocked driveway/dropped kerb, zig-zags, yellow lines, no permit in controlled zone, double parking, disabled bay without badge, bus stop/taxi rank, loading/EV/suspended bays. Needs registration, colour, make, photos. Dropped kerb PCN £70.",
+      "fact_key": "eeb6e06133c0",
+      "id": "F048",
+      "topic": "What the form covers",
+      "url": "https://www.southampton.gov.uk/travel-transport/report-issue/parking-offence/"
+    }
+  ],
+  "fms_categories": [
+    "Illegal parking"
+  ],
+  "form_notes": "Dangerous parking with no restriction: police 101. Blocked driveway needs name, address, phone.",
+  "form_url": "https://www.southampton.gov.uk/travel-transport/report-issue/parking-offence/",
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": false,
+  "id": "illegal_parking",
+  "info_first": false,
+  "label": "Illegal or obstructive parking",
+  "location_mode": "pin",
+  "note": null,
+  "outcome": "council_report",
+  "questions": [
+    {
+      "field": "location",
+      "text": "Where exactly, and what is being blocked (driveway, pavement, junction, crossing)?"
+    },
+    {
+      "field": "detail",
+      "text": "What time was it, and does it happen regularly?"
+    }
+  ],
+  "redirect_to": null,
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [
+    "time_observed"
+  ],
+  "required_local": [
+    "description",
+    "location"
+  ],
+  "required_submission": [],
+  "rulebook_group": "roads_and_parking",
+  "rulebook_required_fields": [
+    "location",
+    "description",
+    "time_observed"
+  ],
+  "service_id": "illegal_parking",
+  "severity": {
+    "high": [
+      "blocking an emergency route or dropped kerb used by a wheelchair user"
+    ],
+    "low": []
+  },
+  "severity_keywords": {
+    "high": [
+      "blocking",
+      "ambulance",
+      "fire engine",
+      "bus",
+      "dropped kerb",
+      "wheelchair",
+      "school"
+    ],
+    "low": []
+  },
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": "https://www.fixmystreet.com/reports/Southampton",
+  "specialist_group": "highways",
+  "submission_status": "unverified",
+  "team": "Parking enforcement",
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

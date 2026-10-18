@@ -1,0 +1,170 @@
+{
+  "allowed_question_fields": [
+    "description",
+    "detail",
+    "location",
+    "photo"
+  ],
+  "check_ownership": "If the road is a motorway, or a named trunk or main road (A33, A36 or similar) that the facts do not say the council looks after, switch to not_council_trunk_road.",
+  "detail_pattern": null,
+  "detail_question": "Is it in the road, a cycle lane or on the pavement?",
+  "detail_words": [
+    "road",
+    "pavement",
+    "footpath",
+    "cycle",
+    "lane",
+    "kerb",
+    "junction",
+    "crossing"
+  ],
+  "duplicate_window_days": 30,
+  "emergency": false,
+  "example_phrases": [
+    "massive crater nearly burst my tyre",
+    "hole in the road by the crossing",
+    "road surface is breaking up"
+  ],
+  "facts": [
+    {
+      "caveat": "The page does not give criteria for abandoned vehicles.",
+      "date": "2026-10-17",
+      "fact": "The council takes reports of abandoned vehicles and of problems with a road or pavement such as a pothole.",
+      "fact_key": "39a56545969a",
+      "id": "F005",
+      "topic": "Roads and parking options",
+      "url": "https://southampton.gov.uk/environmental-issues/report-an-issue"
+    },
+    {
+      "caveat": "The page does not mention private roads, motorways or trunk roads.",
+      "date": "2026-10-17",
+      "fact": "Roads: under 4cm is monitored and not automatically repaired, 4 to 7.5cm is repaired within 6 months, over 7.5cm within 24 hours. Pavements: under 2cm is monitored, 2 to 4cm within 6 months, over 4cm within 24 hours. Staff aim to assess a report within two weeks, emergencies get a temporary repair within 24 hours, and the council tries to repair non-urgent potholes within two months where possible.",
+      "fact_key": "649ac2c5e01a",
+      "id": "F017",
+      "topic": "Size thresholds and repair times",
+      "url": "https://www.southampton.gov.uk/travel-transport/report-issue/potholes"
+    },
+    {
+      "caveat": "This is a 2023/24 news article, so figures are not current. It does not list street lighting or drainage.",
+      "date": "2026-10-17",
+      "fact": "The council announced an 11.9 million pound highways and footways programme for 2023/24 and reported 5,204 potholes repaired in the previous 12 months and over 1.4 million pounds spent on dedicated pothole repair. It names Balfour Beatty Living Places as its highways partner carrying out much of the work. It also reports gritting winter routes, traffic signal improvements on Thomas Lewis Way and 20mph signage.",
+      "fact_key": "6cd41e14de26",
+      "id": "F018",
+      "topic": "Highways programme",
+      "url": "https://southampton.gov.uk/news/article/11-9-million-confirmed-for-highways-and-footways-programme-during-2023-2024"
+    },
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "Report one pothole per form. Staff assess within about two weeks. Emergency defects get a temporary repair within 24 hours; most are non-urgent, programmed within six months (aim two). White marking means already inspected. Form needs location, depth and ideally a photo.",
+      "fact_key": "39ac91546e03",
+      "id": "F041",
+      "topic": "Reporting and repair",
+      "url": "https://www.southampton.gov.uk/travel-transport/report-issue/potholes/"
+    }
+  ],
+  "fms_categories": [
+    "Potholes"
+  ],
+  "form_notes": "One report per pothole. Needs location, depth, photo if possible. Depth bands: road <4cm monitor, 4-7.5cm 6 months, >7.5cm 24h; pavement <2/2-4/>4cm.",
+  "form_url": "https://www.southampton.gov.uk/travel-transport/report-issue/potholes/",
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": false,
+  "id": "pothole",
+  "info_first": false,
+  "label": "Pothole",
+  "location_mode": "pin",
+  "note": null,
+  "outcome": "council_report",
+  "questions": [
+    {
+      "field": "location",
+      "text": "Which road, and nearest house number or junction?"
+    },
+    {
+      "field": "detail",
+      "text": "Roughly how big and how deep?"
+    },
+    {
+      "field": "detail",
+      "text": "Is it in the road, on a cycle lane, or on the pavement?"
+    },
+    {
+      "field": "detail",
+      "text": "Is it a main road or a motorway/trunk road?"
+    }
+  ],
+  "redirect_to": null,
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [
+    "road_name"
+  ],
+  "required_local": [
+    "description",
+    "location"
+  ],
+  "required_submission": [],
+  "rulebook_group": "roads_and_parking",
+  "rulebook_required_fields": [
+    "location",
+    "description",
+    "road_name",
+    "photo_recommended"
+  ],
+  "service_id": "pothole",
+  "severity": {
+    "high": [
+      "deep or wide",
+      "in a live lane",
+      "on a cycle lane",
+      "has caused damage or injury"
+    ],
+    "low": [
+      "hairline crack",
+      "shallow"
+    ]
+  },
+  "severity_keywords": {
+    "high": [
+      "deep",
+      "huge",
+      "massive",
+      "crater",
+      "dangerous",
+      "cycle lane",
+      "bike lane",
+      "school",
+      "burst",
+      "tyre",
+      "wheel",
+      "fell",
+      "injury",
+      "injured",
+      "bus route",
+      "main road",
+      "swerve",
+      "swerving",
+      "ankle"
+    ],
+    "low": [
+      "small",
+      "hairline",
+      "crack",
+      "shallow"
+    ]
+  },
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": "https://southampton.gov.uk/environmental-issues/report-an-issue",
+  "specialist_group": "highways",
+  "submission_status": "unverified",
+  "team": "Highways",
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

@@ -1,0 +1,100 @@
+{
+  "allowed_question_fields": [
+    "address",
+    "description",
+    "detail",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": null,
+  "detail_question": null,
+  "detail_words": [],
+  "duplicate_window_days": 14,
+  "emergency": false,
+  "example_phrases": [
+    "my council flat has a broken boiler",
+    "leak in the ceiling of my council house"
+  ],
+  "facts": [
+    {
+      "caveat": "Only the form title was seen.",
+      "date": "2026-10-17",
+      "fact": "The council has an online form to report a repair for council tenants and leaseholders.",
+      "fact_key": "40b7cf3163a3",
+      "id": "F025",
+      "topic": "Repair form",
+      "url": "https://southampton.gov.uk/contact-us/online-forms"
+    },
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "Call 023 8023 3344 for council housing emergency repairs outside office hours. The same line covers children's services, community alarm, community care, emergency planning, highways, homelessness caused by an emergency, the register office and trees. Textphone users dial 18001 first.",
+      "fact_key": "fa44796a6bb1",
+      "id": "F026",
+      "topic": "Out-of-hours emergency number",
+      "url": "https://www.southampton.gov.uk/contact-us/emergency-out-of-hours/"
+    }
+  ],
+  "fms_categories": [],
+  "form_notes": "",
+  "form_url": "https://www.southampton.gov.uk/housing/council-housing-tenants-and-leaseholders/repairs-maintenance-and-improvements/report-a-repair/",
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": false,
+  "id": "council_housing_repair",
+  "info_first": false,
+  "label": "Repair for a council tenant or leaseholder",
+  "location_mode": "address",
+  "note": "The council has a separate online form for council tenants and leaseholders, so this must not be mixed up with private rented disrepair.",
+  "outcome": "council_report",
+  "questions": [
+    {
+      "field": "address",
+      "text": "Is your landlord Southampton City Council?"
+    },
+    {
+      "field": "detail",
+      "text": "What is broken and where in the home?"
+    },
+    {
+      "field": "detail",
+      "text": "Is it urgent (no heating, water leak, safety)?"
+    }
+  ],
+  "redirect_to": null,
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [],
+  "required_local": [
+    "description",
+    "address"
+  ],
+  "required_submission": [],
+  "rulebook_group": "housing",
+  "rulebook_required_fields": [
+    "address",
+    "description"
+  ],
+  "service_id": "council_housing_repair",
+  "severity": {
+    "high": [
+      "no heating or water",
+      "active leak",
+      "safety issue"
+    ],
+    "low": []
+  },
+  "severity_keywords": {},
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": "https://southampton.gov.uk/contact-us/online-forms",
+  "specialist_group": "housing",
+  "submission_status": "unverified",
+  "team": "Housing repairs",
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

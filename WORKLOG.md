@@ -9,6 +9,10 @@ Three places, no more:
 
 ---
 
+## 03:38, Sunday: verified playbooks
+
+- Step 5: `code/services/build_playbooks.py`, 22 playbooks and `_index.json`, `code/test_playbooks.py`. Generated from `agent/` with a byte-exact `--check`. The index carries categories, the handoff and never-saved sets, specialist groups, teams, numbers, guidance, per-category questions, location modes, duplicate windows, all 54 fact URLs and the nine general fact ids. The goal audit blocked the first design; its fixes are in. 21 playbook tests, 621 total, 4 skips, 31/31. JSON replaces YAML; the parent plans are amended.
+
 ## 03:37, Sunday: policy goal gaps closed
 
 - After the goal audit: a wrong proposed category is repairable and cannot kill a valid capture; `locally_actionable` now uses service requirements and a street or postcode, not a district name; an answer without facts or a record is `policy.answer_ungrounded`; negation is scoped to the claim's clause; receipt matching covers "have it", "got it" and "received it". 62 policy tests, 621 total, 4 skips, 31/31.

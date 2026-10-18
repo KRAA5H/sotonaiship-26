@@ -1,0 +1,66 @@
+{
+  "allowed_question_fields": [
+    "description",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": null,
+  "detail_question": null,
+  "detail_words": [],
+  "duplicate_window_days": 30,
+  "emergency": false,
+  "example_phrases": [
+    "pothole in Eastleigh",
+    "fly-tipping near Totton"
+  ],
+  "facts": [
+    {
+      "caveat": "Do not decide city boundary from postcode prefix alone.",
+      "date": "2026-10-17",
+      "fact": "Council address search only works for SO14-SO19 postcodes, and some SO16, SO18 and SO19 properties are outside the city boundary.",
+      "fact_key": "351648c12db8",
+      "id": "F053",
+      "topic": "Postcode boundary",
+      "url": "https://southampton.portal.uk.empro.verintcloudservices.com/site/southampton/request/report-missed-bin-collection"
+    }
+  ],
+  "fms_categories": [],
+  "form_notes": "",
+  "form_url": null,
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": false,
+  "id": "outside_southampton",
+  "info_first": false,
+  "label": "Location is outside Southampton",
+  "location_mode": "pin",
+  "note": "Demo failure case: location check fails, resident is told it is outside coverage and pointed to the right council.",
+  "outcome": "not_council",
+  "questions": [],
+  "redirect_to": "find_your_council",
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [],
+  "required_local": [
+    "description",
+    "location"
+  ],
+  "required_submission": [],
+  "rulebook_group": "not_council",
+  "rulebook_required_fields": [],
+  "service_id": "outside_southampton",
+  "severity": {},
+  "severity_keywords": {},
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": null,
+  "specialist_group": null,
+  "submission_status": "unverified",
+  "team": null,
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}

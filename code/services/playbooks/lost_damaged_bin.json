@@ -1,0 +1,104 @@
+{
+  "allowed_question_fields": [
+    "address",
+    "description",
+    "detail",
+    "photo"
+  ],
+  "check_ownership": null,
+  "detail_pattern": null,
+  "detail_question": null,
+  "detail_words": [],
+  "duplicate_window_days": 14,
+  "emergency": false,
+  "example_phrases": [
+    "my recycling bin has gone missing",
+    "bin lid is broken"
+  ],
+  "facts": [
+    {
+      "caveat": "",
+      "date": "2026-10-17",
+      "fact": "Homes with bin storage should have a green-top general waste bin, a blue-top recycling bin and a black or grey glass box. Homes without storage get rolls of sacks delivered twice a year. Before reporting a missing bin residents are asked to check whether it was moved, claimed by a neighbour or returned to the wrong property.",
+      "fact_key": "2081dc866c06",
+      "id": "F022",
+      "topic": "Bin types and checks",
+      "url": "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/"
+    },
+    {
+      "caveat": "The page does not say whether damaged bins are free.",
+      "date": "2026-10-17",
+      "fact": "A lost or stolen general waste (green-lidded) bin costs 33 pounds for 140 litre, 43 pounds for 240 litre and 54 pounds for 360 litre. Charges are non-refundable. Glass and recycling bins can be replaced free.",
+      "fact_key": "b8a7204ac23a",
+      "id": "F023",
+      "topic": "Replacement charges",
+      "url": "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/my-bin-is-lost-or-stolen"
+    }
+  ],
+  "fms_categories": [],
+  "form_notes": "",
+  "form_url": null,
+  "generated_from": {
+    "categories": "0.3",
+    "facts_date": "2026-10-17"
+  },
+  "handoff": false,
+  "id": "lost_damaged_bin",
+  "info_first": true,
+  "label": "Lost, damaged or stray bin",
+  "location_mode": "address",
+  "note": null,
+  "outcome": "council_report",
+  "questions": [
+    {
+      "field": "address",
+      "text": "What is your address?"
+    },
+    {
+      "field": "detail",
+      "text": "Which bin is it?"
+    },
+    {
+      "field": "detail",
+      "text": "Is it missing or damaged?"
+    },
+    {
+      "field": "detail",
+      "text": "Have you checked neighbours and nearby streets?"
+    }
+  ],
+  "redirect_to": null,
+  "required_capture_any": [
+    "description",
+    "photo"
+  ],
+  "required_detail": [
+    "which_bin",
+    "problem"
+  ],
+  "required_local": [
+    "description",
+    "address"
+  ],
+  "required_submission": [],
+  "rulebook_group": "bins",
+  "rulebook_required_fields": [
+    "address",
+    "which_bin",
+    "problem"
+  ],
+  "service_id": "lost_damaged_bin",
+  "severity": {
+    "high": [],
+    "low": []
+  },
+  "severity_keywords": {},
+  "show_guidance": [],
+  "source_date": "2026-10-17",
+  "source_url": "https://www.southampton.gov.uk/bins-recycling/bins/lost-bin/",
+  "specialist_group": "waste",
+  "submission_status": "unverified",
+  "team": "Waste collection",
+  "team_confirmed": false,
+  "version": "0.3+38f8b56fe45e"
+}
