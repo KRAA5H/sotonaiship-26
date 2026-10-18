@@ -143,9 +143,12 @@ def _validate_patch_shape(patch):
     problems = []
     if not isinstance(patch, dict):
         return ["patch.unknown_key"]
+    if not patch:
+        return ["patch.unknown_key"]
     problems += _unknown(patch, PATCH_KEYS, "patch.unknown_key")
-    for key, allowed in (("set", PATCHABLE), ("add", APPENDABLE)):
-        value = patch.get(key)
+    sets = patch.get("set")
+    adds = patch.get("add")
+    for key, value, allowed in (("set", sets, PATCHABLE), ("add", adds, APPENDABLE)):
         if value is None:
             continue
         if not isinstance(value, dict):
@@ -160,7 +163,7 @@ def _validate_patch_shape(patch):
             for field in clear:
                 if field not in CLEARABLE:
                     problems.append(_problem("patch.unknown_key", str(field)))
-    for field, value in (patch.get("set") or {}).items():
+    for field, value in (sets if isinstance(sets, dict) else {}).items():
         if field == "description" and not (isinstance(value, str) or value is None):
             problems.append(_problem("schema.invalid", "set.description"))
         elif field == "description" and isinstance(value, str) and not value.strip():
@@ -174,14 +177,30 @@ def _validate_patch_shape(patch):
         elif field == "location" and not isinstance(value, dict):
             problems.append(_problem("schema.invalid", "set.location"))
         elif field == "location":
+            problems += _unknown(value, LOCATION_KEYS)
             for key in ("text", "street", "area", "postcode"):
-                if value.get(key) == "":
+                item = value.get(key)
+                if isinstance(item, str) and not item.strip():
                     problems.append(_problem("patch.empty_value", f"location.{key}"))
         elif field == "severity" and not (isinstance(value, str) or value is None):
             problems.append(_problem("schema.invalid", "set.severity"))
-    for field, value in (patch.get("add") or {}).items():
+    for field, value in (adds if isinstance(adds, dict) else {}).items():
         if not isinstance(value, list):
             problems.append(_problem("schema.invalid", f"add.{field}"))
+            continue
+        for item in value:
+            if field == "attachments":
+                if not isinstance(item, dict) or set(item) - ATTACHMENT_KEYS \
+                        or item.get("kind") not in ATTACHMENT_KINDS \
+                        or not _text(item.get("ref")):
+                    problems.append(_problem("schema.invalid", "attachments"))
+            elif field == "evidence":
+                if not isinstance(item, dict) or set(item) - EVIDENCE_KEYS:
+                    problems.append(_problem("schema.invalid", "evidence"))
+            elif field == "retracted":
+                if not isinstance(item, dict) or set(item) - RETRACTED_KEYS \
+                        or not _text(item.get("claim")):
+                    problems.append(_problem("schema.invalid", "retracted"))
     return problems
 
 
@@ -482,8 +501,11 @@ def validate_executed_outcome(raw):
     saved = raw.get("saved")
     if saved is True and report_id is None:
         problems.append(_problem("schema.invalid", "report_id"))
-    if saved is False and (report_id is not None or not _text(raw.get("refused_reason"))):
-        problems.append(_problem("schema.invalid", "refused_reason"))
+    if saved is False:
+        if report_id is not None:
+            problems.append(_problem("schema.invalid", "report_id"))
+        if raw.get("action") == "log" and not _text(raw.get("refused_reason")):
+            problems.append(_problem("schema.invalid", "refused_reason"))
     if problems:
         return None, problems
     return copy.deepcopy(raw), []
@@ -549,6 +571,10 @@ def validate_thread_state(raw, today=None):
     if outcome is not None:
         _, outcome_problems = validate_executed_outcome(outcome)
         problems += outcome_problems
+    last_outcome = raw.get("last_executed_outcome")
+    if last_outcome is not None:
+        _, last_problems = validate_executed_outcome(last_outcome)
+        problems += last_problems
     bubble_plan = raw.get("bubble_plan")
     if bubble_plan is not None:
         _, bubble_problems = validate_bubble_plan(bubble_plan, allow_suppressed=True)
@@ -595,7 +621,7 @@ def apply_patch(draft, patch, version, reason_codes=None, today=None):
         if value is None:
             continue
         if field == "description":
-            text = _text(value)
+            text = _text(value, limit=None)
             if not text:
                 if current.get("description"):
                     return draft, [_problem("patch.empty_value", "description")]

@@ -139,10 +139,18 @@ class TurnPlanTest(unittest.TestCase):
 
 class PatchShapeTest(unittest.TestCase):
     def test_patch_must_be_an_object_with_known_keys(self):
-        for bad in (None, {}, {"location": {"text": "Alma Road"}}, {"replace": {}}):
-            with self.subTest(bad=bad):
-                _, problems = schemas.apply_patch(draft(), bad, 0)
-                self.assertTrue(any("patch" in item for item in problems), problems)
+        cases = [
+            (None, "patch.unknown_key"),
+            ({}, "patch.unknown_key"),
+            ({"location": {"text": "Alma Road"}}, "patch.unknown_key:location"),
+            ({"replace": {}}, "patch.unknown_key:replace"),
+            ({"set": ["severity"]}, "patch.unknown_key:set"),
+            ({"add": "description"}, "patch.unknown_key:add"),
+        ]
+        for patch, expected in cases:
+            with self.subTest(patch=patch):
+                _, problems = schemas.apply_patch(draft(), patch, 0)
+                self.assertIn(expected, problems)
 
     def test_unknown_set_add_or_clear_key_is_rejected(self):
         _, problems = schemas.apply_patch(draft(), {"set": {"photo": "x"}}, 0)
@@ -169,11 +177,30 @@ class ApplyPatchTest(unittest.TestCase):
             ({"set": {"description": ""}}, "patch.empty_value:description"),
             ({"set": {"location": {"text": ""}}}, "patch.empty_value:location.text"),
             ({"set": {"location": {"street": ""}}}, "patch.empty_value:location.street"),
+            ({"set": {"location": {"street": "   "}}}, "patch.empty_value:location.street"),
         ]
         for patch, expected in cases:
             with self.subTest(patch=patch):
                 _, problems = schemas.apply_patch(draft(), patch, 0)
                 self.assertIn(expected, problems)
+
+    def test_location_and_append_keys_are_validated(self):
+        _, problems = schemas.apply_patch(
+            draft(), {"set": {"location": {"lat": 50.9}}}, 0)
+        self.assertIn("schema.unknown_key:lat", problems)
+        _, problems = schemas.apply_patch(
+            draft(), {"add": {"evidence": [{"phone": "07700900000"}]}}, 0)
+        self.assertIn("schema.invalid:evidence", problems)
+        _, problems = schemas.apply_patch(
+            draft(), {"add": {"attachments": [{"kind": "document", "ref": "x"}]}}, 0)
+        self.assertIn("schema.invalid:attachments", problems)
+
+    def test_a_long_description_is_not_truncated(self):
+        long_text = "x" * 480
+        updated, problems = schemas.apply_patch(
+            new_incident_draft(), {"set": {"description": long_text}}, 0)
+        self.assertEqual(problems, [])
+        self.assertEqual(len(updated["description"]), 480)
 
     def test_append_only_fields_dedupe(self):
         photo = {"kind": "photo", "ref": "guid:1"}
@@ -303,7 +330,7 @@ class SpecialistTest(unittest.TestCase):
     def test_a_specialist_patch_obeys_the_same_rules(self):
         _, problems = schemas.validate_specialist_result(
             specialist(proposed_patch={"set": {"description": ""}}))
-        self.assertTrue(any("patch" in item or "empty" in item for item in problems), problems)
+        self.assertIn("patch.empty_value:description", problems)
 
 
 class OutcomeTest(unittest.TestCase):
@@ -326,6 +353,12 @@ class OutcomeTest(unittest.TestCase):
             outcome(facts=[{"fact": "x", "url": "ftp://x", "date": "2026-10-17"}]))
         self.assertIn("schema.invalid:fact", problems)
 
+    def test_a_non_log_outcome_may_write_nothing(self):
+        self.assertEqual(schemas.validate_executed_outcome(
+            new_executed_outcome("answer"))[1], [])
+        _, problems = schemas.validate_executed_outcome(new_executed_outcome("log"))
+        self.assertIn("schema.invalid:refused_reason", problems)
+
 
 class ThreadStateTest(unittest.TestCase):
     def test_a_new_state_validates(self):
@@ -347,6 +380,14 @@ class ThreadStateTest(unittest.TestCase):
         state["plan"] = plan(dialogue_act="meteor")
         _, problems = schemas.validate_thread_state(state)
         self.assertIn("schema.invalid:dialogue_act", problems)
+        state = new_thread_state("h-1", "g-1")
+        state["executed_outcome"] = {"action": "meteor"}
+        _, problems = schemas.validate_thread_state(state)
+        self.assertIn("schema.invalid:action", problems)
+        state = new_thread_state("h-1", "g-1")
+        state["last_executed_outcome"] = {"action": "meteor"}
+        _, problems = schemas.validate_thread_state(state)
+        self.assertIn("schema.invalid:action", problems)
 
 
 class CopyRulesTest(unittest.TestCase):
