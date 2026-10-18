@@ -10,7 +10,7 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
-from . import schemas
+from . import evidence, schemas
 
 PLAYBOOK_DIR = Path(__file__).resolve().parents[1] / "services" / "playbooks"
 
@@ -45,7 +45,23 @@ JSON shape:
  "fact_request": {"question": "...", "category_id": "..."} or null,
  "escalation": {"kind": "...", "destination": "..."} or null,
  "retracted_claims": [],
- "reason_codes": []}
+ "reason_codes": [],
+ "profile_patch": {"name": "...", "address": "...", "phone": "...", "style": "casual|formal"},
+ "task_request": {"kind": "permit|council_tax|bins", "fields": {"name": "...", "address": "...", "vehicle": "..."}}}
+
+You are the conversation director. Read the whole conversation, not one message.
+A short reply after an agent question is an answer to that question: name, address,
+phone, location or photo. A greeting, thanks, insult, "what do you mean" or confusion
+is not a report. A status question reads the active report. Never save a greeting,
+thanks, name, address, phone, confusion or a message with no concrete problem. Saving
+"hello", "krish" or "wdym" is forbidden. Ask exactly one question, never two. Fill profile_patch only
+when the conversation establishes it; do not ask for all the profile fields at once.
+Infer the resident's style and put it in profile_patch.style when it is clear.
+
+For a permit or council tax task, use task_request. Dialogue_act is other and action is
+ask or answer. Permit requires name, address and vehicle. Ask exactly one missing field
+at a time. When all fields are present, return the task_request with action answer. The backend prepares a case and gives a reference.
+Never claim the council has accepted it. A task is not a report.
 
 Allowed pairs: new_report, detail and correction -> log or ask; question -> answer or escalate;
 status and challenge_previous_claim -> answer; greeting and other -> answer, ask or escalate.
@@ -93,6 +109,13 @@ _OUTSIDE_TEXT = re.compile(r"\b(winchester|eastleigh|fareham|portsmouth|gosport|
 _HANDOFF_TEXT = re.compile(
     r"\b(noisy (neighbour|neighbor)|neighbour(s)? (noise|making noise)|loud music|"
     r"barking dog|noise from (next door|the neighbours?)|noise nuisance)\b", re.I)
+_GREETING_TEXT = re.compile(
+    r"^(hi|hello|hey|hiya|yo+|sup|wassup|wagwan|wag1|what'?s up|"
+    r"good (morning|afternoon|evening)|morning|evening)( there)?[\s!.,]*$", re.I)
+_PLACE_HINT = re.compile(
+    r"\b(near|by|at|on|outside|opposite|next to|behind|in front of|corner|"
+    r"junction|postcode|street|road|lane|avenue|close|drive|way|crescent|"
+    r"gardens|hill|park|terrace|place|grove|court|walk|mews|rise|row)\b", re.I)
 _STATUS_TEXT = re.compile(
     r"\b(any update|update on (my|the) report|what'?s (the )?status|status of (my|the) report|"
     r"has (it|my report) been|is it fixed|still open|any progress)\b|"
@@ -188,6 +211,11 @@ def hard_route(text):
     return None
 
 
+def is_greeting(text):
+    text = (text or "").strip()
+    return bool(text) and len(text) <= 25 and bool(_GREETING_TEXT.search(text))
+
+
 def is_status(text):
     return bool(_STATUS_TEXT.search(text or ""))
 
@@ -206,6 +234,47 @@ def _content_words(text):
             if word.lower() not in _STOPWORDS]
 
 
+_NAME_EXPLICIT = re.compile(
+    r"\b(?:my name is|my name's|call me)\s+([A-Za-z][A-Za-z' -]{1,30})", re.I)
+_NAME_SELF = re.compile(
+    r"\b(?:i am|i'm|im)\s+(?!at\b|in\b|on\b|reporting\b|not\b|so\b|just\b|going\b|"
+    r"looking\b|having\b|a\b|an\b|the\b)([A-Za-z][A-Za-z' -]{1,30})", re.I)
+_ADDRESS = re.compile(
+    r"\b(?:my address is|i live at|i live in|i'm at|im at|address:)\s+(.{3,100})", re.I)
+_PHONE = re.compile(
+    r"(\+44\s?\d{2,4}\s?\d{3,4}\s?\d{3,4}|\b0\d{3,4}\s?\d{3,4}\s?\d{3,4}\b)")
+
+
+def extract_profile(text, last_claims=None):
+    """The small profile: preferred name, address and phone, when offered."""
+    text = " ".join((text or "").split())
+    found = {}
+    name = _NAME_EXPLICIT.search(text) or _NAME_SELF.search(text)
+    if name:
+        candidate = name.group(1).strip(" .,!?")
+        if 1 <= len(candidate.split()) <= 4:
+            found["name"] = candidate.title()
+    elif last_claims and any(word in " ".join(last_claims).lower()
+                             for word in ("call you", "your name")):
+        words = text.strip(" .,!?").split()
+        if 1 <= len(words) <= 3 and not _REPORT_WORDS.search(text):
+            found["name"] = " ".join(words).title()
+    address = _ADDRESS.search(text)
+    if address:
+        found["address"] = address.group(1).strip(" .,!?")
+    elif last_claims and any("address" in claim.lower() for claim in last_claims):
+        if 2 <= len(text.split()) <= 10 and not _REPORT_WORDS.search(text):
+            found["address"] = text.strip(" .,!?")
+    phone = _PHONE.search(text)
+    if phone:
+        found["phone"] = phone.group(1).strip()
+    elif last_claims and any("phone" in claim.lower() for claim in last_claims):
+        phone = _PHONE.search(text)
+        if phone:
+            found["phone"] = phone.group(1).strip()
+    return found
+
+
 def is_detail(text, state):
     """A message that adds to the open incident rather than starting a new one.
 
@@ -216,7 +285,7 @@ def is_detail(text, state):
     if not state.get("active_incident_id") or not draft.get("description"):
         return False
     text = (text or "").strip()
-    if is_challenge(text) or is_question(text):
+    if is_greeting(text) or is_challenge(text) or is_question(text):
         return False
     if is_photo_announcement(text):
         return True
@@ -232,7 +301,7 @@ def is_detail(text, state):
         return not _content_words(residual)
     pending = state.get("pending_question") or {}
     if pending.get("field") in ("location", "detail"):
-        return len(_content_words(text)) <= 6
+        return bool(_PLACE_HINT.search(text))
     return False
 
 
@@ -501,9 +570,16 @@ def brief(state, deps):
             "facts": [{key: fact.get(key) for key in ("id", "fact", "url", "date")}
                       for fact in (book.get("facts") or [])[:4]],
         })
+    conversation = state.get("conversation") or []
+    last_agent = next((item.get("text") for item in reversed(conversation)
+                       if item.get("role") == "agent"), None)
+    profile = state.get("profile") or {}
     payload = {
         "message": text,
         "photo": bool(draft.get("attachments")),
+        "conversation": conversation,
+        "last_agent_question": last_agent,
+        "profile": profile,
         "recent": [item.get("text") for item in (state.get("recent_messages") or [])[-6:]],
         "draft": {
             "description": draft.get("description"),
@@ -517,6 +593,8 @@ def brief(state, deps):
         "candidates": guesses,
         "categories": [{"id": key, "outcome": value}
                        for key, value in (index.get("categories") or {}).items()],
+        "evidence": [evidence.as_fact(row) for row in evidence.search(text, limit=4)],
+        "task": state.get("task"),
         "playbooks": compact_books,
         "violations": [f"{item.get('code')}:{item.get('field') or ''} {item.get('message') or ''}".strip()
                        for item in (state.get("violations") or [])],
@@ -539,6 +617,10 @@ def parse(reply):
         return None, ["schema.invalid"]
     if isinstance(raw, dict):
         action = raw.get("action")
+        if raw.get("task_request") and action in ("ask", "answer"):
+            raw["dialogue_act"] = "other"
+        if raw.get("task_request") and action == "ask" and not raw.get("clarification"):
+            raw["clarification"] = {"field": "name", "reason": "What is your name?"}
         if action != "ask":
             raw["clarification"] = None
         if action != "answer":

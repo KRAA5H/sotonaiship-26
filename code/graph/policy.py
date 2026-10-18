@@ -55,6 +55,11 @@ _HANDOFF_TEXT = re.compile(
     r"\b(noisy (neighbour|neighbor)|neighbour(s)? (noise|making noise)|loud music|"
     r"barking dog|noise from (next door|the neighbours?)|noise nuisance)\b", re.I)
 _UTILITY_TEXT = re.compile(r"\b(power cut|electricity|water leak|gas leak)\b", re.I)
+_PROBLEM_WORDS = re.compile(
+    r"\b(problem|issue|pothole|hole|crater|tree|fallen|blocked|blocking|broken|"
+    r"dumped|fly.?tip|graffiti|litter|glass|bins?|collect|collected|collection|dead|animal|fox|cat|dog|bird|"
+    r"noise|parking|abandoned|damaged|leak|spill|damp|vermin|wasp|nest|"
+    r"sewage|drain|flood|smell|odour)\b", re.I)
 
 
 @dataclass(frozen=True)
@@ -178,6 +183,8 @@ def check(state, context=PolicyContext(), problems=()):
         violations.append(_violation("policy.plan_missing", "plan",
                                      "no plan to validate"))
         return _dedupe(violations)
+    if plan.get("task_request"):
+        return []
     draft = state.get("incident_draft") or {}
     action = plan.get("action")
     patch = plan.get("incident_patch") or {}
@@ -223,6 +230,10 @@ def check(state, context=PolicyContext(), problems=()):
     if action == "log" and not _has_evidence(effective):
         violations.append(_violation("capture.lost", "incident_draft",
                                      "no description or photo to keep"))
+    effective_category = _category(plan, effective)
+    if action == "log" and effective_category == "unclear_other"             and not _PROBLEM_WORDS.search(effective.get("description") or "")             and not effective.get("attachments"):
+        violations.append(_violation("capture.lost", "description",
+                                     "there is no problem to save", hard=True))
     if action == "ask" and not _has_evidence(effective) and target != "description":
         violations.append(_violation("capture.lost", "incident_draft",
                                      "no description or photo to keep"))

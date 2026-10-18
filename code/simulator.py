@@ -229,7 +229,9 @@ PAGE = """<!doctype html>
     <h1>Southampton street line</h1>
     <span class="sub">simulator</span>
   </header>
-  <div id="chat"></div>
+  <div id="chat">
+    <div class="row bot"><div class="bubble">hey, this is soton council. what can we help with?</div></div>
+  </div>
   <div class="tools">
     <label><input type="checkbox" id="simulate" checked> simulate typing</label>
     <label><input type="checkbox" id="showdebug"> debug</label>
@@ -366,7 +368,11 @@ def outbox():
 
 @app.get("/")
 def page():
-    return PAGE
+    """Every page load starts a brand new chat, never the previous one."""
+    response = make_response(PAGE)
+    response.headers["Cache-Control"] = "no-store"
+    response.set_cookie("sim_sid", uuid.uuid4().hex[:12], max_age=86400, samesite="Lax")
+    return response
 
 
 if __name__ == "__main__":

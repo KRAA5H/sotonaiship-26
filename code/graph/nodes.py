@@ -17,8 +17,8 @@ SILENCE_WORDS = re.compile(
     re.IGNORECASE,
 )
 GREETING_WORDS = re.compile(
-    r"^(hi|hello|hey|hiya|yo+|sup|wassup|what'?s up|good (morning|afternoon|evening)|"
-    r"morning|evening)( there)?[\s!.,]*$",
+    r"^(hi|hello|hey|hiya|yo+|sup|wassup|wagwan|wag1|what'?s up|"
+    r"good (morning|afternoon|evening)|morning|evening)( there)?[\s!.,]*$",
     re.IGNORECASE,
 )
 # The same boundary as agents/safety.py, copied so the graph does not import the
@@ -81,23 +81,31 @@ def make_nodes(deps):
                 "pending_question": row.get("pending_question"),
                 "last_claims_sent": row.get("last_claims") or [],
             })
+        profiles = getattr(deps, "profiles", None)
+        base["profile"] = profiles.get(thread_id) if profiles else {}
+        tasks = getattr(deps, "tasks", None)
+        base["task"] = tasks.active(thread_id) if tasks else None
+        history = []
+        if hasattr(deps.threads, "history"):
+            history = deps.threads.history(thread_id)
         if row and row.get("last_turn_id") == turn_id:
             base.update({
                 "suppressed": True,
                 "short_circuit": False,
                 "emergency": False,
-                "recent_messages": list(state.get("recent_messages") or []),
+                "conversation": history,
+                "recent_messages": history[-MAX_RECENT_MESSAGES:],
             })
             return base
         entry = {
             "role": "resident",
-            "text": inbound.get("text") or "",
+            "text": inbound.get("text") or "(photo)",
             "at": deps.now().isoformat(timespec="seconds"),
         }
-        messages = list(state.get("recent_messages") or [])
-        messages = messages + [entry] if messages else [entry]
+        conversation = history + [entry]
         base.update({
-            "recent_messages": messages[-MAX_RECENT_MESSAGES:],
+            "conversation": conversation,
+            "recent_messages": conversation[-MAX_RECENT_MESSAGES:],
             "suppressed": False,
             "short_circuit": False,
             "emergency": False,
@@ -189,17 +197,7 @@ def make_nodes(deps):
         calls = 0
         degraded = []
         plan = None
-        text = (state.get("inbound") or {}).get("text") or ""
-        if not repairing:
-            if prompts.is_status(text):
-                plan = prompts.deterministic_plan(state, deps)
-            elif (not prompts.likely_report(text, state)
-                  and not prompts.is_question(text)
-                  and not prompts.is_detail(text, state)
-                  and not prompts.is_challenge(text)
-                  and not prompts.is_photo_announcement(text)):
-                plan = prompts.deterministic_plan(state, deps)
-        if plan is None and not repairing and deps.llm is not None and hasattr(deps.llm, "chat"):
+        if not repairing and deps.llm is not None and hasattr(deps.llm, "chat"):
             try:
                 reply, mode = deps.llm.chat(
                     prompts.SYSTEM, prompts.brief(state, deps),
@@ -259,7 +257,7 @@ def make_nodes(deps):
 
 
 def route_precheck(state):
-    return "end" if state.get("suppressed") or state.get("emergency") else "cheap"
+    return "end" if state.get("suppressed") or state.get("emergency") else "capture"
 
 
 def route_cheap(state):

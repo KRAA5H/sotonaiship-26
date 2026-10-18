@@ -42,6 +42,8 @@ class Deps:
     outbox: object | None = None
     ops: object | None = None
     claims: object | None = None
+    profiles: object | None = None
+    tasks: object | None = None
     writer: bool = True
 
 
@@ -77,6 +79,12 @@ class TurnRuntime:
                 last_action=(state.get("executed_outcome") or {}).get("action"),
             )
         plan = state.get("bubble_plan") or {}
+        if kind != "duplicate" and getattr(self.deps, "profiles", None):
+            profile = state.get("profile") or {}
+            if not profile.get("style") and (inbound.get("text") or "").strip():
+                style = writer._register(inbound.get("text") or "")
+                self.deps.profiles.save(thread_id, style=style)
+                state["profile"] = {**profile, "style": style}
         if kind == "greeting" and self.deps.writer and self.deps.llm is not None:
             greeting_outcome = {"action": "answer", "saved": False, "facts": [],
                                 "missing": [], "destination": None, "status": None,
@@ -90,6 +98,16 @@ class TurnRuntime:
             plan = {"bubbles": [{"purpose": "action", "text": line}
                                 for line in copy.splitlines() if line.strip()],
                     "url": None, "source_url": None, "suppressed": False}
+        if kind != "duplicate" and hasattr(self.deps.threads, "append"):
+            try:
+                self.deps.threads.append(thread_id, "resident",
+                                         inbound.get("text") or "(photo)",
+                                         self.deps.now().isoformat(timespec="seconds"))
+                for bubble in plan.get("bubbles") or []:
+                    self.deps.threads.append(thread_id, "agent", bubble.get("text") or "",
+                                             self.deps.now().isoformat(timespec="seconds"))
+            except Exception as error:  # noqa: BLE001 - history must not break the reply
+                print(f"[history] could not save the conversation: {error}")
         return {
             "thread_id": thread_id,
             "turn_id": turn_id,
@@ -128,7 +146,8 @@ def selftest():
         store.migrate(db)
         deps = Deps(threads=store.ThreadStore(db), playbooks=load_playbooks(),
                     reports=db, ops=store.TurnOperations(db), outbox=store.Outbox(db),
-                    claims=store.Claims(db))
+                    claims=store.Claims(db), profiles=store.ProfileStore(db),
+                    tasks=store.TaskStore(db))
         runtime = TurnRuntime(deps, MemorySaver())
 
         def turn(text, guid):
@@ -164,7 +183,8 @@ def main(argv=None):
     store.migrate(db)
     deps = Deps(threads=store.ThreadStore(db), playbooks=load_playbooks(), llm=llm_module,
                 reports=db, ops=store.TurnOperations(db), outbox=store.Outbox(db),
-                claims=store.Claims(db))
+                claims=store.Claims(db), profiles=store.ProfileStore(db),
+                tasks=store.TaskStore(db))
     with SqliteSaver.from_conn_string(str(db)) as saver:
         runtime = TurnRuntime(deps, saver)
         result = runtime.turn({"sender": "+447700900000", "text": args.turn,

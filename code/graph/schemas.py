@@ -45,7 +45,10 @@ PROBLEM_CODES = (
 
 PLAN_KEYS = {"dialogue_act", "action", "incident_patch", "service_candidates",
              "specialist_request", "clarification", "fact_request", "escalation",
-             "retracted_claims", "reason_codes"}
+             "retracted_claims", "reason_codes", "profile_patch", "task_request"}
+PROFILE_KEYS = {"name", "address", "phone", "style"}
+TASK_KEYS = {"kind", "fields"}
+TASK_KINDS = ("permit", "council_tax", "bins")
 PATCH_KEYS = {"set", "clear", "add"}
 PATCHABLE = {"category_id", "category_candidates", "description", "location", "severity"}
 APPENDABLE = {"attachments", "evidence", "retracted"}
@@ -62,9 +65,11 @@ PENDING_KEYS = {"field", "text", "asked_at", "turn_id"}
 OUTCOME_KEYS = {"action", "report_id", "link_token", "submitted", "duplicate_of",
                 "locally_actionable", "missing", "facts", "review_queued",
                 "transport", "degraded", "saved", "refused_reason",
-                "playbook_version", "destination", "status"}
+                "playbook_version", "destination", "status", "location_url",
+                "task_url"}
 STATE_KEYS = {"thread_id", "turn_id", "inbound", "recent_messages", "active_incident_id",
-              "incident_draft", "pending_question", "last_claims_sent",
+              "incident_draft", "pending_question", "profile", "conversation",
+              "task", "last_claims_sent",
               "last_executed_outcome", "candidate_services", "selected_specialist",
               "specialist_results", "plan", "violations", "executed_outcome",
               "bubble_plan", "review_queued", "repair_count", "specialist_call_count",
@@ -277,6 +282,34 @@ def validate_turn_plan(raw, allow_emergency=False):
     elif escalation is not None:
         problems.append(_problem("schema.invalid", "escalation"))
 
+    task_request = raw.get("task_request")
+    if task_request is not None:
+        if not isinstance(task_request, dict):
+            problems.append(_problem("schema.invalid", "task_request"))
+        else:
+            problems += _unknown(task_request, TASK_KEYS)
+            if task_request.get("kind") not in TASK_KINDS:
+                problems.append(_problem("schema.invalid", "task_request.kind"))
+            fields = task_request.get("fields") or {}
+            if not isinstance(fields, dict):
+                problems.append(_problem("schema.invalid", "task_request.fields"))
+            else:
+                for key, value in fields.items():
+                    if not isinstance(key, str) or not isinstance(value, str):
+                        problems.append(_problem("schema.invalid", "task_request.fields"))
+
+    profile_patch = raw.get("profile_patch")
+    if profile_patch is not None:
+        if not isinstance(profile_patch, dict):
+            problems.append(_problem("schema.invalid", "profile_patch"))
+        else:
+            problems += _unknown(profile_patch, PROFILE_KEYS)
+            for key, value in profile_patch.items():
+                if value is not None and not isinstance(value, str):
+                    problems.append(_problem("schema.invalid", f"profile_patch.{key}"))
+            if profile_patch.get("style") not in (None, "casual", "formal"):
+                problems.append(_problem("schema.invalid", "profile_patch.style"))
+
     retracted = raw.get("retracted_claims") or []
     if not _string_list(retracted):
         problems.append(_problem("schema.invalid", "retracted_claims"))
@@ -299,6 +332,8 @@ def validate_turn_plan(raw, allow_emergency=False):
         "escalation": escalation,
         "retracted_claims": retracted,
         "reason_codes": reasons,
+        "profile_patch": profile_patch or {},
+        "task_request": task_request,
     }, []
 
 

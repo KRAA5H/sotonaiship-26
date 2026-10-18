@@ -84,6 +84,8 @@ class ExecutedOutcome(TypedDict, total=False):
     playbook_version: str | None
     destination: str | None
     status: dict | None
+    location_url: str | None
+    task_url: str | None
 
 
 class ThreadState(TypedDict, total=False):
@@ -91,9 +93,12 @@ class ThreadState(TypedDict, total=False):
     turn_id: str
     inbound: InboundMessage
     recent_messages: list[Message]
+    conversation: list[Message]
+    task: dict | None
     active_incident_id: str | None
     incident_draft: IncidentDraft
     pending_question: PendingQuestion | None
+    profile: dict
     last_claims_sent: list[str]
     last_executed_outcome: ExecutedOutcome | None
     candidate_services: list[str]
@@ -155,9 +160,12 @@ def new_thread_state(thread_id: str, turn_id: str,
         "turn_id": turn_id,
         "inbound": inbound or {},
         "recent_messages": [],
+        "conversation": [],
+        "task": None,
         "active_incident_id": None,
         "incident_draft": new_incident_draft(),
         "pending_question": None,
+        "profile": {},
         "last_claims_sent": [],
         "last_executed_outcome": None,
         "candidate_services": [],

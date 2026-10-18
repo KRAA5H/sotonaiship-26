@@ -29,6 +29,8 @@ def get_runtime():
             ops=store.TurnOperations(db),
             outbox=store.Outbox(db),
             claims=store.Claims(db),
+            profiles=store.ProfileStore(db),
+            tasks=store.TaskStore(db),
         )
         _RUNTIME = TurnRuntime(deps, MemorySaver())
     return _RUNTIME

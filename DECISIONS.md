@@ -153,6 +153,15 @@ URL and claim rules against the executed outcome. A model may rewrite the
 bubbles after the freeze only through the same lint gate. This keeps the demo
 truthful when the model is unavailable and preserves the natural, short register.
 
+## D65: personal profile override
+
+The operator explicitly overrides the earlier no-PII rule for this pilot. A separate
+`profiles` table may store a preferred name, address and phone, keyed by the salted
+reporter reference. The reports table, the resident page `/r/<token>` and the public
+dashboard never carry those fields. The writer may use the first name; it never reads
+the phone back. Only those three fields are stored; other details are asked when a
+report is filled in. This supersedes D26 and the no-name/no-phone rule for this build.
+
 ## How to change something
 
 1. Write the line in this file first: what, why, who.

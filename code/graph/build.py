@@ -6,21 +6,19 @@ write, repaired once, and the fallback keeps the incident rather than dropping i
 
 from langgraph.graph import END, START, StateGraph
 
-from .nodes import make_nodes, route_cheap, route_precheck, route_validate
+from .nodes import make_nodes, route_precheck, route_validate
 from .state import ThreadState
 
 
 def build_graph(deps, checkpointer=None):
     nodes = make_nodes(deps)
     graph = StateGraph(ThreadState)
-    for name in ("hydrate", "precheck", "cheap", "capture", "decide", "validate",
+    for name in ("hydrate", "precheck", "capture", "decide", "validate",
                  "repair", "fallback", "execute", "compose", "lint", "enqueue"):
         graph.add_node(name, nodes[name])
     graph.add_edge(START, "hydrate")
     graph.add_edge("hydrate", "precheck")
     graph.add_conditional_edges("precheck", route_precheck,
-                                {"end": END, "cheap": "cheap"})
-    graph.add_conditional_edges("cheap", route_cheap,
                                 {"end": END, "capture": "capture"})
     graph.add_edge("capture", "decide")
     graph.add_edge("decide", "validate")

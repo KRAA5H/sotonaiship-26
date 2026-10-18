@@ -12,7 +12,7 @@ import messages
 import reports_db
 import tools
 
-from . import policy, prompts, schemas, writer
+from . import evidence, policy, prompts, schemas, writer
 
 
 def _place(draft):
@@ -53,8 +53,10 @@ def context(deps, state):
         book.get("allowed_question_fields")
         or (index.get("allowed_questions_by_category") or {}).get(category)
         or index.get("allowed_questions") or ())
+    known_facts = dict(index.get("known_facts") or {})
+    known_facts.update(evidence.known_facts())
     destinations = set(index.get("numbers") or ())
-    destinations.update((index.get("known_facts") or {}).keys())
+    destinations.update(known_facts.keys())
     for item in (index.get("guidance") or {}).values():
         for key in ("url", "contact"):
             if item.get(key):
@@ -66,7 +68,7 @@ def context(deps, state):
     return policy.PolicyContext(
         known_categories=frozenset((index.get("categories") or {}).keys()),
         category_outcomes=index.get("categories") or {},
-        known_facts=index.get("known_facts") or {},
+        known_facts=known_facts,
         allowed_destinations=frozenset(destinations),
         allowed_questions=allowed_questions,
         allowed_numbers=frozenset(index.get("numbers") or ()),
@@ -117,24 +119,29 @@ def execute(state, deps):
     plan = state.get("plan") or {}
     draft = copy.deepcopy(state.get("incident_draft") or {})
     draft = _apply_patch(draft, plan)
+    profile = dict(state.get("profile") or {})
+    profile_patch = {key: value for key, value in (plan.get("profile_patch") or {}).items()
+                     if key in ("name", "address", "phone", "style") and value}
+    if profile_patch:
+        profile.update(profile_patch)
+        profiles = getattr(deps, "profiles", None)
+        if profiles is not None:
+            profiles.save(state.get("thread_id"), **profile_patch)
     index = deps.playbooks or {}
     categories = index.get("categories") or {}
     candidates = plan.get("service_candidates") or state.get("candidate_services") or []
     category = draft.get("category_id") or (candidates[0] if candidates else None) \
         or "unclear_other"
     action = plan.get("action") or "ask"
+    if plan.get("dialogue_act") == "greeting" and action == "answer":
+        # A greeting is a greeting. Do not answer it with a general fact.
+        action = "ask"
     if plan.get("dialogue_act") == "challenge_previous_claim" and action != "answer":
         action = "answer"
 
     if category not in categories and category != "unclear_other":
         category = "unclear_other"
     clarification = plan.get("clarification") or {}
-    if action == "ask" and _has_text(draft) \
-            and clarification.get("field") in ("location", "address") \
-            and categories.get(category) != "not_council" \
-            and category not in (index.get("never_saved") or ()):
-        # Capture-first: a described problem is saved before we ask where it is.
-        action = "log"
     if action == "log" and (categories.get(category) in ("info_only", "not_council")
                             or category in (index.get("never_saved") or ())):
         category = "unclear_other"
@@ -171,9 +178,43 @@ def execute(state, deps):
         "playbook_version": prompts.playbook(category).get("version"),
         "destination": None,
         "status": None,
+        "location_url": None,
     }
     pending = None
     active = state.get("active_incident_id")
+    task_request = plan.get("task_request")
+    if task_request:
+        tasks = getattr(deps, "tasks", None)
+        if tasks is not None:
+            kind = task_request.get("kind") or "permit"
+            task = (tasks.active(state.get("thread_id"))
+                    or tasks.create(state.get("thread_id"), kind))
+            task = tasks.update_fields(task["task_id"],
+                                       task_request.get("fields") or {}) or task
+            required = tasks.REQUIRED.get(kind, ())
+            missing = [field for field in required
+                       if not (task.get("fields") or {}).get(field)]
+            task_url = None
+            if missing:
+                outcome["action"] = "ask"
+                outcome["missing"] = [missing[0]]
+                pending = {"field": missing[0],
+                           "text": f"What is your {missing[0]}?",
+                           "asked_at": _now(state, deps),
+                           "turn_id": state.get("turn_id")}
+            else:
+                if not task.get("external_ref"):
+                    task = tasks.attach_case(task["task_id"],
+                                             f"CASE-{task['task_id']}") or task
+                task_url = f"{tools.SITE_URL}/t/{task['link_token']}"
+                outcome.update({"action": "answer", "task_url": task_url,
+                                "missing": []})
+            outcome.update({"saved": False, "locally_actionable": False,
+                            "review_queued": False})
+            return {"incident_draft": draft, "executed_outcome": outcome,
+                    "last_executed_outcome": outcome, "pending_question": pending,
+                    "active_incident_id": active, "profile": profile,
+                    "task": task}
     is_detail = bool(action == "log" and active and (
         plan.get("dialogue_act") == "detail"
         or prompts.is_detail((state.get("inbound") or {}).get("text") or "", state)))
@@ -232,6 +273,12 @@ def execute(state, deps):
                     "review_queued": category == "unclear_other",
                 })
                 active = saved.get("report_id") or active
+                if "location" in missing and active:
+                    try:
+                        import pin_service
+                        outcome["location_url"] = pin_service.create_location_link(active)
+                    except Exception as error:  # noqa: BLE001 - a pin link must not block the save
+                        print(f"[location] could not create a pin link: {error}")
             else:
                 outcome["refused_reason"] = saved.get("error") or "save_failed"
                 outcome["degraded"].append("save_failed")
@@ -312,6 +359,9 @@ def execute(state, deps):
                  "date": row.get("date_checked")}
                 for row in found.get("facts") or []
             ][:4]
+        checked = evidence.search(text, limit=4)
+        if checked and (question == "general" or not outcome["facts"]):
+            outcome["facts"] = [evidence.as_fact(row) for row in checked]
         if not outcome["facts"]:
             outcome["degraded"].append("no_facts")
         outcome["missing"] = [] if outcome["facts"] else ["description"]
@@ -336,6 +386,7 @@ def execute(state, deps):
         "last_executed_outcome": outcome,
         "pending_question": pending,
         "active_incident_id": active,
+        "profile": profile,
     }
 
 
@@ -392,12 +443,12 @@ def compose(state, deps):
         written = writer.write(state, deps, outcome, ctx)
         if written:
             written["url"] = url
-            written["source_url"] = _source_url(outcome)
+            written["source_url"] = (outcome.get("task_url")
+                                     or outcome.get("location_url")
+                                     or _source_url(outcome))
             return {"bubble_plan": written}
-        # The model answered nothing usable. Do not replace its voice with a template;
-        # send no automated copy. Only the runtime's 999 instruction is hardcoded.
-        return {"bubble_plan": {"bubbles": [], "url": None,
-                                "source_url": None, "suppressed": True}}
+        # The model answered nothing usable. Keep the turn alive with the checked
+        # template fallback; the 999 instruction remains the only fixed safety copy.
     text = ""
     inbound_text = ((state.get("inbound") or {}).get("text") or "").lower()
     challenge = (bool(plan.get("retracted_claims"))
@@ -477,6 +528,8 @@ def lint(state, deps):
     checked, problems = schemas.validate_bubble_plan(plan)
     if checked and checked.get("source_url") \
             and ctx.allowed_destinations \
+            and "/p/" not in checked["source_url"] \
+            and "/t/" not in checked["source_url"] \
             and checked["source_url"] not in ctx.allowed_destinations:
         plan = dict(plan)
         plan["source_url"] = None

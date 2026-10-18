@@ -36,6 +36,7 @@ import photo_features
 import priority
 import reports_db
 import tools
+from graph.store import TaskStore
 
 import loader  # noqa: E402  (agent/loader.py, on the path via tools)
 
@@ -134,6 +135,42 @@ def _council_denied():
         return None
     return Response("Council staff only.", 401, {"WWW-Authenticate": 'Basic realm="council"'},
                     mimetype="text/plain")
+
+
+@site.get("/t/<token>")
+def task_page(token):
+    task = TaskStore().get_by_token(token)
+    if not task:
+        return Response("No task found.", 404, mimetype="text/plain")
+    fields = "".join(
+        f"<li><b>{key}</b>: {value}</li>"
+        for key, value in (task.get("fields") or {}).items())
+    return Response(f"""<!doctype html><meta name="viewport" content="width=device-width">
+    <title>Your task</title><body style="font:17px system-ui;max-width:36rem;margin:2rem auto;padding:0 1rem">
+    <p>Southampton City Council</p><h1>{task['kind']} task</h1>
+    <p>Status: <b>{task['status']}</b></p>
+    <p>Reference: <b>{task.get('external_ref') or 'not created yet'}</b></p>
+    <ul>{fields}</ul><p>This is a prepared case in the council sandbox. Nothing was submitted unless a reference says so.</p>
+    </body>""", mimetype="text/html")
+
+
+@site.get("/council/tasks")
+def council_tasks():
+    denied = _council_denied()
+    if denied:
+        return denied
+    rows = TaskStore().all()
+    body = "".join(
+        f"<tr><td>{task['task_id']}</td><td>{task['kind']}</td><td>{task['status']}</td>"
+        f"<td>{task.get('external_ref') or ''}</td><td>{task.get('fields') or {}}</td></tr>"
+        for task in rows)
+    return Response(f"""<!doctype html><title>Council tasks</title>
+    <body style="font:16px system-ui;margin:2rem"><h1>Council tasks</h1>
+    <p><a href="/council">Back to reports</a></p>
+    <table border="1" cellpadding="6" cellspacing="0"><thead><tr>
+    <th>Task</th><th>Kind</th><th>Status</th><th>Reference</th><th>Fields</th>
+    </tr></thead><tbody>{body or '<tr><td colspan=5>No tasks yet.</td></tr>'}</tbody></table>
+    </body>""", mimetype="text/html")
 
 
 @site.get("/council")

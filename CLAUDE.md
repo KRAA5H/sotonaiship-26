@@ -38,6 +38,13 @@ Submissions lock Sunday 18 Oct 2026 13:00.
 - `_pi/sotonaiship-26/IMPLEMENTATION-PLAN-CONTEXT.md`: `plans/IMPLEMENTATION_PLAN.md` against the code, with the conflicts to settle first.
 - Corrections to the summary above, verified 2026-10-18: `dashboard/schema.sql` has **16** columns, not 11 (photo_guid, photo_mime, area, status_changed_at, photo_features were added). `agent/categories.json` has 22 categories of which **16 are `council_report`**, and **there is no tree category**. Live turn path is `blue_bubbles.handle_inbound` -> `agents.TriageAgent(handle)`, not `code/triage.py`. 475 tests pass offline: `cd code && python -m unittest discover -p "test_*.py"`.
 
+## D65 profile override (2026-10-18)
+
+The operator overrides the no-PII rule for this pilot. A separate `profiles` table may
+store preferred name, address and phone, keyed by the salted reporter reference. Reports,
+`/r/<token>` and the public dashboard never carry those fields. The writer may use the
+first name and never reads the phone back.
+
 ## Open items
 - Decided to leave out: A33/A36 responsibility not confirmed.
 - Most council multi-step forms only read to their first steps.
