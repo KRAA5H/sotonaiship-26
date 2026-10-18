@@ -180,6 +180,12 @@ report is filled in. This supersedes D26 and the no-name/no-phone rule for this 
 
 **Before any ranked list of areas is shown:** check the reuse terms of FixMyStreet and mySociety data on ranking areas. The Forecast page deliberately leads with preventive jobs, and its heat view is by area and expected count, not a "worst streets" league table.
 
+## Map link when the AI writer is off (D67)
+
+| # | Decision | Why | Proposed by |
+|---|---|---|---|
+| D67 | **The checked template fallback now passes the drop-a-pin link to `messages.need_location`.** Two call sites in `compose()` in `code/graph/execution.py` changed from `need_location(decision, None, mode)` to `need_location(decision, outcome.get("location_url"), mode)`. `address` categories (bins, housing) still never get a pin | The graph builds the map link whenever a street is missing, but only the AI writer ever used it. With no key, or when the writer returns nothing, the resident was asked for a street and never offered the map. The link travels as `source_url`, delivered as its own message, so the one-report-link rule and the lint are unchanged | Anirudh |
+
 ## How to change something
 
 1. Write the line in this file first: what, why, who.
