@@ -33,6 +33,7 @@ load_dotenv(Path(__file__).with_name(".env"))
 
 import bb
 import photo_features
+import dashboard_categories
 import priority
 import reports_db
 import tools
@@ -76,7 +77,13 @@ def _ukdate(iso_day):
     return f"{day.day} {day:%b %Y}"
 
 
-_GROUPS = {cid: c["group"] for cid, c in loader.load(tools.AGENT_DIR)[0].items()}
+_GROUPS = {**{cid: c["group"] for cid, c in loader.load(tools.AGENT_DIR)[0].items()},
+           **dashboard_categories.groups()}
+
+
+def _labels():
+    """Rulebook labels plus the dashboard-only ones for imported reports (D70)."""
+    return {**tools.category_labels(), **dashboard_categories.labels()}
 
 
 def _with_priority(reports):
@@ -174,7 +181,7 @@ def council():
     with _connect() as conn:
         reports = _with_priority(reports_db.council_reports(conn))
         stats = reports_db.summary_stats(conn)
-    return render_template("council.html", reports=reports, stats=stats, labels=tools.category_labels())
+    return render_template("council.html", reports=reports, stats=stats, labels=_labels())
 
 
 @site.get("/council/reports.json")
@@ -196,7 +203,7 @@ def council_stats_csv():
         return denied
     with _connect() as conn:
         stats = reports_db.summary_stats(conn)
-    labels = tools.category_labels()
+    labels = _labels()
     rows = [
         ("generated_at", datetime.now().astimezone().isoformat(timespec="seconds")),
         ("total_reports", stats["total"]),

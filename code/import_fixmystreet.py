@@ -15,6 +15,8 @@ Politeness (https://www.fixmystreet.com/robots.txt asks for Crawl-delay: 3):
 What is kept per report: created date, category, a one-line description (the
 report's title), the street, status, has_photo yes/no, and the report URL
 (source_url, internal only). No names, emails, usernames or coordinates.
+Category and severity are approximated where FixMyStreet has no clean match or
+no severity at all (D70): see APPROX_BY_* and estimate_severity().
 
 Run:
   python code/import_fixmystreet.py           fetch what is not cached, add new reports
@@ -50,11 +52,8 @@ LIMIT = 150
 USER_AGENT = "KerbsideImport/0.1 (SotonShip 2026 hackathon; +https://github.com/KRAA5H/sotonaiship-26)"
 GEOCODE_DELAY = 1.1      # Nominatim allows one request a second
 
-# FixMyStreet category -> our category_id (agent/categories.json). Only clean
-# matches are listed. Everything else is stored as "unclear_other", which the
-# dashboard labels "Unclear or other": traffic lights, signs, trees, pavements
-# and the rest are real council work our categories do not cover, and we do not
-# force-fit them.
+# FixMyStreet category -> our category_id (agent/categories.json): the clean matches.
+# Everything else is approximated below (D70).
 CATEGORY_MAP = {
     "Potholes": "pothole",
     "Flytipping": "fly_tipping",
@@ -67,6 +66,78 @@ CATEGORY_MAP = {
     "Illegal parking": "illegal_parking",
 }
 UNMAPPED = "unclear_other"
+
+# D70 (owner instruction): no imported report is left as "unclear_other". Reports
+# whose FixMyStreet category has no clean match are approximated, first from the
+# FixMyStreet category where it is unambiguous, then from words in the title,
+# then from the FixMyStreet category again. Ids not in categories.json are
+# dashboard-only (code/dashboard_categories.py).
+APPROX_BY_SERVICE = {
+    "Traffic lights": "traffic_lights_signs",
+    "Road traffic signs": "traffic_lights_signs",
+    "Street nameplates": "traffic_lights_signs",
+    "Street lighting": "street_lighting",
+    "Bus stop damage": "street_furniture",
+    "Overhanging vegetation": "trees_vegetation",
+    "Shopping trolleys": "litter_street_cleaning",   # the council's street cleaning form lists trolleys
+}
+APPROX_BY_TITLE = [   # first match wins
+    (r"pot ?hole", "pothole"),
+    (r"fly.?tip", "fly_tipping"),
+    (r"glass|needle|sharps", "glass_spillage_hazard"),
+    (r"litter|overflowing|rubbish", "litter_street_cleaning"),
+    (r"burnt out|abandoned (car|vehicle)", "abandoned_vehicle"),
+    (r"\bparking\b|\bparked\b|caravan", "illegal_parking"),
+    (r"\btrees?\b|branch|hedge|bush|overhang|vegetation|verge", "trees_vegetation"),
+    (r"leak|turbid|discharg", "not_council_utility"),
+    (r"drain|manhole|mam hole|cover|gull(y|ies)", "drains_covers"),
+    (r"lighting|street ?light|lamp", "street_lighting"),
+    (r"traffic|crossing|marking|sign\b|cone", "traffic_lights_signs"),
+    (r"railing|bench|swing|life ?belt|bollard|shelter", "street_furniture"),
+    (r"defect|tarmac|uneven|pavement|paving|slab|foot ?pa(th|ss)|crumbl|road", "road_pavement_defect"),
+]
+APPROX_FALLBACK = {
+    "Roads/highways": "road_pavement_defect",
+    "Pavements/footpaths": "road_pavement_defect",
+    "Bollards": "street_furniture",
+    "Grass verges": "trees_vegetation",
+}
+
+# D70: FixMyStreet has no severity, so it is estimated: words in the title first,
+# then a default per category. An estimate for ordering work, not an assessment.
+HIGH_WORDS = re.compile(r"danger|hazard|deep|huge|major|urgent|exposed|collaps|fallen|flood|sharp|needle|glass|"
+                        r"asbestos|burnt|loose|open|sheared|protrud|missing|broken (access|mam|man)|"
+                        r"all off|stuck|black traffic|failure|not working|faulty|bulb", re.I)
+LOW_WORDS = re.compile(r"graffiti|flypost|faded|nameplate|name sign|untidy|trolley|leaves|sequenc|"
+                       r"staying green|wrapped|quality of", re.I)
+DEFAULT_SEVERITY = {
+    "pothole": "medium", "road_pavement_defect": "medium", "traffic_lights_signs": "medium",
+    "street_lighting": "medium", "drains_covers": "medium", "fly_tipping": "medium", "dead_animal": "medium",
+    "glass_spillage_hazard": "high", "abandoned_vehicle": "medium", "not_council_utility": "medium",
+    "trees_vegetation": "low", "street_furniture": "low", "illegal_parking": "low",
+    "litter_street_cleaning": "low", "graffiti_flyposting": "low", "dog_fouling": "low",
+    "general_enquiry": "low",
+}
+
+
+def categorise(report):
+    service, title = report.get("service_name") or "", (report.get("title") or "").lower()
+    if service in CATEGORY_MAP:
+        return CATEGORY_MAP[service]
+    if service in APPROX_BY_SERVICE:
+        return APPROX_BY_SERVICE[service]
+    for pattern, category in APPROX_BY_TITLE:
+        if re.search(pattern, title):
+            return category
+    return APPROX_FALLBACK.get(service, "general_enquiry")
+
+
+def estimate_severity(category, title):
+    if HIGH_WORDS.search(title or ""):
+        return "high"
+    if LOW_WORDS.search(title or ""):
+        return "low"
+    return DEFAULT_SEVERITY.get(category, "medium")
 # Not imported. D48: problems at one neighbour's home go to the council's own
 # form and are never saved here, so a public report about a home is not either.
 SKIPPED_CATEGORIES = {"Noise nuisance", "Rubbish accumulation on private property"}
@@ -146,14 +217,15 @@ def one_line(title):
 def to_row(report, street):
     created = datetime.fromisoformat(report["requested_datetime"]).astimezone(timezone.utc)
     lat, lng = float(report["lat"]), float(report["long"])
+    category = categorise(report)
     return {
         "created_at": created.isoformat(timespec="seconds"),
-        "category_id": CATEGORY_MAP.get(report.get("service_name"), UNMAPPED),
+        "category_id": category,
         "status": STATUS_MAP.get(report.get("status"), "new"),
         # The report went to the council through FixMyStreet.
         "capture_state": "submitted",
         "routing_status": "verified",
-        "severity": None,           # FixMyStreet has no severity; we do not invent one
+        "severity": estimate_severity(category, report.get("title")),   # estimated (D70)
         "location": street or None,
         "area": area_for(street, lat, lng) if street else None,
         "description": one_line(report.get("title") or report.get("service_name")),

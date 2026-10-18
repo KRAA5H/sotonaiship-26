@@ -15,6 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import import_fixmystreet as fms  # noqa: E402
+import dashboard_categories  # noqa: E402
 import reports_db  # noqa: E402
 import tools  # noqa: E402
 import website  # noqa: E402
@@ -67,12 +68,37 @@ class ImportCase(unittest.TestCase):
 
 
 class ImportTest(ImportCase):
-    def test_categories_map_cleanly_or_go_to_unclear_other(self):
+    def test_categories_map_cleanly_or_are_approximated(self):
         rows = self.rows()
         self.assertEqual(rows["1001"]["category_id"], "pothole")
-        self.assertEqual(rows["1003"]["category_id"], "unclear_other")
+        self.assertEqual(rows["1003"]["category_id"], "traffic_lights_signs")
         self.assertEqual(rows["1005"]["category_id"], "fly_tipping")
+        self.assertNotIn("unclear_other", {r["category_id"] for r in rows.values()})
         self.assertTrue(set(fms.CATEGORY_MAP.values()) <= set(tools.category_labels()))
+
+    def test_every_approximated_category_has_a_label(self):
+        labels = {**tools.category_labels(), **dashboard_categories.labels()}
+        produced = ({c for _, c in fms.APPROX_BY_TITLE} | set(fms.APPROX_BY_SERVICE.values())
+                    | set(fms.APPROX_FALLBACK.values()) | {"general_enquiry"})
+        self.assertTrue(produced <= set(labels), produced - set(labels))
+
+    def test_title_words_decide_ambiguous_reports(self):
+        cases = {"Drain covers on our street not working": "drains_covers",
+                 "Fallen tree blocking car park": "trees_vegetation",
+                 "Resident has 2 caravans parked permanently.": "illegal_parking",
+                 "Water leak for 7 weeks": "not_council_utility",
+                 "Uneven ground on the road": "road_pavement_defect"}
+        for title, want in cases.items():
+            self.assertEqual(fms.categorise({"service_name": "Other", "title": title}), want, title)
+        self.assertEqual(fms.categorise({"service_name": "Other", "title": "Abusive driver"}), "general_enquiry")
+
+    def test_severity_is_estimated_from_the_title_then_the_category(self):
+        self.assertEqual(fms.estimate_severity("pothole", "Deep pothole"), "high")
+        self.assertEqual(fms.estimate_severity("traffic_lights_signs", "Traffic lights all off"), "high")
+        self.assertEqual(fms.estimate_severity("graffiti_flyposting", "Graffiti on wall"), "low")
+        self.assertEqual(fms.estimate_severity("pothole", "Pothole on my road"), "medium")
+        self.assertEqual(fms.estimate_severity("street_furniture", "Damaged bench"), "low")
+        self.assertTrue(all(r["severity"] in ("high", "medium", "low") for r in self.rows().values()))
 
     def test_a_report_about_a_home_is_not_imported(self):
         self.assertNotIn("1004", self.rows())
@@ -97,7 +123,7 @@ class ImportTest(ImportCase):
         self.assertEqual((first["has_photo"], rows["1002"]["has_photo"]), (1, 0))
         self.assertIsNone(first["photo_guid"])
         self.assertIsNone(first["reporter_ref"])
-        self.assertIsNone(first["severity"])
+        self.assertEqual(first["severity"], "medium")
         self.assertEqual(first["source"], "fixmystreet")
         self.assertEqual(first["source_url"], "https://www.fixmystreet.com/report/1001")
         self.assertEqual(first["location"], "Earls Road")
@@ -136,6 +162,8 @@ class PageTest(ImportCase):
         body = json.dumps(reports)
         for hidden in ('"source"', '"source_url"', "fixmystreet.com/report"):
             self.assertNotIn(hidden, body)
+        page = self.client.get("/council", headers=AUTH).get_data(as_text=True)
+        self.assertIn("Traffic lights, signs and markings", page)
         self.assertTrue(all(r["link_token"] is None for r in reports))
 
     def test_no_resident_page_for_an_imported_report(self):
