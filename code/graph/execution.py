@@ -196,6 +196,13 @@ def execute(state, deps):
                         capture_state=draft["capture_state"],
                         routing_status=draft["routing_status"],
                     )
+                    if saved.get("ok") and draft.get("attachments"):
+                        photo = next((item for item in draft["attachments"]
+                                      if item.get("ref")), None)
+                        if photo:
+                            mime = (photo.get("features") or {}).get("mime") or "image/jpeg"
+                            tools.attach_photo_to_report(saved.get("report_id"),
+                                                         photo.get("ref"), mime, conn=conn)
                 finally:
                     if conn is not None:
                         conn.close()
@@ -229,7 +236,8 @@ def execute(state, deps):
         try:
             link_data = tools.report_link(active, conn=conn)
             if link_data.get("ok") and photo:
-                tools.attach_photo_to_report(active, photo.get("ref"), conn=conn)
+                mime = (photo.get("features") or {}).get("mime") or "image/jpeg"
+                tools.attach_photo_to_report(active, photo.get("ref"), mime, conn=conn)
             if link_data.get("ok") and place:
                 link_data = tools.update_report_location(active, place, conn=conn)
         finally:

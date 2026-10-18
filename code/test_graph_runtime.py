@@ -264,18 +264,29 @@ class CaptureTest(RuntimeCase):
         self.assertEqual(result["kind"], "saved")
         self.assertEqual(draft["description"], "Photo of a problem")
         self.assertEqual(draft["attachments"], [{"kind": "photo", "ref": "guid:1"}])
+        row = self.row()
+        self.assertEqual(row["photo_guid"], "1")
+        self.assertEqual(row["photo_mime"], "image/jpeg")
 
     def test_a_photo_tuple_is_stored_as_a_guid(self):
         result = self.turn("", "g-photo-t", photo_ref=("G-ABC", "image/jpeg"))
         draft = result["state"]["incident_draft"]
         self.assertEqual(result["kind"], "saved")
-        self.assertEqual(draft["attachments"], [{"kind": "photo", "ref": "guid:G-ABC"}])
+        self.assertEqual(draft["attachments"], [{"kind": "photo", "ref": "guid:G-ABC",
+                                                  "features": {"mime": "image/jpeg"}}])
 
     def test_an_image_ref_is_a_photo(self):
         result = self.turn("", "g-image", image_ref="guid:2")
         draft = result["state"]["incident_draft"]
         self.assertEqual(result["kind"], "saved")
         self.assertEqual(draft["attachments"], [{"kind": "photo", "ref": "guid:2"}])
+
+    def row(self):
+        conn = reports_db.connect(self.db)
+        try:
+            return conn.execute("SELECT * FROM reports").fetchone()
+        finally:
+            conn.close()
 
     def test_the_playbook_index_is_available_to_the_runtime(self):
         index = graph_runtime.load_playbooks()

@@ -151,13 +151,19 @@ def make_nodes(deps):
                 draft["location"] = {"text": place, "street": place,
                                      "area": None, "postcode": None,
                                      "provenance": "text", "ambiguous": False}
+        features = None
         if isinstance(ref, (tuple, list)) and ref:
             guid = str(ref[0])
+            mime = str(ref[1]) if len(ref) > 1 and ref[1] else "image/jpeg"
             ref = guid if guid.startswith("guid:") else f"guid:{guid}"
+            features = {"mime": mime}
         if ref:
             existing = list(draft.get("attachments") or [])
             if not any(item.get("ref") == str(ref) for item in existing):
-                existing.append({"kind": "photo", "ref": str(ref)})
+                attachment = {"kind": "photo", "ref": str(ref)}
+                if features:
+                    attachment["features"] = features
+                existing.append(attachment)
             draft["attachments"] = existing
         return {"incident_draft": draft, "candidate_services": []}
 
