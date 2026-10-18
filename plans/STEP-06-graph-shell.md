@@ -107,7 +107,7 @@ class TurnRuntime:
     def selftest(self) -> list[dict]         # scripted turns on MemorySaver
 ```
 
-`kind` is `"emergency"`, `"silence"`, `"greeting"`, `"captured"`, `"duplicate"` or `"empty"`. `reply` is `None` in this step; the writer is Step 9.
+`kind` is `"emergency"`, `"silence"`, `"greeting"`, `"captured"`, `"duplicate"`, `"empty"`, `"threat"` or `"spam"`. `reply` is `None` in this step; the writer is Step 9.
 
 The production checkpointer is `SqliteSaver` in `code/graph.db` (gitignored). The CLI opens it once and compiles one graph.
 
@@ -204,3 +204,17 @@ Acceptance:
 - No channel change. Step 11.
 - No specialist. Step 12.
 - No resident-page truth fix. Step 10 carries D55.
+
+---
+
+## Doctor pass (after the shell)
+
+The Step 6 doctor found two blocking shell bugs and one inherited safety false positive. Fixed in the follow-up commit:
+
+- A duplicate replay no longer calls `ThreadStore.save`; hydrate overlays the stored draft, pending question and claims, so memory cannot be wiped.
+- `photo_ref` from the live channel is a `(guid, mime)` tuple; capture stores `guid:<id>`, and `image_ref` is accepted as the same concept.
+- `hydrate` starts from `new_thread_state`, so `model_calls`, `degraded` and `repair_count` exist before P1.
+- `fire` and `trapped` need hazard or person context; a pothole outside a fire station is captured, not sent to 999.
+- `kind` now names `threat` and `spam` instead of folding them into `short_circuit`, and `empty` and `silence` are distinct.
+
+645 tests, 4 skips, 31/31 after the pass.

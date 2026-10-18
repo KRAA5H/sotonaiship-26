@@ -1,1 +1,1 @@
-"""Graph contracts. No runtime yet. See plans/STEP-02-contracts.md."""
+"""Graph contracts and the runtime shell. See plans/STEP-06-graph-shell.md."""

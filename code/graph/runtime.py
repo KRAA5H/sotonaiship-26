@@ -22,7 +22,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver  # noqa: E402
 import tools  # noqa: E402
 from graph import store  # noqa: E402
 from graph.build import build_graph  # noqa: E402
-from graph.nodes import wants_greeting  # noqa: E402
+from graph.nodes import danger, wants_greeting  # noqa: E402
 
 
 def _now():
@@ -60,17 +60,19 @@ class TurnRuntime:
         initial = {"thread_id": thread_id, "turn_id": turn_id, "inbound": inbound}
         config = {"configurable": {"thread_id": thread_id}}
         state = self.graph.invoke(initial, config)
-        self.deps.threads.save(
-            thread_id,
-            last_turn_id=turn_id,
-            incident_draft=state.get("incident_draft"),
-            pending_question=state.get("pending_question"),
-            last_claims=state.get("last_claims_sent"),
-        )
+        kind = self._kind(state, inbound, duplicate)
+        if kind != "duplicate":
+            self.deps.threads.save(
+                thread_id,
+                last_turn_id=turn_id,
+                incident_draft=state.get("incident_draft"),
+                pending_question=state.get("pending_question"),
+                last_claims=state.get("last_claims_sent"),
+            )
         return {
             "thread_id": thread_id,
             "turn_id": turn_id,
-            "kind": self._kind(state, inbound, duplicate),
+            "kind": kind,
             "state": state,
         }
 
@@ -78,12 +80,16 @@ class TurnRuntime:
     def _kind(state, inbound, duplicate):
         if duplicate:
             return "duplicate"
-        if state.get("suppressed"):
-            return "suppressed"
         if state.get("emergency"):
             return "emergency"
+        text = inbound.get("text") or ""
         if state.get("short_circuit"):
-            return "greeting" if wants_greeting(inbound.get("text") or "") else "short_circuit"
+            if wants_greeting(text):
+                return "greeting"
+            return danger(text) or "short_circuit"
+        if state.get("suppressed"):
+            ref = inbound.get("photo_ref") or inbound.get("image_ref")
+            return "empty" if not text.strip() and not ref else "silence"
         return "captured"
 
 

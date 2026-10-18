@@ -9,6 +9,10 @@ Three places, no more:
 
 ---
 
+## 04:15, Sunday: Step 6 doctor fixes
+
+- Closed the doctor's blockers before P1. A duplicate replay is a no-op and hydrate overlays the stored draft, pending question and claims, so a replay cannot wipe thread memory. `photo_ref` tuples become `guid:<id>` and `image_ref` is accepted. `hydrate` starts from `new_thread_state`, so `model_calls`, `degraded` and `repair_count` exist for P1. `fire` and `trapped` need hazard or person context; a pothole outside a fire station is captured, not sent to 999. `kind` now distinguishes empty, silence, threat and spam. 18 runtime tests; 645 total, 4 skips, 31/31.
+
 ## 04:00, Sunday: combined finish plan approved
 
 - `plans/STEP-07-FINISH.md` is the single plan for the rest: P1 decide/validate/repair, P2 execute/write plus simulator graph, P3 writer/outbox, P4 corrections/restart/safety, P5 channels/demo. Step 12 is cut; the legacy tests and the message evaluation are deferred until after the demo. One combined doctor per checkpoint. Current: 640 tests, 4 skips, 31/31; graph shell at `76ffc9c`. Resume by reading the plan, then P1.

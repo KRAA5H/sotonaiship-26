@@ -37,10 +37,12 @@ class RuntimeCase(unittest.TestCase):
                                   now=lambda: FIXED)
         return graph_runtime.TurnRuntime(deps, checkpointer or MemorySaver())
 
-    def turn(self, text, guid, sender="+447700900001", photo_ref=None):
+    def turn(self, text, guid, sender="+447700900001", photo_ref=None, image_ref=None):
         inbound = {"sender": sender, "text": text, "message_guid": guid}
         if photo_ref:
             inbound["photo_ref"] = photo_ref
+        if image_ref:
+            inbound["image_ref"] = image_ref
         return self.runtime.turn(inbound)
 
     def count_reports(self):
@@ -78,15 +80,29 @@ class HydrateTest(RuntimeCase):
         first = self.turn("there is a tree fallen on the road", "g-1")
         second = self.turn("there is a tree fallen on the road", "g-1")
         self.assertEqual(second["kind"], "duplicate")
-        self.assertTrue(second["state"]["suppressed"])
+        self.assertEqual(second["state"]["suppressed"], True)
         self.assertEqual(len(second["state"]["recent_messages"]), 1)
         self.assertEqual(second["thread_id"], first["thread_id"])
+
+    def test_a_duplicate_does_not_wipe_the_thread_memory(self):
+        first = self.turn("there is a tree fallen on the road", "g-1")
+        thread_id = first["thread_id"]
+        draft = self.threads.load(thread_id)["incident_draft"]
+        pending = {"field": "street", "text": "where is it?",
+                   "asked_at": "2026-10-18T04:00:00", "turn_id": "g-1"}
+        self.threads.save(thread_id, last_turn_id="g-1", incident_draft=draft,
+                          pending_question=pending, last_claims=["saved here"])
+        self.turn("there is a tree fallen on the road", "g-1")
+        row = self.threads.load(thread_id)
+        self.assertEqual(row["incident_draft"], draft)
+        self.assertEqual(row["pending_question"]["field"], "street")
+        self.assertEqual(row["last_claims"], ["saved here"])
 
 
 class PrecheckTest(RuntimeCase):
     def test_empty_input_is_suppressed(self):
         result = self.turn("", "g-empty")
-        self.assertEqual(result["kind"], "suppressed")
+        self.assertEqual(result["kind"], "empty")
         self.assertTrue(result["state"]["suppressed"])
 
     def test_an_emergency_stops_before_capture(self):
@@ -98,9 +114,19 @@ class PrecheckTest(RuntimeCase):
 
     def test_a_threat_is_not_an_emergency(self):
         result = self.turn("I will hurt you", "g-threat")
-        self.assertEqual(result["kind"], "short_circuit")
+        self.assertEqual(result["kind"], "threat")
         self.assertFalse(result["state"]["emergency"])
         self.assertTrue(result["state"]["short_circuit"])
+
+    def test_a_fire_station_is_not_an_emergency(self):
+        result = self.turn("pothole outside the fire station on Winchester Road", "g-fire-station")
+        self.assertEqual(result["kind"], "captured")
+        self.assertFalse(result["state"]["emergency"])
+
+    def test_a_house_fire_is_an_emergency(self):
+        result = self.turn("the house is on fire", "g-house-fire")
+        self.assertEqual(result["kind"], "emergency")
+        self.assertTrue(result["state"]["emergency"])
 
     def test_a_greeting_takes_the_cheap_edge(self):
         result = self.turn("hello", "g-hello")
@@ -109,7 +135,7 @@ class PrecheckTest(RuntimeCase):
 
     def test_a_thank_you_is_silence(self):
         result = self.turn("thanks", "g-thanks")
-        self.assertEqual(result["kind"], "suppressed")
+        self.assertEqual(result["kind"], "silence")
         self.assertTrue(result["state"]["suppressed"])
 
 
@@ -124,6 +150,18 @@ class CaptureTest(RuntimeCase):
         self.assertEqual(result["kind"], "captured")
         self.assertEqual(draft["description"], "")
         self.assertEqual(draft["attachments"], [{"kind": "photo", "ref": "guid:1"}])
+
+    def test_a_photo_tuple_is_stored_as_a_guid(self):
+        result = self.turn("", "g-photo-t", photo_ref=("G-ABC", "image/jpeg"))
+        draft = result["state"]["incident_draft"]
+        self.assertEqual(result["kind"], "captured")
+        self.assertEqual(draft["attachments"], [{"kind": "photo", "ref": "guid:G-ABC"}])
+
+    def test_an_image_ref_is_a_photo(self):
+        result = self.turn("", "g-image", image_ref="guid:2")
+        draft = result["state"]["incident_draft"]
+        self.assertEqual(result["kind"], "captured")
+        self.assertEqual(draft["attachments"], [{"kind": "photo", "ref": "guid:2"}])
 
     def test_the_playbook_index_is_available_to_the_runtime(self):
         index = graph_runtime.load_playbooks()

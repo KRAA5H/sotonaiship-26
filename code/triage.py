@@ -210,8 +210,13 @@ def normalise(data):
 
 
 EMERGENCY_WORDS = re.compile(
-    r"\b(smell(s)? (of )?gas|gas leak|gas smell|fire|on fire|house fire|"
-    r"trapped|live wire|live cable|electrocuted|not breathing|"
+    r"\b(smell(s)? (of )?gas|gas leak|gas smell|"
+    r"on fire|(house|flat|building|kitchen|car|vehicle|shop|school|care home) fire|"
+    r"fire (in|at|inside) (the|a|an)|"
+    r"(person|people|someone|child|man|woman|driver|passenger|occupant|animal|pet|car|vehicle|van|lorry|truck) "
+    r"(is |are |got |was |were )?trapped|"
+    r"trapped (in|inside|under) (a |the )?(car|vehicle|van|lorry|truck|building|house|flat|lift|elevator|rubble|wreckage)|"
+    r"live wire|live cable|electrocuted|not breathing|"
     r"can'?t breathe|drowning|someone (is )?(hurt|injured|collapsed))\b",
     re.IGNORECASE,
 )

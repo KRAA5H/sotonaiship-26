@@ -8,7 +8,7 @@ import re
 
 import tools
 import triage
-from .state import MAX_RECENT_MESSAGES, new_incident_draft
+from .state import MAX_RECENT_MESSAGES, new_incident_draft, new_thread_state
 
 SILENCE_WORDS = re.compile(
     r"^(thanks|thank you|cheers|ta|ok|okay|cool|got it|perfect|great|nice one)[\s!.,]*$",
@@ -26,6 +26,7 @@ THREAT = re.compile(
     re.IGNORECASE,
 )
 URL = re.compile(r"https?://\S+", re.IGNORECASE)
+MAPS = re.compile(r"maps\.apple\.com|google\.[a-z.]+/maps|maps\.app\.goo\.gl|goo\.gl/maps|geo:", re.IGNORECASE)
 SPAM_URLS = 3
 SPAM_CHARS = 3000
 
@@ -47,7 +48,7 @@ def danger(text):
         return "emergency"
     if THREAT.search(text):
         return "threat"
-    if len(text) > SPAM_CHARS or len(URL.findall(text)) >= SPAM_URLS:
+    if len(text) > SPAM_CHARS or len([url for url in URL.findall(text) if not MAPS.search(url)]) >= SPAM_URLS:
         return "spam"
     return None
 
@@ -68,36 +69,42 @@ def make_nodes(deps):
         sender = inbound.get("sender") or ""
         thread_id = tools.reporter_ref(sender) or "h-anon"
         turn_id = state.get("turn_id") or inbound.get("message_guid") or ""
+        base = new_thread_state(thread_id, turn_id, inbound)
         row = deps.threads.load(thread_id)
+        if row:
+            base.update({
+                "active_incident_id": row.get("active_incident_id"),
+                "incident_draft": row.get("incident_draft") or new_incident_draft(),
+                "pending_question": row.get("pending_question"),
+                "last_claims_sent": row.get("last_claims") or [],
+            })
         if row and row.get("last_turn_id") == turn_id:
-            return {"thread_id": thread_id, "turn_id": turn_id,
-                    "inbound": inbound, "suppressed": True,
-                    "short_circuit": False, "emergency": False}
-        messages = list(state.get("recent_messages") or [])
-        messages.append({
+            base.update({
+                "suppressed": True,
+                "short_circuit": False,
+                "emergency": False,
+                "recent_messages": list(state.get("recent_messages") or []),
+            })
+            return base
+        entry = {
             "role": "resident",
             "text": inbound.get("text") or "",
             "at": deps.now().isoformat(timespec="seconds"),
-        })
-        return {
-            "thread_id": thread_id,
-            "turn_id": turn_id,
-            "inbound": inbound,
-            "active_incident_id": row.get("active_incident_id") if row else None,
-            "incident_draft": (row.get("incident_draft") if row else None)
-            or new_incident_draft(),
-            "pending_question": row.get("pending_question") if row else None,
-            "last_claims_sent": (row.get("last_claims") if row else None) or [],
+        }
+        messages = list(state.get("recent_messages") or [])
+        messages = messages + [entry] if messages else [entry]
+        base.update({
             "recent_messages": messages[-MAX_RECENT_MESSAGES:],
             "suppressed": False,
             "short_circuit": False,
             "emergency": False,
-        }
+        })
+        return base
 
     def precheck(state):
         inbound = _inbound(state)
         text = _text(state)
-        if not text and not inbound.get("photo_ref"):
+        if not text and not (inbound.get("photo_ref") or inbound.get("image_ref")):
             return {"suppressed": True, "emergency": False, "short_circuit": False}
         kind = danger(text)
         if kind == "emergency":
@@ -117,7 +124,10 @@ def make_nodes(deps):
     def capture(state):
         inbound = _inbound(state)
         draft = new_incident_draft(_text(state))
-        ref = inbound.get("photo_ref")
+        ref = inbound.get("photo_ref") or inbound.get("image_ref")
+        if isinstance(ref, (tuple, list)) and ref:
+            guid = str(ref[0])
+            ref = guid if guid.startswith("guid:") else f"guid:{guid}"
         if ref:
             draft["attachments"] = [{"kind": "photo", "ref": str(ref)}]
         return {"incident_draft": draft, "candidate_services": []}
