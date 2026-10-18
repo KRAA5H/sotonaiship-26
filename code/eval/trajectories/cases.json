@@ -1,0 +1,331 @@
+[
+  {
+    "name": "tree_capture",
+    "layer": "agent",
+    "legacy": "pass",
+    "note": "The reported failure: a real report the model maps to an info_only category.",
+    "turns": [
+      {
+        "text": "there is a tree fallen on the road",
+        "model": {
+          "is_report": true,
+          "category_id": "flooding_severe_weather",
+          "location": "",
+          "description": "tree fallen on the road",
+          "severity": null,
+          "confidence": 0.9
+        }
+      }
+    ],
+    "expect": {
+      "rows": 1,
+      "categories": [
+        "unclear_other"
+      ],
+      "locations": [
+        "Not given"
+      ],
+      "reply_contains": [
+        "hasn't gone to the council"
+      ],
+      "reply_forbids": [
+        "The council has it",
+        "crew"
+      ],
+      "max_questions": 1
+    }
+  },
+  {
+    "name": "challenge_retraction",
+    "layer": "agent",
+    "legacy": "fail",
+    "note": "The second turn is a correction of the first answer, not a new unclear message.",
+    "turns": [
+      {
+        "text": "there is a tree fallen on the road",
+        "model": {
+          "is_report": true,
+          "category_id": "flooding_severe_weather",
+          "location": "",
+          "description": "tree fallen on the road",
+          "severity": null,
+          "confidence": 0.9
+        }
+      },
+      {
+        "text": "what has that got to do with flooding",
+        "model": {
+          "is_report": false,
+          "category_id": "unclear_other",
+          "location": "",
+          "description": "what has that got to do with flooding",
+          "severity": null,
+          "confidence": 0.9
+        }
+      }
+    ],
+    "expect": {
+      "rows": 1,
+      "categories": [
+        "unclear_other"
+      ],
+      "locations": [
+        "Not given"
+      ],
+      "reply_contains": [
+        "you're right",
+        "that wasn't flooding"
+      ],
+      "reply_forbids": [
+        "The council's page might have it too"
+      ],
+      "max_questions": 1,
+      "retracted": [
+        "flooding"
+      ]
+    }
+  },
+  {
+    "name": "wrong_specialist",
+    "layer": "graph",
+    "legacy": "fail",
+    "note": "A specialist mismatch must preserve the draft and reroute once.",
+    "turns": [
+      {
+        "text": "tree down blocking the road at weston lane",
+        "model": {
+          "is_report": true,
+          "category_id": "pothole",
+          "location": "Weston Lane",
+          "description": "tree down blocking the road",
+          "severity": "high",
+          "confidence": 0.5
+        }
+      }
+    ],
+    "specialist": {
+      "group": "highways",
+      "fit": "mismatch",
+      "alternate": "cleansing"
+    },
+    "expect": {
+      "rows": 1,
+      "categories": [
+        "pothole"
+      ],
+      "locations": [
+        "Weston Lane"
+      ],
+      "draft_preserved": true,
+      "reroutes": 1,
+      "reply_contains": [],
+      "reply_forbids": []
+    }
+  },
+  {
+    "name": "null_patch",
+    "layer": "graph",
+    "legacy": "fail",
+    "note": "A null-filled patch cannot clear a location the resident already gave.",
+    "turns": [
+      {
+        "text": "pothole on Alma Road",
+        "model": {
+          "is_report": true,
+          "category_id": "pothole",
+          "location": "Alma Road",
+          "description": "pothole",
+          "severity": "medium",
+          "confidence": 0.9
+        }
+      },
+      {
+        "text": "it is still there",
+        "model": {
+          "is_report": true,
+          "category_id": "pothole",
+          "location": "",
+          "description": "still there",
+          "severity": "medium",
+          "confidence": 0.9
+        }
+      }
+    ],
+    "expect": {
+      "rows": 1,
+      "categories": [
+        "pothole"
+      ],
+      "locations": [
+        "Alma Road"
+      ],
+      "patch_preserved": [
+        "location"
+      ],
+      "reply_contains": [],
+      "reply_forbids": []
+    }
+  },
+  {
+    "name": "photo_after_text",
+    "layer": "agent",
+    "legacy": "pass",
+    "note": "A photo sent after the report attaches to the open report, never a second row.",
+    "turns": [
+      {
+        "text": "graffiti on the wall at Alma Road",
+        "model": {
+          "is_report": true,
+          "category_id": "graffiti_flyposting",
+          "location": "Alma Road",
+          "description": "graffiti on the wall",
+          "severity": "medium",
+          "confidence": 0.9
+        }
+      },
+      {
+        "text": "",
+        "photo": {
+          "ref": "G-1",
+          "mime": "image/jpeg"
+        }
+      }
+    ],
+    "expect": {
+      "rows": 1,
+      "categories": [
+        "graffiti_flyposting"
+      ],
+      "locations": [
+        "Alma Road"
+      ],
+      "has_photo": 1,
+      "reply_contains": [],
+      "reply_forbids": [
+        "I didn't catch that"
+      ],
+      "max_questions": 0
+    }
+  },
+  {
+    "name": "two_incidents",
+    "layer": "agent",
+    "legacy": "pass",
+    "note": "A second, unrelated problem creates a second row and leaves the first alone.",
+    "turns": [
+      {
+        "text": "pothole on Alma Road",
+        "model": {
+          "is_report": true,
+          "category_id": "pothole",
+          "location": "Alma Road",
+          "description": "pothole",
+          "severity": "medium",
+          "confidence": 0.9
+        }
+      },
+      {
+        "text": "different problem, graffiti on the wall at Weston Lane",
+        "model": {
+          "is_report": true,
+          "category_id": "graffiti_flyposting",
+          "location": "Weston Lane",
+          "description": "graffiti on the wall",
+          "severity": "medium",
+          "confidence": 0.9
+        }
+      }
+    ],
+    "expect": {
+      "rows": 2,
+      "categories": [
+        "graffiti_flyposting",
+        "pothole"
+      ],
+      "locations": [
+        "Alma Road",
+        "Weston Lane"
+      ],
+      "reply_contains": [],
+      "reply_forbids": [],
+      "max_questions": 0
+    }
+  },
+  {
+    "name": "duplicate_webhook",
+    "layer": "channel",
+    "legacy": "not_applicable",
+    "note": "The same BlueBubbles message guid arrives twice. The channel must answer once.",
+    "turns": [
+      {
+        "text": "pothole on Alma Road",
+        "message_guid": "G-DUP",
+        "model": {
+          "is_report": true,
+          "category_id": "pothole",
+          "location": "Alma Road",
+          "description": "pothole",
+          "severity": "medium",
+          "confidence": 0.9
+        }
+      }
+    ],
+    "repeat_turn": true,
+    "expect": {
+      "rows": 1,
+      "replies": 1,
+      "categories": [
+        "pothole"
+      ],
+      "locations": [
+        "Alma Road"
+      ],
+      "reply_contains": [],
+      "reply_forbids": []
+    }
+  },
+  {
+    "name": "restart",
+    "layer": "graph",
+    "legacy": "fail",
+    "note": "A new runtime instance resumes the pending question instead of starting again.",
+    "turns": [
+      {
+        "text": "there is a tree fallen on the road",
+        "model": {
+          "is_report": true,
+          "category_id": "flooding_severe_weather",
+          "location": "",
+          "description": "tree fallen on the road",
+          "severity": null,
+          "confidence": 0.9
+        }
+      },
+      {
+        "text": "weston lane",
+        "restart_before": true,
+        "model": {
+          "is_report": true,
+          "category_id": "unclear_other",
+          "location": "Weston Lane",
+          "description": "tree fallen on the road",
+          "severity": null,
+          "confidence": 0.9
+        }
+      }
+    ],
+    "expect": {
+      "rows": 1,
+      "categories": [
+        "unclear_other"
+      ],
+      "locations": [
+        "Weston Lane"
+      ],
+      "pending_resumed": true,
+      "max_questions": 0,
+      "reply_contains": [],
+      "reply_forbids": []
+    }
+  }
+]

@@ -9,6 +9,10 @@ Three places, no more:
 
 ---
 
+## 02:17, Sunday: trajectory fixtures
+
+- Step 1: eight fixtures in `code/eval/trajectories/cases.json` and their loader in `code/test_trajectories.py`. Four agent cases run against the legacy path: tree capture passes, challenge retraction fails (no retraction, generic link), photo after text passes, two incidents passes. Four graph and channel cases are loaded and skipped until those runtimes exist. 482 tests pass, 4 skips, 31/31 message evaluation. Plan: `plans/STEP-01-trajectories.md`.
+
 ## 02:07, Sunday: baseline frozen for the graph build
 
 - Baseline commit `40b2ee5` (`40b2ee59e48356cf6b6bcebe78445b58a9491fda`): the three capture and truth fixes plus the documentation. 475 unit tests pass, 31/31 message evaluation cases pass. Step 0 only; the graph build starts from this tree after Step 1 is approved.
