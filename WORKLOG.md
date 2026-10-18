@@ -9,6 +9,10 @@ Three places, no more:
 
 ---
 
+## 02:35, Sunday: contract hardening after the adversarial test
+
+- Step 2b after the Step 2 test doctor: guarded a non-dict `set`/`add` that could crash a turn, validated nested location, attachment, evidence and retraction keys, rejected whitespace location values that could erase a street, allowed a no-write outcome for `ask`/`answer`/`escalate` while a `log` still needs a refusal reason, and stopped truncating the resident's description at 400 characters. 39 contract tests, 537 total, 4 skips, 31/31.
+
 ## 02:32, Sunday: graph storage
 
 - Step 3: `code/graph/store.py` and `code/test_graph_store.py`. `threads`, `turn_operations`, `delivery_outbox`, `claims_sent`, plus the D51 `capture_state`/`routing_status` columns in `reports_db` and `dashboard/schema.sql`. 15 store tests. 534 tests pass, 4 skips, 31/31. D56 recorded. Step 3 now owns the D51 migration; Step 8 uses the columns and adds nothing.

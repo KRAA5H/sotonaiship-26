@@ -157,11 +157,26 @@ MAX_BUBBLES = 3
 MARKDOWN = re.compile(r"[*_#`]")
 EM_DASH = "\u2014"
 EN_DASH = "\u2013"
-URLISH = re.compile(r"(https?://|www\.|google\.|search\?q=)", re.I)
-REPORT_ID = re.compile(r"\bR-\d{3,}\b")
+URLISH = re.compile(
+    r"https?://|www\.|google\.|search\?q=|"
+    r"\b[a-z0-9-]+\.(?:gov\.uk|co\.uk|org\.uk|ac\.uk|uk|com|org|net|io)\b",
+    re.I,
+)
+REPORT_ID = re.compile(r"\bR-\d{4}\b", re.I)
 ```
 
 A test asserts these match the patterns in `code/voice.py`, so the two cannot drift.
+
+### Post-review fixes
+
+The Step 2 test doctor probed the contract with malformed plans. Four fixes followed:
+
+1. A non-dict `set` or `add` could crash `_validate_patch_shape` after it had already recorded the problem. Both loops are now guarded by `isinstance`, so a malformed model plan earns `patch.unknown_key:set`, not an `AttributeError`.
+2. Plan-level patches did not validate nested keys. `set.location` now rejects `lat`, and `add.attachments`, `add.evidence` and `add.retracted` check their item keys and enums.
+3. A whitespace `street` could overwrite a real one. Empty and whitespace-only location strings are now rejected.
+4. `new_executed_outcome("log")` had no representable state when nothing was saved and nothing was refused. A `log` now needs `refused_reason`; `ask`, `answer` and `escalate` may write nothing. The description is no longer truncated to 400 characters, because the resident's words are the audit record.
+
+An explicit `{}` patch is rejected as `patch.unknown_key`, while an omitted patch is valid and `{"set": {}}` is a `patch.no_change`.
 
 ### schemas.py
 
@@ -212,7 +227,7 @@ Rules:
 - `specialist_request.group` must be one of `SPECIALIST_GROUPS`. `service_candidates` are strings; category membership is policy's job in Steps 4 and 5.
 - `validate_specialist_result`: `fit`, `recommended_action` and `routing_status` from their enums; `fit="mismatch"` needs non-empty observations; `fit="supported"` needs non-empty `source_refs` and `fact_ids`; `fact_ids` match `^F\d+$`; source URLs are http or https and dates are `YYYY-MM-DD` not in the future; `proposed_patch` must pass the same shape check as a plan patch. It is applied only through `apply_patch`.
 - `validate_bubble_plan`: 1 to 3 bubbles, each one line, non-empty, at most 300 characters, no markdown, no em dash, no en dash, no URL-ish text, no report id. `url` is null or `^https?://[^/]+/r/[A-Za-z0-9_-]{16,}$`. The writer emits null; the runtime fills it. A suppressed plan is `{"bubbles": [], "url": null, "suppressed": true}` and is valid only with `allow_suppressed=True`.
-- `validate_executed_outcome`: action from `ACTIONS`, report id `^R-\d{4}$`, token 8 to 64 characters, transport from `TRANSPORT_STATES`, facts with url and date, and `saved` plus `refused_reason` so "nothing was saved" is representable.
+- `validate_executed_outcome`: action from `ACTIONS`, report id `^R-\d{4}$`, token 8 to 64 characters, transport from `TRANSPORT_STATES`, facts with url and date, and `saved` plus `refused_reason`. A saved outcome needs a report id. A `log` that saved nothing needs a refusal reason; an `ask`, `answer` or `escalate` may write nothing.
 - `validate_incident_draft`: enum fields, no `lat` or `lng` anywhere, attachments with `kind` from the enum, evidence keys limited to `kind`, `ref`, `text`, `at`, `source`, so a phone number or coordinate cannot ride along.
 - `validate_thread_state`: every nested field validated, `recent_messages` capped at 12, and `plan`/`specialist_results`/`executed_outcome`/`bubble_plan` validated when present.
 
@@ -225,7 +240,7 @@ The failure this prevents: a model returns `{"location": null}` or `{"set": {"de
 - `add` keys must be a subset of `{"attachments", "evidence", "retracted"}`. These fields are append-only and the only way to write them. Duplicate attachment `ref` or retraction `claim` is ignored, not duplicated.
 - `clear` may contain only `category_id`, `category_candidates`, `severity`, or `location`. `location` may be cleared only when its `text` is empty or `LOCATION_UNKNOWN` compared case-insensitively. `description`, `evidence`, `attachments`, `retracted`, `id`, `capture_state`, `routing_status` and `version` can never be cleared.
 - Every `clear` requires at least one reason code from `CLEAR_REASONS`; otherwise `patch.clear_without_reason`.
-- In `set.location`, `None` and `""` mean omitted. A non-null key replaces that key. A `set` that would blank a non-empty description, or blank a filled street without a clear, is rejected as `patch.empty_value`.
+- In `set.location`, `None` means omitted. An empty or whitespace-only `text`, `street`, `area` or `postcode` is rejected as `patch.empty_value`, never written as a blank. An unknown location key such as `lat` is rejected. A `set` that would blank a non-empty description is rejected the same way.
 - Policy-owned fields are rejected in a patch: `id`, `capture_state`, `routing_status`, `version`.
 - `version` is a required positional argument. If it does not equal `draft["version"]`, return the original draft and `patch.stale_version`.
 - A patch that changes nothing returns the original draft and `patch.no_change`, without bumping the version.
