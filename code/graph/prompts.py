@@ -50,6 +50,11 @@ JSON shape:
 Use no markdown and no extra keys. Keep one question at most."""
 
 _KEYWORDS = (
+    ("not_council_trunk_road", ("motorway", "a33", "a36", "m27", "m3", "trunk road")),
+    ("noise_nuisance", ("noisy neighbour", "noisy neighbor", "neighbour noise",
+                        "loud music", "barking dog", "noise from next door",
+                        "noise nuisance")),
+    ("not_council_utility", ("power cut", "electricity", "water leak", "gas leak")),
     ("pothole", ("pothole", "hole in the road", "road surface", "crater", "sunken drain")),
     ("fly_tipping", ("fly tip", "fly-tip", "dumped rubbish", "dumped waste", "mattress",
                      "fridge", "sofa dumped", "rubbish dumped")),
@@ -63,14 +68,10 @@ _KEYWORDS = (
                     "bin wasn't collected", "bin was not collected")),
     ("lost_damaged_bin", ("missing bin", "broken bin", "damaged bin", "bin lid")),
     ("litter_street_cleaning", ("litter", "street cleaning", "street needs sweeping")),
-    ("noise_nuisance", ("noise", "loud music", "barking", "shouting")),
     ("council_housing_repair", ("housing repair", "council house", "leak in my flat", "damp")),
     ("flooding_severe_weather", ("flood", "flooding", "storm")),
-    ("not_council_trunk_road", ("motorway", "a33", "a36", "trunk road")),
-    ("not_council_utility", ("power cut", "electricity", "water leak", "gas leak")),
-    ("outside_southampton", ("winchester", "eastleigh", "fareham", "portsmouth",
-                             "outside southampton")),
 )
+
 
 _REPORT_WORDS = re.compile(
     r"\b(tree|fallen|blocking|blocked|broken|dumped|leak|spill|fly.?tip|graffiti|"
@@ -81,6 +82,14 @@ _QUESTION_START = re.compile(
 _CHALLENGE = re.compile(
     r"(what has that got to do|that'?s wrong|that is wrong|you said|"
     r"wasn'?t|was not|nothing to do with|why did you say|got that wrong)", re.I)
+_TRUNK_TEXT = re.compile(r"\b(A3[36]|M27|M3|motorway|trunk road)\b", re.I)
+_OUTSIDE_TEXT = re.compile(r"\b(winchester|eastleigh|fareham|portsmouth|gosport|romsey|outside southampton)\b(?!\s+(?:road|street|lane|avenue|close|drive|way|crescent|gardens|hill|park|terrace|place|grove|court|walk|mews|rise|row)\b)", re.I)
+_HANDOFF_TEXT = re.compile(
+    r"\b(noisy (neighbour|neighbor)|neighbour(s)? (noise|making noise)|loud music|"
+    r"barking dog|noise from (next door|the neighbours?)|noise nuisance)\b", re.I)
+_STATUS_TEXT = re.compile(
+    r"\b(any update|update on (my|the) report|what'?s (the )?status|status of (my|the) report|"
+    r"has (it|my report) been|is it fixed|still open|any progress)\b", re.I)
 _POSTCODE = re.compile(r"\bSO\d{1,2}\s?\d[A-Z]{2}\b", re.I)
 _SUFFIX = r"(?:Road|Street|Lane|Avenue|Close|Drive|Way|Crescent|Gardens|Hill|Park|Terrace|Place|Grove|Court|Walk|Mews|Rise|Row)"
 _PREP_STREET = re.compile(r"\b(?:on|at|outside|near|by|in)\s+([A-Z][\w']*(?:\s+[A-Z][\w']*){0,4}\s+" + _SUFFIX + r")\b", re.I)
@@ -149,6 +158,22 @@ def is_question(text):
 
 def is_challenge(text):
     return bool(_CHALLENGE.search(text or ""))
+
+
+def hard_route(text):
+    """The routes the council rulebook forbids us to save, regardless of model."""
+    text = text or ""
+    if _TRUNK_TEXT.search(text):
+        return "not_council_trunk_road"
+    if _OUTSIDE_TEXT.search(text):
+        return "outside_southampton"
+    if _HANDOFF_TEXT.search(text):
+        return "noise_nuisance"
+    return None
+
+
+def is_status(text):
+    return bool(_STATUS_TEXT.search(text or ""))
 
 
 def is_detail(text, state):
@@ -240,11 +265,23 @@ def deterministic_plan(state, deps):
                      retracted=[wrong] if wrong else [],
                      reasons=["challenge"])
 
-    if not text and draft.get("attachments"):
+    hard = hard_route(text)
+    if hard:
+        if hard in handoff:
+            return _handoff_plan(index, hard)
+        return _escalation_plan(index, hard)
+
+    if not text and (draft.get("attachments") or inbound.get("card")):
         return _plan("detail", "log", [category], reasons=["photo_detail"])
 
     if is_detail(text, state):
         return _plan("detail", "log", [category], patch=patch, reasons=["detail"])
+
+    if is_status(text) and state.get("active_incident_id"):
+        return _plan("status", "answer", [category],
+                     fact_request={"question": text,
+                                   "category_id": category if category in categories else "general"},
+                     reasons=["status"])
 
     if is_question(text):
         fact_category = category if category != "unclear_other" else "general"
@@ -294,6 +331,16 @@ def _escalation_plan(index, category):
                  reasons=["not_council"])
 
 
+def _handoff_plan(index, category):
+    book = playbook(category)
+    form = book.get("form_url")
+    if not form:
+        return _escalation_plan(index, category)
+    return _plan("other", "escalate", [category],
+                 escalation={"kind": "council_form", "destination": form},
+                 reasons=["handoff"])
+
+
 def _proposed_category(state):
     draft = state.get("incident_draft") or {}
     plan = state.get("plan") or {}
@@ -318,6 +365,12 @@ def repair_plan(state, deps):
         return _plan("other", "ask", [draft.get("category_id") or "unclear_other"],
                      clarification={"field": target, "reason": "Tell me a bit more."})
     category = _proposed_category(state)
+    hard = hard_route(((state.get("inbound") or {}).get("text") or ""))
+    if hard:
+        index = deps.playbooks or {}
+        return (_handoff_plan(index, hard)
+                if hard in set(index.get("handoff_categories") or ())
+                else _escalation_plan(index, hard))
     if category in set((deps.playbooks or {}).get("never_saved") or ()) \
             or ((deps.playbooks or {}).get("categories") or {}).get(category) == "not_council":
         return _escalation_plan(deps.playbooks or {}, category)
@@ -329,6 +382,11 @@ def repair_plan(state, deps):
 def fallback_plan(state, deps):
     """The last honest action after a hard policy failure."""
     index = deps.playbooks or {}
+    hard = hard_route(((state.get("inbound") or {}).get("text") or ""))
+    if hard:
+        return (_handoff_plan(index, hard)
+                if hard in set(index.get("handoff_categories") or ())
+                else _escalation_plan(index, hard))
     category = _proposed_category(state)
     if category in set(index.get("never_saved") or ()) \
             or (index.get("categories") or {}).get(category) == "not_council":

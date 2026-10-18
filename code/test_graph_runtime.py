@@ -9,6 +9,7 @@ import json
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -41,12 +42,15 @@ class RuntimeCase(unittest.TestCase):
                                   claims=store.Claims(self.db))
         return graph_runtime.TurnRuntime(deps, checkpointer or MemorySaver())
 
-    def turn(self, text, guid, sender="+447700900001", photo_ref=None, image_ref=None):
+    def turn(self, text, guid, sender="+447700900001", photo_ref=None, image_ref=None,
+             card=None):
         inbound = {"sender": sender, "text": text, "message_guid": guid}
         if photo_ref:
             inbound["photo_ref"] = photo_ref
         if image_ref:
             inbound["image_ref"] = image_ref
+        if card:
+            inbound["card"] = card
         return self.runtime.turn(inbound)
 
     def count_reports(self):
@@ -226,6 +230,50 @@ class DecideTest(RuntimeCase):
         self.assertTrue(facts)
         self.assertTrue(facts[0]["url"].startswith("https://"))
         self.assertEqual(facts[0]["date"], "2026-10-17")
+
+    def test_an_a33_pothole_is_pointed_to_national_highways_not_saved(self):
+        result = self.turn("pothole on the A33", "g-1")
+        self.assertEqual(result["kind"], "escalated")
+        self.assertEqual(self.count_reports(), 0)
+        joined = " ".join(result["bubbles"]).lower()
+        self.assertIn("national highways", joined)
+        self.assertIn("0300 123 5000", joined)
+        self.assertNotIn("hasn't gone to the council", joined)
+
+    def test_a_winchester_pothole_is_not_saved(self):
+        result = self.turn("pothole in Winchester", "g-1")
+        self.assertEqual(result["kind"], "escalated")
+        self.assertEqual(self.count_reports(), 0)
+        self.assertIn("not southampton city council", " ".join(result["bubbles"]).lower())
+
+    def test_a_noise_complaint_goes_to_the_council_form(self):
+        result = self.turn("loud music every night from next door", "g-1")
+        self.assertEqual(result["kind"], "escalated")
+        self.assertEqual(self.count_reports(), 0)
+        self.assertIn("form", " ".join(result["bubbles"]).lower())
+        self.assertIn("envir", (result.get("source_url") or "").lower())
+
+    def test_a_status_question_answers_the_open_report(self):
+        self.turn("pothole on Alma Road", "g-1")
+        result = self.turn("any update on my report?", "g-2")
+        self.assertEqual(result["kind"], "answered")
+        self.assertEqual(self.count_reports(), 1)
+        joined = " ".join(result["bubbles"])
+        self.assertIn("Update on your pothole", joined)
+        self.assertIn("Alma Road", joined)
+        self.assertTrue(result["url"].startswith("http"))
+
+    def test_a_card_only_message_updates_the_open_report(self):
+        first = self.turn("pothole on Alma Road", "g-1")
+        self.assertEqual(first["kind"], "saved")
+        with unittest.mock.patch(
+                "agents.location_agent.LocationAgent.shared_place",
+                return_value={"street_name": "Weston Lane", "area": "Bevois",
+                              "postcode": None, "in_city": True}):
+            result = self.turn("", "g-2", card="BEGIN:VCARD X-APPLE-STRUCTURED-LOCATION:geo:50.9,-1.4 END:VCARD")
+        self.assertEqual(result["kind"], "saved")
+        self.assertEqual(self.count_reports(), 1)
+        self.assertEqual(self.row()["location"], "Weston Lane")
 
     def test_an_emergency_never_calls_the_model(self):
         fake = self.use([model_plan()])

@@ -82,6 +82,8 @@ class ExecutedOutcome(TypedDict, total=False):
     saved: bool
     refused_reason: str | None
     playbook_version: str | None
+    destination: str | None
+    status: dict | None
 
 
 class ThreadState(TypedDict, total=False):

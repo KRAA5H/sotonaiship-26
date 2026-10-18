@@ -454,5 +454,144 @@
       ],
       "max_questions": 0
     }
+  },
+  {
+    "name": "trunk_road",
+    "layer": "graph",
+    "legacy": "unverified",
+    "note": "An A33 pothole is never saved; the checked National Highways contact is sent.",
+    "turns": [
+      {
+        "text": "pothole on the A33",
+        "model": {
+          "is_report": true,
+          "category_id": "pothole",
+          "location": "",
+          "description": "pothole on the A33",
+          "severity": null,
+          "confidence": 0.9
+        }
+      }
+    ],
+    "expect": {
+      "rows": 0,
+      "categories": [],
+      "locations": [],
+      "reply_contains": [
+        "National Highways",
+        "0300 123 5000"
+      ],
+      "reply_forbids": [
+        "hasn't gone to the council"
+      ],
+      "max_questions": 0
+    }
+  },
+  {
+    "name": "outside_city",
+    "layer": "graph",
+    "legacy": "unverified",
+    "note": "A Winchester pothole is not saved; the resident is pointed to their own council.",
+    "turns": [
+      {
+        "text": "pothole in Winchester",
+        "model": {
+          "is_report": true,
+          "category_id": "pothole",
+          "location": "Winchester",
+          "description": "pothole",
+          "severity": null,
+          "confidence": 0.9
+        }
+      }
+    ],
+    "expect": {
+      "rows": 0,
+      "categories": [],
+      "locations": [],
+      "reply_contains": [
+        "not Southampton City Council"
+      ],
+      "reply_forbids": [
+        "hasn't gone to the council"
+      ],
+      "max_questions": 0
+    }
+  },
+  {
+    "name": "noise_handoff",
+    "layer": "graph",
+    "legacy": "unverified",
+    "note": "A neighbour noise complaint goes to the council's own form, not a report row.",
+    "turns": [
+      {
+        "text": "loud music every night from next door",
+        "model": {
+          "is_report": true,
+          "category_id": "noise_nuisance",
+          "location": "",
+          "description": "loud music every night",
+          "severity": null,
+          "confidence": 0.9
+        }
+      }
+    ],
+    "expect": {
+      "rows": 0,
+      "categories": [],
+      "locations": [],
+      "reply_contains": [
+        "form"
+      ],
+      "reply_forbids": [
+        "hasn't gone to the council"
+      ],
+      "max_questions": 0
+    }
+  },
+  {
+    "name": "status_followup",
+    "layer": "graph",
+    "legacy": "unverified",
+    "note": "After a save, an update question reads the open report instead of answering a fact.",
+    "turns": [
+      {
+        "text": "pothole on Alma Road",
+        "model": {
+          "is_report": true,
+          "category_id": "pothole",
+          "location": "Alma Road",
+          "description": "pothole",
+          "severity": "medium",
+          "confidence": 0.9
+        }
+      },
+      {
+        "text": "any update on my report?",
+        "model": {
+          "is_report": false,
+          "category_id": "pothole",
+          "location": "",
+          "description": "any update",
+          "severity": null,
+          "confidence": 0.9
+        }
+      }
+    ],
+    "expect": {
+      "rows": 1,
+      "categories": [
+        "pothole"
+      ],
+      "locations": [
+        "Alma Road"
+      ],
+      "reply_contains": [
+        "Update on your pothole",
+        "Status:"
+      ],
+      "reply_forbids": [],
+      "max_questions": 0
+    }
   }
 ]

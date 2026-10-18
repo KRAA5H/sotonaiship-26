@@ -49,6 +49,19 @@ class GraphWebhookTest(unittest.TestCase):
         self.assertEqual(fake.inbound["sender"], "+447700900321")
         self.assertEqual(fake.inbound["text"], "there is a tree fallen on the road")
 
+    def test_a_shared_location_card_reaches_the_graph(self):
+        fake = FakeRuntime()
+        with unittest.mock.patch.object(bot, "MODE", "graph"),              unittest.mock.patch.object(bot.service, "get_runtime", return_value=fake),              unittest.mock.patch.object(bot, "read_attachments",
+                                       return_value=(None, None, "BEGIN:VCARD END:VCARD")),              unittest.mock.patch.object(bot, "deliver"):
+            bot.handle_inbound({
+                "chat_guid": "chat-card-1",
+                "sender": "+447700900322",
+                "text": "",
+                "message_guid": "G-CARD-1",
+                "attachments": [{"guid": "card-1", "transferName": "x.loc.vcf"}],
+            })
+        self.assertEqual(fake.inbound["card"], "BEGIN:VCARD END:VCARD")
+
     def test_legacy_mode_is_still_selectable(self):
         self.assertIn("legacy", ("legacy", "graph"))
 

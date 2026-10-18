@@ -58,10 +58,10 @@ class FakeGeocoder:
 
 
 class FixtureTest(unittest.TestCase):
-    def test_twelve_cases_with_unique_names(self):
+    def test_sixteen_cases_with_unique_names(self):
         cases = load_cases()
-        self.assertEqual(len(cases), 12)
-        self.assertEqual(len({case["name"] for case in cases}), 12)
+        self.assertEqual(len(cases), 16)
+        self.assertEqual(len({case["name"] for case in cases}), 16)
 
     def test_every_case_has_the_required_shape(self):
         for case in load_cases():
@@ -95,7 +95,8 @@ class FixtureTest(unittest.TestCase):
             self.assertEqual(overlap, set(), case["name"])
 
     def test_graph_cases_declare_a_state_expectation(self):
-        safety = {"info_question", "emergency_safe", "utility_safe", "outside_safe"}
+        safety = {"info_question", "emergency_safe", "utility_safe", "outside_safe",
+                  "trunk_road", "outside_city", "noise_handoff", "status_followup"}
         for case in load_cases():
             if case["layer"] == "graph" and case["name"] not in safety:
                 with self.subTest(case=case["name"]):
@@ -268,7 +269,8 @@ class GraphScaffoldTest(unittest.TestCase):
 
     def test_the_remaining_graph_cases_are_named_not_skipped(self):
         covered = {"null_patch", "restart", "info_question", "emergency_safe",
-                   "utility_safe", "outside_safe"}
+                   "utility_safe", "outside_safe", "trunk_road", "outside_city",
+                   "noise_handoff", "status_followup"}
         found = {item["name"] for item in load_cases() if item["layer"] == "graph"}
         self.assertEqual(found - covered, {"wrong_specialist"})
 

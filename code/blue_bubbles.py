@@ -376,6 +376,7 @@ def handle_inbound(inbound):
                 "text": text,
                 "message_guid": inbound.get("message_guid") or "",
                 "photo_ref": photo_ref,
+                "card": card,
             }
             started = time.perf_counter()
             result = service.get_runtime().turn(graph_inbound)

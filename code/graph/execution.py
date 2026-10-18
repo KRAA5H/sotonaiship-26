@@ -157,6 +157,8 @@ def execute(state, deps):
         "saved": False,
         "refused_reason": None,
         "playbook_version": prompts.playbook(category).get("version"),
+        "destination": None,
+        "status": None,
     }
     pending = None
     active = state.get("active_incident_id")
@@ -269,10 +271,27 @@ def execute(state, deps):
         outcome["missing"] = [field]
 
     elif action == "answer":
-        if active:
-            link_data = tools.report_link(active)
-            if link_data.get("ok"):
-                outcome["link_token"] = link_data.get("link_token")
+        text = (state.get("inbound") or {}).get("text") or ""
+        answer_conn = reports_db.connect(deps.reports) if deps.reports else None
+        try:
+            if active and prompts.is_status(text):
+                link_data = tools.report_link(active, conn=answer_conn)
+                if link_data.get("ok"):
+                    report = tools.get_report_status(link_data.get("link_token"),
+                                                     conn=answer_conn)
+                    if report.get("ok"):
+                        report["link"] = link_data.get("link")
+                        report["category_id"] = category
+                        outcome["status"] = report
+                        outcome["report_id"] = active
+                        outcome["link_token"] = link_data.get("link_token")
+            if active and not outcome.get("status"):
+                link_data = tools.report_link(active, conn=answer_conn)
+                if link_data.get("ok"):
+                    outcome["link_token"] = link_data.get("link_token")
+        finally:
+            if answer_conn is not None:
+                answer_conn.close()
         question = (plan.get("fact_request") or {}).get("category_id") or "general"
         found = tools.find_category_facts(question)
         if found.get("ok"):
@@ -288,6 +307,7 @@ def execute(state, deps):
     elif action == "escalate":
         escalation = plan.get("escalation") or {}
         outcome["refused_reason"] = escalation.get("kind") or "not_council"
+        outcome["destination"] = escalation.get("destination")
         outcome["transport"] = "queued"
 
     violations = policy.check_outcome(outcome, draft, ctx)
@@ -383,6 +403,8 @@ def compose(state, deps):
                 text = text + f"\nFollow it: {url}"
         else:
             text = messages.unclear()
+    elif outcome.get("status"):
+        text = messages.status(outcome["status"])
     elif outcome.get("action") == "answer":
         if outcome.get("facts"):
             fact = outcome["facts"][0]
@@ -394,13 +416,18 @@ def compose(state, deps):
                                        "outside_southampton"):
             text = messages.not_council(decision)
         else:
-            contact = messages.contact_for(decision["category_id"])
-            text = messages.handoff(decision, contact.get("page") or "")
+            text = messages.handoff(decision, outcome.get("destination")
+                                    or messages.contact_for(decision["category_id"]).get("page") or "")
     else:
         text = messages.sorry()
 
     bubbles, url, source_url = _split(text, url)
-    if outcome.get("action") == "answer" and outcome.get("facts"):
+    destination = outcome.get("destination")
+    if outcome.get("action") == "escalate" and isinstance(destination, str) \
+            and destination.startswith(("http://", "https://")):
+        source_url = destination
+    if outcome.get("action") == "answer" and outcome.get("facts") \
+            and not outcome.get("status"):
         fact = outcome["facts"][0]
         source_url = source_url or fact.get("url")
         checked = fact.get("date") or ""

@@ -105,7 +105,8 @@ def make_nodes(deps):
     def precheck(state):
         inbound = _inbound(state)
         text = _text(state)
-        if not text and not (inbound.get("photo_ref") or inbound.get("image_ref")):
+        if not text and not (inbound.get("photo_ref") or inbound.get("image_ref")
+                             or inbound.get("card")):
             return {"suppressed": True, "emergency": False, "short_circuit": False}
         kind = danger(text)
         if kind == "emergency":
@@ -132,7 +133,7 @@ def make_nodes(deps):
         detail_only = bool(previous_text) and (
             (place and not prompts._REPORT_WORDS.search(text))
             or (text.lower() in ("it is still there", "still there", "it's still there"))
-            or (not text and ref)
+            or (not text and (ref or inbound.get("card")))
             or prompts.is_challenge(text)
             or prompts.is_question(text)
             or (bool(state.get("pending_question"))
@@ -165,6 +166,23 @@ def make_nodes(deps):
                     attachment["features"] = features
                 existing.append(attachment)
             draft["attachments"] = existing
+        card = inbound.get("card")
+        if card:
+            try:
+                from agents.location_agent import LocationAgent
+                shared = LocationAgent().shared_place("", card)
+            except Exception as error:  # noqa: BLE001 - a card must not break the turn
+                print(f"[card] could not read the shared location: {error}")
+                shared = None
+            if shared and shared.get("street_name"):
+                draft["location"] = {
+                    "text": shared["street_name"],
+                    "street": shared["street_name"],
+                    "area": shared.get("area"),
+                    "postcode": shared.get("postcode"),
+                    "provenance": "pin",
+                    "ambiguous": False,
+                }
         return {"incident_draft": draft, "candidate_services": []}
 
     def decide(state):

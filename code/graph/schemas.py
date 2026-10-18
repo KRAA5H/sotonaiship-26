@@ -62,7 +62,7 @@ PENDING_KEYS = {"field", "text", "asked_at", "turn_id"}
 OUTCOME_KEYS = {"action", "report_id", "link_token", "submitted", "duplicate_of",
                 "locally_actionable", "missing", "facts", "review_queued",
                 "transport", "degraded", "saved", "refused_reason",
-                "playbook_version"}
+                "playbook_version", "destination", "status"}
 STATE_KEYS = {"thread_id", "turn_id", "inbound", "recent_messages", "active_incident_id",
               "incident_draft", "pending_question", "last_claims_sent",
               "last_executed_outcome", "candidate_services", "selected_specialist",

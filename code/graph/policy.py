@@ -49,6 +49,11 @@ _TIMESCALE = re.compile(
     r"\bwithin\s+\d+|\bin\s+\d+\s*(hour|day|week)|\b(tonight|tomorrow|today|this week)\b"
     r"|\bcrew will\b", re.I)
 _NUMBER = re.compile(r"\b0\d{2,4}\s?\d{3,4}\s?\d{0,4}\b")
+_TRUNK_TEXT = re.compile(r"\b(A3[36]|M27|M3|motorway|trunk road)\b", re.I)
+_OUTSIDE_TEXT = re.compile(r"\b(winchester|eastleigh|fareham|portsmouth|gosport|romsey|outside southampton)\b(?!\s+(?:road|street|lane|avenue|close|drive|way|crescent|gardens|hill|park|terrace|place|grove|court|walk|mews|rise|row)\b)", re.I)
+_HANDOFF_TEXT = re.compile(
+    r"\b(noisy (neighbour|neighbor)|neighbour(s)? (noise|making noise)|loud music|"
+    r"barking dog|noise from (next door|the neighbours?)|noise nuisance)\b", re.I)
 
 
 @dataclass(frozen=True)
@@ -199,6 +204,17 @@ def check(state, context=PolicyContext(), problems=()):
     if action not in ("log", "ask", "answer", "escalate"):
         violations.append(_violation("action.missing", "action", "unknown action"))
         return _dedupe(violations)
+
+    text = (state.get("inbound") or {}).get("text") or ""
+    if action in ("log", "ask"):
+        if _TRUNK_TEXT.search(text) or _OUTSIDE_TEXT.search(text):
+            violations.append(_violation("not_council.saved", "inbound",
+                                         "a trunk road or out-of-area issue is never saved",
+                                         hard=True))
+        if _HANDOFF_TEXT.search(text):
+            violations.append(_violation("policy.handoff_action", "inbound",
+                                         "a neighbour problem goes to the council form",
+                                         hard=True))
 
     effective, patch_violations = _patch_violations(draft, plan)
     violations += patch_violations
@@ -366,6 +382,8 @@ def check_bubbles(bubbles, outcome=None, context=PolicyContext()):
                                              "a number is not in the checked sheet"))
         if context.forbidden_team_names:
             lowered = text.lower()
+            if "national highways" in lowered:
+                lowered = lowered.replace("national highways", " ")
             for team in context.forbidden_team_names:
                 if team.lower() in lowered:
                     violations.append(_violation("claim.team", "bubbles",
