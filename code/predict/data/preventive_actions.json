@@ -1,0 +1,53 @@
+{
+  "note": "Every lead time and team below is ASSUMED, confirm with the council before real use.",
+  "actions": {
+    "leaf_fall": {
+      "categories": ["litter_street_cleaning"],
+      "action": "Sweep leaves and clear drains",
+      "lead_days": 2, "team": "Street cleansing (confirm)",
+      "steps": ["Sweep leaves on the listed streets", "Clear gullies and drains", "Check again after the next heavy rain"]
+    },
+    "frost_rain": {
+      "categories": ["pothole"],
+      "action": "Inspect roads after frost and rain",
+      "lead_days": 1, "team": "Highways (confirm)",
+      "steps": ["Walk or drive the listed streets", "Log new defects with depth", "Patch small defects before they grow"]
+    },
+    "match_day": {
+      "categories": ["litter_street_cleaning", "illegal_parking"],
+      "action": "Litter pick and parking patrol around the match",
+      "lead_days": 1, "team": "Street cleansing and parking enforcement (confirm)",
+      "steps": ["Put out extra bins the day before", "Parking patrol from two hours before kick-off", "Litter pick the morning after"]
+    },
+    "cruise_call": {
+      "categories": ["litter_street_cleaning"],
+      "action": "Extra cleaning on cruise days",
+      "lead_days": 1, "team": "Street cleansing (confirm)",
+      "steps": ["Empty bins near the terminals in the morning", "Litter pick the walking routes in the afternoon"]
+    },
+    "university_move_out": {
+      "categories": ["fly_tipping", "missed_bin"],
+      "action": "Bulk waste collection in student streets",
+      "lead_days": 3, "team": "Waste services (confirm)",
+      "steps": ["Book extra bulk collections", "Place notices about free collection", "Check the streets 24 hours after move-out"]
+    },
+    "festival": {
+      "categories": ["litter_street_cleaning"],
+      "action": "Litter pick before and after the event",
+      "lead_days": 2, "team": "Street cleansing (confirm)",
+      "steps": ["Extra bins before the event", "Litter pick the morning after"]
+    },
+    "surge": {
+      "categories": [],
+      "action": "Same-day check by the duty officer",
+      "lead_days": 0, "team": "Duty officer (confirm)",
+      "steps": ["Visit the street today", "Confirm whether it is one problem or several", "Raise jobs for what is found"]
+    },
+    "history": {
+      "categories": [],
+      "action": "Check the street on the next round",
+      "lead_days": 1, "team": "Owning team for the category (confirm)",
+      "steps": ["Add the street to the next scheduled round", "Report what is found"]
+    }
+  }
+}
