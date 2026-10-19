@@ -1,6 +1,6 @@
-# Kerbside
+# Saint
 
-An iMessage bot that lets Southampton residents report street problems by text, and gives council officers a clean, de-duplicated queue with a forecast of what to fix before residents have to ask.
+Saint is an iMessage bot that lets Southampton residents report street problems by text, and gives council officers a clean, de-duplicated queue with a forecast of what to fix before residents have to ask.
 
 Built for SotonShip 2026, track: Southampton City.
 
